@@ -2,7 +2,7 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "6.4.3",
-  "entryCount": 3602,
+  "entryCount": 3603,
   "generatedAt": "2026-10-05T00:00:00.000Z",
   "entries": [
     {
@@ -31430,6 +31430,14 @@
       "severity": "critical",
       "confidence": 0.9,
       "source": "MAL-2026-17570 (amazon-inspector)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "@subql/common@5.8.3",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-9333-3c4x-x3h5",
       "firstSeen": "2026-10-05"
     }
   ]

@@ -116,6 +116,22 @@ skipped are now mapped:
   a hijacked legitimate package. A package the registry has deleted pins the
   versions the range names explicitly. Any registry failure other than 404
   rejects the run.
+
+  **Only versions published on or before the record's FIRST publication are
+  pinned.** A range describes the versions that existed when it was assessed;
+  a later version was never examined and the name may have changed owner. On
+  2026-10-05 GHSA-qmrm-wwg3-xhpg (`flipper-frontend-core <= 1.1.0`) named an
+  attacker's 1.0.0 and 1.1.0, after which the rightful owner published 0.1.0
+  to 0.212.0, all inside the range. The publication date is used, never
+  `updated_at` or `modified`: both are bumped by bulk edits, and flipper's
+  `updated_at` falls after the owner's first release. A record without a
+  publication date pins nothing from the registry.
+- **GitHub `vulnerable_version_range` strings** (`>= X`, `>= X, <= Y`,
+  `>= X, < Y`, `< Y`, `<= Y`) are translated into the same OSV events and
+  settled the same way for npm. Outside npm there is no registry resolution;
+  the versions a range names explicitly (a non-zero `>=`, a `<=`) are pinned,
+  and a range naming none stays unmappable. An exclusive `> X` is never
+  approximated.
 - **Version strings with `_`** (PyPI `v_05`).
 
 What still cannot be mapped is recorded in `threat-feed-unresolvable.json` (see
