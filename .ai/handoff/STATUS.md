@@ -1,3 +1,49 @@
+## Unmappable OpenSSF records (2026-10-05, second change) (claude-opus-5-5)
+
+Follow-up to the full reconcile (PR 382): the 1,077 OpenSSF records the
+importer skipped as unmappable are now mapped, except 21 recorded gaps.
+
+- Names: NuGet ids may carry Unicode letters, combining marks and digits (513
+  homoglyph records), npm names may start with `-` (CLI-flag squats such as
+  `--no-audit`) or use a legacy scope starting with `_`/`-` (30 records).
+  Whitespace, controls and format characters stay refused everywhere.
+- Bounded npm ranges without a versions list (533 records) are evaluated
+  against the registry's full version history and become exact pins, never
+  bare names. Deleted packages pin the versions the range names explicitly.
+  Any registry failure other than 404 rejects the run.
+- `_` is allowed in versions (PyPI `v_05`).
+- Result: 1,409 entries, all to the catalog (258,555 entries). `npm run
+  feed:reconcile` afterwards: 0 missing, 0 unmapped, exit 0.
+- `threat-feed-unresolvable.json` records the 21 that cannot be mapped:
+  dependency-confusion records from 2022 naming every version before a fix of
+  packages npm has deleted. `--check` now fails on any unmapped record not on
+  that list and reports stale entries.
+
+Found on the way, and the reason the acceptance suite must run for every
+catalog change: `isValidFeedIOC` accepted printable ASCII only for package
+values, and the client refuses the WHOLE catalog over one invalid line. The
+655 Unicode NuGet entries would have switched off all catalog indicators. The
+shape now admits Unicode letters, marks and digits, tested in both directions.
+
+The code-scanning alert on PR 382 (`INTERNAL_HOSTNAME` on a comment in
+`scripts/generate-catalog.mjs`) was the self-scan reading an internal-looking
+package name in prose; the comment no longer spells it out (control scan: 1
+finding before, 0 after).
+
+CodeQL on this PR (`js/incomplete-sanitization`): the registry URL was built
+with `name.replace("/", "%2f")`, which encodes only the first slash. Every
+character is now percent-encoded (`@scope%2Fname` for scoped names, checked
+live against the registry), and a test asserts `a/b/c` cannot add a path
+segment (red with the old replace).
+
+Worth knowing for support: `fsevents` 1.0.0 to 1.2.10 is now pinned
+(MAL-2023-462, the hijacked binary bucket, CVE-2023-45311). Correct, and
+OSV-Scanner reports it too, but projects with very old lockfiles will see it.
+
+Still open from the reconcile note: the daily routine should run
+`--osv-snapshot`; GitHub-only malware advisories not yet measured; the
+catalog JSONL (41 MB) needs sharding before 50 MB.
+
 ## Full OpenSSF reconcile and backfill (2026-10-05) (claude-opus-5-5)
 
 The owner asked for every entry to be checked after the daily run found two

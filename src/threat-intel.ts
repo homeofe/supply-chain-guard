@@ -5706,7 +5706,12 @@ const IOC_VALUE_SHAPES: Record<string, RegExp> = {
   // Package coordinates incl. ecosystem prefixes (ruby:, go:github.com/x/y),
   // scopes (@scope/name) and version pins (name@1.2.3): printable, no spaces.
   // Loose is safe here: packages are matched by exact compare, never substring.
-  package: /^[\x21-\x7e]+$/,
+  // Unicode letters, combining marks and digits are allowed because NuGet ids
+  // are Unicode, and homoglyph typosquats spell them with Cyrillic letters
+  // (655 OpenSSF entries on 2026-10-05). An ASCII-only shape here made the
+  // client refuse the WHOLE catalog over them. Whitespace, controls and format
+  // characters (bidi overrides, zero-width joiners) stay refused.
+  package: /^(?:[\x21-\x7e]|[\p{L}\p{M}\p{N}])+$/u,
 };
 
 // Severity must be one of the report's known levels: an unknown string would

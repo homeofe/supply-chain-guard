@@ -9,6 +9,18 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Added
 
+- 1,409 more OpenSSF malware entries the importer used to skip, all in the
+  catalog: 655 NuGet entries whose ids are homoglyph typosquats (Cyrillic
+  letters, a hidden combining mark), 753 npm entries (packages squatting CLI
+  flags such as `--no-audit`, legacy scopes, and exact pins resolved from
+  records that give a version range but no version list, hijacked releases of
+  legitimate packages among them) and a PyPI version containing `_`.
+- `threat-feed-unresolvable.json`: upstream records no mapping can turn into an
+  IOC, each with a reason. `npm run feed:reconcile` now also fails on any
+  unmappable record not on that list. 21 records are on it: dependency-
+  confusion records whose packages the npm registry has deleted, where a
+  bare-name block would flag the victim's own internal package.
+
 - `npm run feed:import -- --osv-snapshot`: reconciles the feed against OpenSSF's
   complete OSV export (`all.zip` per ecosystem) instead of the modified-date
   window, with no token and no date window. Fail-closed like the windowed
@@ -17,8 +29,20 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   that fails when an upstream malware record has been published for more than
   two days and is still in neither store.
 
+### Changed
+
+- `isValidFeedIOC` accepts Unicode letters, combining marks and digits in a
+  package value; whitespace, controls and format characters stay refused. It
+  accepted printable ASCII only, and the client refuses the whole catalog over
+  one invalid line, so the NuGet homoglyph entries above would have switched
+  every catalog indicator off. A catalog acceptance test caught it before
+  release.
+
 ### Fixed
 
+- `scripts/generate-catalog.mjs` no longer spells out an internal-looking
+  package name in a comment, which the `INTERNAL_HOSTNAME` self-scan rule
+  reported as a code-scanning alert.
 - 164,239 OpenSSF malware entries were missing from both the bundle and the
   catalog: 142,610 npm, 16,180 PyPI, 4,555 NuGet, 873 RubyGems, 12 Cargo and
   9 Go entries, first published between 2021 and 2026 (121,698 of them in

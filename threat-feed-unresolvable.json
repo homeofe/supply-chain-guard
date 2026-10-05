@@ -1,0 +1,89 @@
+{
+  "$comment": "Upstream malware records that no mapping can turn into a feed IOC, recorded so the gap is visible rather than silent. Unlike threat-feed-declined.json this claims NO coverage: every entry here is a detection gap. npm run feed:reconcile fails on any unmappable record NOT listed here, and reports a listed id that has since become mappable as stale. See docs/threat-feed-sources.md.",
+  "records": [
+    {
+      "id": "MAL-2022-455",
+      "reason": "Dependency-confusion record naming every version before 6.72.11 of @nexthink/apollo-components, a package the npm registry has deleted (404), so no exact version is known. A bare-name block would flag the victim organization's own internal package of the same name."
+    },
+    {
+      "id": "MAL-2022-456",
+      "reason": "Dependency-confusion record naming every version before 1.37.3 of @nexthink/apollo-tokens, a package the npm registry has deleted (404), so no exact version is known. A bare-name block would flag the victim organization's own internal package of the same name."
+    },
+    {
+      "id": "MAL-2022-457",
+      "reason": "Dependency-confusion record naming every version before 11.13.14 of @nexthink/apollo-widgets, a package the npm registry has deleted (404), so no exact version is known. A bare-name block would flag the victim organization's own internal package of the same name."
+    },
+    {
+      "id": "MAL-2022-458",
+      "reason": "Dependency-confusion record naming every version before 1.2.6 of @nexthink/arm-claims-library, a package the npm registry has deleted (404), so no exact version is known. A bare-name block would flag the victim organization's own internal package of the same name."
+    },
+    {
+      "id": "MAL-2022-459",
+      "reason": "Dependency-confusion record naming every version before 1.1.3 of @nexthink/arm-jwt-decoder, a package the npm registry has deleted (404), so no exact version is known. A bare-name block would flag the victim organization's own internal package of the same name."
+    },
+    {
+      "id": "MAL-2022-460",
+      "reason": "Dependency-confusion record naming every version before 1.1.2 of @nexthink/content-admin-list, a package the npm registry has deleted (404), so no exact version is known. A bare-name block would flag the victim organization's own internal package of the same name."
+    },
+    {
+      "id": "MAL-2022-461",
+      "reason": "Dependency-confusion record naming every version before 1.0.7 of @nexthink/content-sharing, a package the npm registry has deleted (404), so no exact version is known. A bare-name block would flag the victim organization's own internal package of the same name."
+    },
+    {
+      "id": "MAL-2022-462",
+      "reason": "Dependency-confusion record naming every version before 3.1.3 of @nexthink/data-formatter, a package the npm registry has deleted (404), so no exact version is known. A bare-name block would flag the victim organization's own internal package of the same name."
+    },
+    {
+      "id": "MAL-2022-463",
+      "reason": "Dependency-confusion record naming every version before 0.0.7 of @nexthink/ea-widgets, a package the npm registry has deleted (404), so no exact version is known. A bare-name block would flag the victim organization's own internal package of the same name."
+    },
+    {
+      "id": "MAL-2022-464",
+      "reason": "Dependency-confusion record naming every version before 1.10.3 of @nexthink/engage-branding, a package the npm registry has deleted (404), so no exact version is known. A bare-name block would flag the victim organization's own internal package of the same name."
+    },
+    {
+      "id": "MAL-2022-465",
+      "reason": "Dependency-confusion record naming every version before 1.2.4 of @nexthink/engage-widgets, a package the npm registry has deleted (404), so no exact version is known. A bare-name block would flag the victim organization's own internal package of the same name."
+    },
+    {
+      "id": "MAL-2022-466",
+      "reason": "Dependency-confusion record naming every version before 2.0.3 of @nexthink/flow-fe, a package the npm registry has deleted (404), so no exact version is known. A bare-name block would flag the victim organization's own internal package of the same name."
+    },
+    {
+      "id": "MAL-2022-467",
+      "reason": "Dependency-confusion record naming every version before 0.1.5 of @nexthink/investigations-components, a package the npm registry has deleted (404), so no exact version is known. A bare-name block would flag the victim organization's own internal package of the same name."
+    },
+    {
+      "id": "MAL-2022-468",
+      "reason": "Dependency-confusion record naming every version before 1.5.4 of @nexthink/investigations-editor, a package the npm registry has deleted (404), so no exact version is known. A bare-name block would flag the victim organization's own internal package of the same name."
+    },
+    {
+      "id": "MAL-2022-469",
+      "reason": "Dependency-confusion record naming every version before 1.1.5 of @nexthink/investigations-widgets, a package the npm registry has deleted (404), so no exact version is known. A bare-name block would flag the victim organization's own internal package of the same name."
+    },
+    {
+      "id": "MAL-2022-470",
+      "reason": "Dependency-confusion record naming every version before 0.2.3 of @nexthink/kendo-react, a package the npm registry has deleted (404), so no exact version is known. A bare-name block would flag the victim organization's own internal package of the same name."
+    },
+    {
+      "id": "MAL-2022-471",
+      "reason": "Dependency-confusion record naming every version before 1.8.3 of @nexthink/nql-editor, a package the npm registry has deleted (404), so no exact version is known. A bare-name block would flag the victim organization's own internal package of the same name."
+    },
+    {
+      "id": "MAL-2022-472",
+      "reason": "Dependency-confusion record naming every version before 0.0.4 of @nexthink/nxassignment, a package the npm registry has deleted (404), so no exact version is known. A bare-name block would flag the victim organization's own internal package of the same name."
+    },
+    {
+      "id": "MAL-2022-473",
+      "reason": "Dependency-confusion record naming every version before 1.10.3 of @nexthink/nxnavigation, a package the npm registry has deleted (404), so no exact version is known. A bare-name block would flag the victim organization's own internal package of the same name."
+    },
+    {
+      "id": "MAL-2022-474",
+      "reason": "Dependency-confusion record naming every version before 1.11.7 of @nexthink/remote-action-widgets, a package the npm registry has deleted (404), so no exact version is known. A bare-name block would flag the victim organization's own internal package of the same name."
+    },
+    {
+      "id": "MAL-2022-475",
+      "reason": "Dependency-confusion record naming every version before 1.1.4 of @nexthink/waas, a package the npm registry has deleted (404), so no exact version is known. A bare-name block would flag the victim organization's own internal package of the same name."
+    }
+  ]
+}
