@@ -1,3 +1,28 @@
+## Threat intel import (2026-10-05) (claude-opus-5-5)
+
+Daily routine run. `feed:import` (default window, published >= 2026-09-21)
+fetched 688 advisories and 4,335 OpenSSF MAL records and proposed 127 new
+entries: 118 to the bundle, 9 to the catalog. No page cap, no `--limit`, no
+unmappable advisories, no decline-list hits, no deferrals, no
+`catalogWindows` change. All 127 are version pins; one is PyPI and carries
+the `pypi:` prefix (`anthropic-sdk` 0.1.0). The 9 catalog entries are
+versions of `ph-common` from MAL-2026-1809 (first seen 2026-03-18, routed by
+date). Full batch reviewed from the `--dry-run --json` report, not the
+20-line preview.
+
+Enrichment (vendor write-ups): nothing addable. Campaigns surfaced this week
+(RedC2, Phantom Bot, PhantomSub, mrmustard, MemTensor sckit) are already in
+the blocklist and the bundle. No hand-added entries.
+
+Observation for an interactive session: two June 2026 MAL records are in
+neither store. MAL-2026-5273 (PyPI `anthropy` 0.0.1 to 0.0.6, reverse shell,
+kam193 + Amazon Inspector, published 2026-06-05) and MAL-2026-6673 (npm
+`anthropic-toolkit`, 22 versions, postinstall recon stealer, Amazon Inspector
++ GHSA, published 2026-06-30). Both packages are already removed from their
+registries (npm security holding package, PyPI 404), so they were not
+hand-added from a daily run. Worth checking whether June 2026 has a
+systematic import gap rather than two isolated misses.
+
 ## Release v6.4.3 (2026-10-04) (claude-opus-5-5)
 
 Patch release: the 2026-10-04 threat intel (PR 379), the security-audit

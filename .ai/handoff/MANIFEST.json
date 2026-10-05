@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1791101437",
-    "timestamp": "2026-10-04T08:10:37Z",
-    "commit": "e879a64",
+    "session_id": "cli-1791177606",
+    "timestamp": "2026-10-05T05:20:06Z",
+    "commit": "696add6",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:66cf07006baf6c2b292901d28fa738d94cc1074b62383101fa432d5ed7198145",
-      "updated": "2026-10-04T08:10:25Z",
-      "lines": 13496,
-      "summary": "Patch release: the 2026-10-04 threat intel (PR 379), the security-audit fixes of PR 378 and the legacy-cache refresh note of PR 377."
+      "checksum": "sha256:1d48c421dff35d21ceb4151d10b84d5a160430838076f5bcb462d7ebdb8e3c9a",
+      "updated": "2026-10-05T05:19:58Z",
+      "lines": 13521,
+      "summary": "Daily routine run. `feed:import` (default window, published >= 2026-09-21) fetched 688 advisories and 4,335 OpenSSF MAL records and proposed 127..."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:3c56dc9b1f39b018e6615972f7ed880250dc0c66e4018d6eff2ba88184a7bb39",
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "Patch release: the 2026-10-04 threat intel (PR 379), the security-audit fixes of PR 378 and the legacy-cache refresh note of PR 377. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Daily routine run. `feed:import` (default window, published >= 2026-09-21) fetched 688 advisories and 4,335 OpenSSF MAL records and proposed 127... Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 925,
-    "manifest_plus_core": 201194,
-    "full_read": 214908
+    "manifest_only": 932,
+    "manifest_plus_core": 201559,
+    "full_read": 215273
   }
 }
