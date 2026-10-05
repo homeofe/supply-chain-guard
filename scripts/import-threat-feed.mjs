@@ -2297,7 +2297,137 @@ export async function fetchDatadogDataset({
     throw new Error(`DataDog sample tree truncated: ${tree.truncated.join(", ")}`);
   }
   const samples = parseDatadogSamples(tree.paths);
-  return { manifests, dates: samples.dates, sampleVersions: samples.versions, treeError: null, manifestDates };
+
+  // IDE extensions: only sampled versions, placed on the marketplace(s) the
+  // registries support (extensionPrefixesFor).
+  const extensions = [];
+  const extensionsWithoutSample = [];
+  if (!ecosystems?.length || ecosystems.includes("vscode")) {
+    const manifestUrl = `${rawUrl}/${DATADOG_EXTENSION_DIR}/manifest.json`;
+    const manifest = await fetchOsvExport(manifestUrl, { timeoutMs, fetchImpl, format: "json", maxBytes: MAX_DATADOG_MANIFEST_BYTES });
+    if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)) {
+      throw new Error("DataDog extension manifest is not an object");
+    }
+    let extTree;
+    try {
+      extTree = await fetchDatadogSamplePaths([DATADOG_EXTENSION_DIR], { token, fetchImpl, timeoutMs, treesApi });
+    } catch (err) {
+      throw new Error(`DataDog extension tree could not be read: ${err instanceof Error ? err.message : String(err)}`);
+    }
+    if (extTree.truncated.length > 0) throw new Error(`DataDog extension tree truncated: ${extTree.truncated.join(", ")}`);
+    const sampled = parseDatadogExtensionSamples(extTree.paths);
+    for (const [id, listed] of Object.entries(manifest)) {
+      const have = sampled.get(id) ?? new Set();
+      const versions = (Array.isArray(listed) ? listed.filter((v) => have.has(v)) : [...have]).filter(
+        (v) => typeof v === "string" && SAFE_VERSION.test(v),
+      );
+      if (versions.length === 0 || !isSafePackageName(id, "vscode") || !id.includes(".")) {
+        extensionsWithoutSample.push(id);
+        continue;
+      }
+      extensions.push({ id, placements: await probeExtensionVersions(id, versions, { fetchImpl }) });
+    }
+    try {
+      const headers = { "User-Agent": "supply-chain-guard-feed-import", Accept: "application/vnd.github+json" };
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const url = `https://api.github.com/repos/${DATADOG_REPO}/commits?path=samples/${DATADOG_EXTENSION_DIR}/manifest.json&per_page=1`;
+      const response = await fetchImpl(url, { headers, signal: AbortSignal.timeout(timeoutMs) });
+      const commits = response.ok ? await response.json() : [];
+      const date = commits?.[0]?.commit?.committer?.date;
+      if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}/.test(date)) manifestDates[DATADOG_EXTENSION_DIR] = date.slice(0, 10);
+    } catch {
+      // Undated is the conservative outcome: the entry is then judged by firstSeen.
+    }
+  }
+
+  return {
+    manifests,
+    dates: samples.dates,
+    sampleVersions: samples.versions,
+    treeError: null,
+    manifestDates,
+    extensions,
+    extensionsWithoutSample,
+  };
+}
+
+
+/** The dataset directory of IDE extensions (VS Code / Open VSX ids). */
+export const DATADOG_EXTENSION_DIR = "ide_extensions";
+export const VSCODE_MARKETPLACE_QUERY = "https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery";
+export const OPEN_VSX_API = "https://open-vsx.org/api";
+
+/** `samples/ide_extensions/<category>/<publisher.name>/<version>.vsix` -> id -> versions. */
+export function parseDatadogExtensionSamples(paths) {
+  const versions = new Map();
+  for (const p of paths) {
+    const m = /^samples\/ide_extensions\/[^/]+\/([^/]+)\/([^/]+)\.vsix$/.exec(p);
+    if (!m) continue;
+    if (!versions.has(m[1])) versions.set(m[1], new Set());
+    versions.get(m[1]).add(m[2]);
+  }
+  return versions;
+}
+
+/**
+ * Where each sampled extension version exists today: the VS Code Marketplace
+ * version history and Open VSX's per-version endpoint. Any answer other than
+ * "found" or "not found" rejects the run.
+ */
+export async function probeExtensionVersions(id, versions, { fetchImpl = globalThis.fetch, timeoutMs = 15000 } = {}) {
+  const headers = { "User-Agent": "supply-chain-guard-feed-import" };
+  let response;
+  try {
+    response = await fetchImpl(VSCODE_MARKETPLACE_QUERY, {
+      method: "POST",
+      headers: { ...headers, "Content-Type": "application/json", Accept: "application/json;api-version=7.2-preview.1" },
+      body: JSON.stringify({ filters: [{ criteria: [{ filterType: 7, value: id }], pageSize: 1 }], flags: 1 }),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch (err) {
+    throw new Error(`VS Code Marketplace request failed for ${id}: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  if (!response.ok) throw new Error(`VS Code Marketplace returned HTTP ${response.status} for ${id}`);
+  const data = await response.json();
+  const marketplaceVersions = new Set(
+    (data?.results?.[0]?.extensions?.[0]?.versions ?? []).map((v) => v?.version).filter((v) => typeof v === "string"),
+  );
+  const dot = id.indexOf(".");
+  const out = [];
+  for (const version of versions) {
+    const url = `${OPEN_VSX_API}/${encodeURIComponent(id.slice(0, dot))}/${encodeURIComponent(id.slice(dot + 1))}/${encodeURIComponent(version)}`;
+    let ovsx;
+    try {
+      ovsx = await fetchImpl(url, { headers, signal: AbortSignal.timeout(timeoutMs) });
+    } catch (err) {
+      throw new Error(`Open VSX request failed for ${id}@${version}: ${err instanceof Error ? err.message : String(err)}`);
+    }
+    if (ovsx.status !== 200 && ovsx.status !== 404) throw new Error(`Open VSX returned HTTP ${ovsx.status} for ${id}@${version}`);
+    out.push({ version, inVscode: marketplaceVersions.has(version), inOpenVsx: ovsx.status === 200 });
+  }
+  return out;
+}
+
+/**
+ * Which marketplace prefixes a sampled extension version is pinned under.
+ *
+ * Only a version that NO marketplace publishes any more is pinned, and then
+ * on both: the marketplaces remove a malicious release after the incident
+ * (`amazon-q-vscode` 1.84.0 is in neither history), so the removal
+ * corroborates the dataset, and where the version never existed the pin
+ * cannot match an installed extension.
+ *
+ * A version that is still published is NOT pinned on this dataset's word
+ * alone. On 2026-10-05 the dataset listed `garytyler.darcula-pycharm` 1.0.0,
+ * that theme's current release since 2019 with 367,801 installs, still listed
+ * on the Marketplace. Pinning it would flag every installation as critical
+ * malware; such versions are reported for a human instead. Never a
+ * whole-extension block either: extensions belong to publisher accounts and
+ * the common incident is a hijacked legitimate one.
+ */
+export function extensionPrefixesFor({ inVscode, inOpenVsx }) {
+  if (inVscode || inOpenVsx) return [];
+  return ["vscode:", "openvsx:"];
 }
 
 /**
@@ -2307,10 +2437,14 @@ export async function fetchDatadogDataset({
  * settleDatadogWholePackages turns into a bare name or into pins after asking
  * the registry, never blindly.
  */
-export function mapDatadogDataset({ manifests, dates, sampleVersions = new Map(), manifestDates = {} }, { now = new Date() } = {}) {
+export function mapDatadogDataset(
+  { manifests, dates, sampleVersions = new Map(), manifestDates = {}, extensions = [] },
+  { now = new Date() } = {},
+) {
   const entries = [];
   const skipped = [];
   const withoutSample = [];
+  const stillPublished = [];
   const today = now.toISOString().slice(0, 10);
   for (const [directory, manifest] of Object.entries(manifests)) {
     const ecosystem = DATADOG_ECOSYSTEMS[directory];
@@ -2364,7 +2498,34 @@ export function mapDatadogDataset({ manifests, dates, sampleVersions = new Map()
       }
     }
   }
-  return { entries, skipped, withoutSample };
+  for (const { id, placements } of extensions) {
+    for (const placement of placements) {
+      const prefixes = extensionPrefixesFor(placement);
+      if (prefixes.length === 0) {
+        stillPublished.push(
+          `${id}@${placement.version} (${[placement.inVscode && "vscode", placement.inOpenVsx && "openvsx"].filter(Boolean).join("+")})`,
+        );
+        continue;
+      }
+      for (const prefix of prefixes) {
+        const entry = {
+          type: "package",
+          value: feedValue(prefix, id, placement.version),
+          severity: "critical",
+          confidence: CONFIDENCE_SINGLE_SOURCE,
+          source: DATADOG_SOURCE_LABEL,
+          firstSeen: today,
+        };
+        entry._ecosystemPrefix = prefix;
+        entry._name = id;
+        entry._discoverySource = DISCOVERY_SOURCE.DATADOG;
+        entry._origins = ["datadog"];
+        if (manifestDates[DATADOG_EXTENSION_DIR]) entry._queueDate = manifestDates[DATADOG_EXTENSION_DIR];
+        entries.push(entry);
+      }
+    }
+  }
+  return { entries, skipped, withoutSample, stillPublished };
 }
 
 /**
@@ -2475,6 +2636,7 @@ export function createDiscoverySources({
     map(result) {
       const mapped = mapDatadogDataset(result, { now });
       this.lastWithoutSample = mapped.withoutSample;
+      this.lastStillPublished = mapped.stillPublished;
       return mapped;
     },
   };
@@ -3129,6 +3291,14 @@ export async function importUpstreamFeed({
           // Manifest versions with no sample in their own ecosystem: not imported.
           manifestWithoutSample:
             sourceResults.find(({ adapter }) => adapter.id === DISCOVERY_SOURCE.DATADOG)?.adapter.lastWithoutSample ?? [],
+          extensionsPinned:
+            sourceResults.find(({ adapter }) => adapter.id === DISCOVERY_SOURCE.DATADOG)?.result?.extensions?.length ?? 0,
+          // Sampled extension versions still published on a marketplace: a
+          // DataDog-only verdict on a live release, not imported, for review.
+          extensionsStillPublished:
+            sourceResults.find(({ adapter }) => adapter.id === DISCOVERY_SOURCE.DATADOG)?.adapter.lastStillPublished ?? [],
+          extensionsWithoutSample:
+            sourceResults.find(({ adapter }) => adapter.id === DISCOVERY_SOURCE.DATADOG)?.result?.extensionsWithoutSample ?? [],
         }
       : null,
     mapped: mapped.length,
@@ -3552,9 +3722,11 @@ if (isMain) {
         `  DataDog dataset:      ${report.datadog.wholePackageClaimsProbed} whole-package claim(s) probed: ` +
           `${report.datadog.settledAsBareName} bare name(s), ${report.datadog.settledAsPins} pin(s), ` +
           `${report.datadog.liveWithoutSamples.length} without a sampled version (live, or version-scoped by another source; not imported), ` +
-          `${report.datadog.manifestWithoutSample.length} manifest line(s) without a sample in their ecosystem (not imported)` +
-          (report.datadog.treeError ? ` (sample dates unavailable: ${report.datadog.treeError})` : ""),
+          `${report.datadog.manifestWithoutSample.length} manifest line(s) without a sample in their ecosystem (not imported), ` +
+          `${report.datadog.extensionsPinned} IDE extension(s) checked, ${report.datadog.extensionsStillPublished.length} sampled version(s) still published (not imported, review), ` +
+          `${report.datadog.extensionsWithoutSample.length} without a sample`,
       );
+      for (const line of report.datadog.extensionsStillPublished) console.log(`    still published: ${line}`);
     }
     if (report.added > 0) {
       console.log(

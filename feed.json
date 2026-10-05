@@ -2,7 +2,7 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "6.4.3",
-  "entryCount": 6489,
+  "entryCount": 6721,
   "generatedAt": "2026-10-05T00:00:00.000Z",
   "entries": [
     {
@@ -54523,6 +54523,1864 @@
     {
       "type": "package",
       "value": "pypi:yohewoasaw",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:0xS1rx58D3V.ChatGPT-B0T@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:0xS1rx58D3V.ChatGPT-B0T@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:7finney.ETHCode@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:7finney.ETHCode@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:AhmedSlem.secure-codee@0.0.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:AhmedSlem.secure-codee@0.0.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:AutoMind.automindX@1.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:AutoMind.automindX@1.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:BenjaminFriedl.lexica-img-fix@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:BenjaminFriedl.lexica-img-fix@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:BlockchainIndustries.bitcoin-toolkit@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:BlockchainIndustries.bitcoin-toolkit@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:BlockchainIndustries.hardhat-toolkit@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:BlockchainIndustries.hardhat-toolkit@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:BlockchainIndustries.solana-toolkit@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:BlockchainIndustries.solana-toolkit@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:CSF-RED.CSF-RED@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:CSF-RED.CSF-RED@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:EchelonStudios.blockchain-language-support@1.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:EchelonStudios.blockchain-language-support@1.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:EthCompiler.among-eth@1.0.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:EthCompiler.among-eth@1.0.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:EtherFoundation.vs-ranket@1.1.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:EtherFoundation.vs-ranket@1.1.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:Ethereum.SoliditySupport@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:Ethereum.SoliditySupport@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:Expressjs.expressjs-session@1.24.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:Expressjs.expressjs-session@1.24.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:GavinLamWood.vs-blanket@0.0.8",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:GavinLamWood.vs-blanket@0.0.8",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:GitlensPro.aicode-companion@2.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:GitlensPro.aicode-companion@2.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:GitlensPro.codebeauty-formatter@2.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:GitlensPro.codebeauty-formatter@2.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:GitlensPro.error-lens-ultra-pro@2.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:GitlensPro.error-lens-ultra-pro@2.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:GitlensPro.gitlens-monocharged@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:GitlensPro.gitlens-monocharged@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:GitlensPro.gitpro-ai-tools@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:GitlensPro.gitpro-ai-tools@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:GitlensPro.peacock-workspace-colorizer@2.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:GitlensPro.peacock-workspace-colorizer@2.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:IconKief.icon-theme-material@5.29.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:IconKief.icon-theme-material@5.29.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:JacobETH.solidi@1.0.7",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:JacobETH.solidi@1.0.7",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:JohnGaffney.blankebesxstnion@1.0.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:JohnGaffney.blankebesxstnion@1.0.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:JosephDembele95.email-grabber@1.0.6",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:JosephDembele95.email-grabber@1.0.6",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:JuanFBlanco.awswhh@0.0.7",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:JuanFBlanco.awswhh@0.0.7",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:JuanFranBlanco.solidit-vscode@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:JuanFranBlanco.solidit-vscode@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:JuanRiseETH.solidit@1.0.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:JuanRiseETH.solidit@1.0.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:NotToTest.NotToTest@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:NotToTest.NotToTest@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:OPENEDAI.OPENEDAI@0.4.51",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:OPENEDAI.OPENEDAI@0.4.51",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:OktayAydoan.smarty-formatter@2.1.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:OktayAydoan.smarty-formatter@2.1.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:OzzyDev777.csharp-editor-pro@2.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:OzzyDev777.csharp-editor-pro@2.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:OzzyDev777.dark-ai-professional@2.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:OzzyDev777.dark-ai-professional@2.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:OzzyDev777.gitlens-turbo-pro@2.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:OzzyDev777.gitlens-turbo-pro@2.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:OzzyDev777.peacock-professional-edition@2.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:OzzyDev777.peacock-professional-edition@2.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:PriyanshuMallick.clipboard-history-manager@0.1.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:PriyanshuMallick.clipboard-history-manager@0.1.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:Puglight.discoverito@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:Puglight.discoverito@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:Puglight.inspiredaily@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:Puglight.inspiredaily@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:Puglight.persistorito@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:Puglight.persistorito@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:Puglight.sysmotivate@0.0.3",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:Puglight.sysmotivate@0.0.3",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:QuantumCodeLabs.ai-code-explainer@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:QuantumCodeLabs.ai-code-explainer@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:QuantumCodeLabs.ai-doc-generator@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:QuantumCodeLabs.ai-doc-generator@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:QuantumCodeLabs.ai-test-generator@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:QuantumCodeLabs.ai-test-generator@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:QuantumCodeLabs.ayu-theme@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:QuantumCodeLabs.ayu-theme@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:QuantumCodeLabs.darky-ai@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:QuantumCodeLabs.darky-ai@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:QuantumCodeLabs.dracula-pro-theme@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:QuantumCodeLabs.dracula-pro-theme@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:QuantumCodeLabs.qoodo-ai-assistant@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:QuantumCodeLabs.qoodo-ai-assistant@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:RabobankAI.rabobank-code-assistant@0.5.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:RabobankAI.rabobank-code-assistant@0.5.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:SFRA-FAKA.sfra-toolkit@0.0.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:SFRA-FAKA.sfra-toolkit@0.0.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:ShowSnowcrypto.SnowShoNo@0.6.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:ShowSnowcrypto.SnowShoNo@0.6.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:SmartContractAI.solaibot@1.4.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:SmartContractAI.solaibot@1.4.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:SoliditFoundation.solidit-language@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:SoliditFoundation.solidit-language@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:StefanYosif.axion-ai@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:StefanYosif.axion-ai@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:TechSolutionsPro.bitcoin-cake-theme@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:TechSolutionsPro.bitcoin-cake-theme@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:VSAnalysistest.code-ai-assistant@0.0.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:VSAnalysistest.code-ai-assistant@0.0.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:VSAnalysistest.codegpt-helper@0.0.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:VSAnalysistest.codegpt-helper@0.0.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:Vitalik-Buterin.soli-extensio@0.0.9",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:Vitalik-Buterin.soli-extensio@0.0.9",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:VitalikButerin-EthFoundation.blan-co@0.0.8",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:VitalikButerin-EthFoundation.blan-co@0.0.8",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:Vsceue.volar-vscode@3.1.6",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:Vsceue.volar-vscode@3.1.6",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:WEB3Foundation.cxzczxcxz@0.2.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:WEB3Foundation.cxzczxcxz@0.2.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:WhenSunset.chatgpt-china@9.5.3",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:WhenSunset.chatgpt-china@9.5.3",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:Zeron1337.Zeron-CySec@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:Zeron1337.Zeron-CySec@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:ab-498.cppformat@1.0.8",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:ab-498.cppformat@1.0.8",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:ab-498.cppplayground@1.0.42",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:ab-498.cppplayground@1.0.42",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:ab-498.httpformat@1.1.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:ab-498.httpformat@1.1.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:ab-498.pythonformat@1.0.50",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:ab-498.pythonformat@1.0.50",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:ahbanC.shiba@0.1.4",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:ahbanC.shiba@0.1.4",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:amazonwebservices.amazon-q-vscode@1.84.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "campaign": "Amazon Q Developer extension 1.84.0",
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:amazonwebservices.amazon-q-vscode@1.84.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "campaign": "Amazon Q Developer extension 1.84.0",
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:bphpburnsus.iconesvscode@12.15.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:bphpburnsus.iconesvscode@12.15.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:codevsce.codelddb-vscode@1.11.9",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:codevsce.codelddb-vscode@1.11.9",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:csvmech.csvrainbow@3.3.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:csvmech.csvrainbow@3.3.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:cweijamysq.sync-settings-vscode@0.18.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:cweijamysq.sync-settings-vscode@0.18.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:dontdownloadthis.dontdownloadthis@0.0.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:dontdownloadthis.dontdownloadthis@0.0.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:eamodas.shiny-vscode@1.3.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:eamodas.shiny-vscode@1.3.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:embeddteam.embedded-build-analyzer@1.1.3",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:embeddteam.embedded-build-analyzer@1.1.3",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:embeddteam.embedded-cortex-debug@1.14.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:embeddteam.embedded-cortex-debug@1.14.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:embeddteam.embedded-cortex-debug@1.14.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:embeddteam.embedded-cortex-debug@1.14.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:embeddteam.embeddedprojectmanager@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:embeddteam.embeddedprojectmanager@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:embeddteam.embeddedprojectmanager@0.0.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:embeddteam.embeddedprojectmanager@0.0.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:flutcode.flutter-extension@3.122.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:flutcode.flutter-extension@3.122.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:hajoo.poisoned-extension@1.0.3",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:hajoo.poisoned-extension@1.0.3",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:juanbIanco.soli989@0.0.189",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:juanbIanco.soli989@0.0.189",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:juanblan281.solid281@0.0.189",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:juanblan281.solid281@0.0.189",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:krabt.krabt-extension-pack@1.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:krabt.krabt-extension-pack@1.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:krabt.krabt-proto@0.5.7",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:krabt.krabt-proto@0.5.7",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:labfile.labfile@0.0.5",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:labfile.labfile@0.0.5",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:luater.luatide@2.2.13",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:luater.luatide@2.2.13",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:msjsdreact.react-native-vsce@1.13.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:msjsdreact.react-native-vsce@1.13.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:ovixcodes.basedpyright-vscode@1.34.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:ovixcodes.basedpyright-vscode@1.34.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:sanchuan.glm-copilot@1.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:sanchuan.glm-copilot@1.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:sanchuan.glm-copilot@1.0.12",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:sanchuan.glm-copilot@1.0.12",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:sanchuan.glm-copilot@1.0.4",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:sanchuan.glm-copilot@1.0.4",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:sanchuan.glm-copilot@1.0.7",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:sanchuan.glm-copilot@1.0.7",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:sanchuan.glm-copilot@1.1.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:sanchuan.glm-copilot@1.1.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:sanchuan.kimi-coding-copilot@1.0.12",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:sanchuan.kimi-coding-copilot@1.0.12",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:sanchuan.kimi-coding-copilot@1.1.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:sanchuan.kimi-coding-copilot@1.1.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:sanchuan.kimi-copilot@1.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:sanchuan.kimi-copilot@1.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:sanchuan.kimi-copilot@1.0.12",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:sanchuan.kimi-copilot@1.0.12",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:sanchuan.kimi-copilot@1.0.4",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:sanchuan.kimi-copilot@1.0.4",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:sanchuan.kimi-copilot@1.0.7",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:sanchuan.kimi-copilot@1.0.7",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:sanchuan.kimi-copilot@1.1.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:sanchuan.kimi-copilot@1.1.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:sanchuan.mimo-copilot@1.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:sanchuan.mimo-copilot@1.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:sanchuan.mimo-copilot@1.0.12",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:sanchuan.mimo-copilot@1.0.12",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:sanchuan.mimo-copilot@1.0.4",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:sanchuan.mimo-copilot@1.0.4",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:sanchuan.mimo-copilot@1.0.7",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:sanchuan.mimo-copilot@1.0.7",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:sanchuan.mimo-copilot@1.1.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:sanchuan.mimo-copilot@1.1.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:sanchuan.minimax-copilot@1.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:sanchuan.minimax-copilot@1.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:sanchuan.minimax-copilot@1.0.12",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:sanchuan.minimax-copilot@1.0.12",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:sanchuan.minimax-copilot@1.0.4",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:sanchuan.minimax-copilot@1.0.4",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:sanchuan.minimax-copilot@1.0.7",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:sanchuan.minimax-copilot@1.0.7",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:sanchuan.minimax-copilot@1.1.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:sanchuan.minimax-copilot@1.1.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:seHunt-20241016.seHunt-20241016@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:seHunt-20241016.seHunt-20241016@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:serialt.sugar-proto@0.5.7",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:serialt.sugar-proto@0.5.7",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:siffat-ahmed.ai-autocomplete-siffat-ahmed@0.1.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:siffat-ahmed.ai-autocomplete-siffat-ahmed@0.1.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:wlnxingdev.free-senltig@17.6.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:wlnxingdev.free-senltig@17.6.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "vscode:zhukunpeng.chat-moss@8.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "openvsx:zhukunpeng.chat-moss@8.0.0",
       "severity": "critical",
       "confidence": 0.9,
       "source": "datadog-malicious-packages",

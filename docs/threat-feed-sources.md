@@ -213,9 +213,21 @@ provenances kept.
   the first import for a name without a sample; the release cutoff then moves
   it to the catalog. `--check` judges these entries by the date their manifest
   last changed, so an undated entry cannot look new forever.
-- **Not mapped yet:** the dataset's IDE extensions (the manifest does not say
-  whether an id belongs to the VS Code Marketplace or Open VSX, where the same
-  `publisher.name` can be different people) and its AI skills.
+- **IDE extensions** (`samples/ide_extensions/<category>/<publisher.name>/<version>.vsix`):
+  only sampled versions, never a whole-extension block. The manifest does not
+  say which marketplace a sample came from, and the same `publisher.name` can
+  be different people on the VS Code Marketplace and Open VSX, so each sampled
+  version is looked up in both: the Marketplace's version history and Open
+  VSX's per-version endpoint. A version that exists on exactly one is pinned
+  there only; one on both, or on neither (a malicious release is usually
+  removed after the incident, `amazon-q-vscode` 1.84.0 among them), is pinned
+  on both, which cannot match an installed extension where it never existed.
+  Any marketplace error other than "not found" rejects the run.
+- **AI skills are not imported.** The dataset names them by composite
+  identifiers that no registry or installed skill carries, many are explicit
+  proof-of-concept fixtures from a security-test repository, and the only
+  reliable identity would be file hashes taken from the encrypted malware
+  samples. Matching on the names would mostly flag researchers' test corpora.
 - On by default in the CLI, `--no-datadog` turns it off. The programmatic API
   leaves it off unless `useDatadog: true` is passed.
 

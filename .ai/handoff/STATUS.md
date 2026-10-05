@@ -1,3 +1,32 @@
+## DataDog IDE extensions, decisions on the remaining items (2026-10-05) (claude-opus-5-5)
+
+The owner asked for every remaining item to be fixed or implemented.
+
+Implemented:
+- DataDog IDE extensions (103 ids, 0 previously covered, among them the
+  Amazon Q Developer extension 1.84.0). Each sampled version is looked up on
+  the VS Code Marketplace (version history) and Open VSX (per-version
+  endpoint). Pinned only when NO marketplace publishes it any more (removal
+  corroborates the dataset), then under both prefixes: 116 versions, 232
+  entries. The first rule also pinned versions still published on one
+  marketplace; review found `garytyler.darcula-pycharm` 1.0.0 among them,
+  that theme's current release since 2019 with 367,801 installs, so a
+  still-published version is now reported for review instead (6 on this run).
+  Amazon Q carries a campaign so it stays in the offline bundle; tests scan an
+  installed copy, a clean release and the Darcula theme (cut: red).
+
+Decided by the owner, documented instead of changed:
+- Scorecard Branch-Protection and Code-Review stay below maximum (single
+  maintainer, a required approval would block every merge). Now in SECURITY.md.
+- Dependabot alerts in the publish toolchain stay open until npm ships fixed
+  bundled dependencies (third confirmation). Now in SECURITY.md; the 4 audit
+  exceptions are exactly the 4 high-severity alerts.
+- The 21 acknowledged dependency-confusion gaps stay acknowledged (a
+  "public registry only" indicator type was offered and declined: packages
+  uninstallable since 2022).
+- DataDog AI skills are not imported (no matchable identity, many PoC
+  fixtures; hashes would require downloading the malware samples).
+
 ## Review of the reconcile work (2026-10-05) (claude-opus-5-5)
 
 Second pass over PRs 381 to 387 at the owner's request, every claim measured
