@@ -92900,3 +92900,12 @@
 {"type":"package","value":"guci-wxrout","severity":"critical","confidence":0.9,"source":"GHSA-wm72-hv9c-mxxr, MAL-2026-15886 (ghsa-malware)","firstSeen":"2026-09-03"}
 {"type":"package","value":"guci-main","severity":"critical","confidence":0.9,"source":"GHSA-xv44-v947-3jrh, MAL-2026-15885 (ghsa-malware)","firstSeen":"2026-09-03"}
 {"type":"package","value":"guci-date","severity":"critical","confidence":0.9,"source":"GHSA-pg5x-8f3x-f3x5, MAL-2026-15884 (ghsa-malware)","firstSeen":"2026-09-03"}
+{"type":"package","value":"ph-common@77.7.7","severity":"critical","confidence":1,"source":"MAL-2026-1809 (amazon-inspector+reversing-labs)","firstSeen":"2026-03-18"}
+{"type":"package","value":"ph-common@1.1.0","severity":"critical","confidence":1,"source":"MAL-2026-1809 (amazon-inspector+reversing-labs)","firstSeen":"2026-03-18"}
+{"type":"package","value":"ph-common@0.1.0","severity":"critical","confidence":1,"source":"MAL-2026-1809 (amazon-inspector+reversing-labs)","firstSeen":"2026-03-18"}
+{"type":"package","value":"ph-common@1.0.0","severity":"critical","confidence":1,"source":"MAL-2026-1809 (amazon-inspector+reversing-labs)","firstSeen":"2026-03-18"}
+{"type":"package","value":"ph-common@99.0.1","severity":"critical","confidence":1,"source":"MAL-2026-1809 (amazon-inspector+reversing-labs)","firstSeen":"2026-03-18"}
+{"type":"package","value":"ph-common@2.0.1","severity":"critical","confidence":1,"source":"MAL-2026-1809 (amazon-inspector+reversing-labs)","firstSeen":"2026-03-18"}
+{"type":"package","value":"ph-common@1.0.1","severity":"critical","confidence":1,"source":"MAL-2026-1809 (amazon-inspector+reversing-labs)","firstSeen":"2026-03-18"}
+{"type":"package","value":"ph-common@3.0.0","severity":"critical","confidence":1,"source":"MAL-2026-1809 (amazon-inspector+reversing-labs)","firstSeen":"2026-03-18"}
+{"type":"package","value":"ph-common@2.0.0","severity":"critical","confidence":1,"source":"MAL-2026-1809 (amazon-inspector+reversing-labs)","firstSeen":"2026-03-18"}

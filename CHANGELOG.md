@@ -7,6 +7,21 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat intel (2026-10-05): 127 package IOCs from the GitHub Advisory
+  Database and OpenSSF, 118 in the offline bundle and 9 in the catalog. Every
+  entry is pinned to the reported versions. The bundle part is mostly first
+  seen 2026-10-04 and 2026-10-05: a wave of single-version `css-*-polyfill`
+  and accessibility-helper names, typosquats of the Angular and Babel scopes
+  (`@angularr/*`, `@angulra/*`, `@nagular/*`, `@anguar/core`, `@babell/core`
+  and similar), `hardhat-*` plugin look-alikes, `@inpeek/odata` and
+  `@inpeek/odata-angular` (4 versions each), `@kibt/www-nuxt-i18n`
+  (8 versions) and the PyPI package `anthropic-sdk` 0.1.0, plus eight
+  versions of seven `express` look-alike names first seen 2026-09-29 and `hardhat-devkit` from
+  2026-09-21. The 9 catalog entries are versions of `ph-common` from a March
+  2026 record, routed by date.
+
 ## [6.4.3] - 2026-10-04
 
 ### Added
