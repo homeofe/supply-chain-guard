@@ -3,17 +3,17 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1791202006",
-    "timestamp": "2026-10-05T12:06:46Z",
-    "commit": "361f11e",
+    "session_id": "cli-1791202460",
+    "timestamp": "2026-10-05T12:14:20Z",
+    "commit": "20a542f",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:0b85dd1639abe0f2371be649d37391c0ad4912efab8ab7b6323d1b512d730ad5",
-      "updated": "2026-10-05T12:06:36Z",
-      "lines": 13615,
+      "checksum": "sha256:624d789774620fa86f3b0db3fd38c3fa44d2cdecd61f5bd447ff05f118b8bdd6",
+      "updated": "2026-10-05T12:14:05Z",
+      "lines": 13621,
       "summary": "Follow-up to the full reconcile (PR 382): the 1,077 OpenSSF records the importer skipped as unmappable are now mapped, except 21 recorded gaps."
     },
     "NEXT_ACTIONS.md": {
@@ -80,7 +80,7 @@
   "quick_context": "Follow-up to the full reconcile (PR 382): the 1,077 OpenSSF records the importer skipped as unmappable are now mapped, except 21 recorded gaps. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
     "manifest_only": 930,
-    "manifest_plus_core": 202917,
-    "full_read": 216631
+    "manifest_plus_core": 203002,
+    "full_read": 216716
   }
 }

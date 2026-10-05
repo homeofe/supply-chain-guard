@@ -30,6 +30,12 @@ The code-scanning alert on PR 382 (`INTERNAL_HOSTNAME` on a comment in
 package name in prose; the comment no longer spells it out (control scan: 1
 finding before, 0 after).
 
+CodeQL on this PR (`js/incomplete-sanitization`): the registry URL was built
+with `name.replace("/", "%2f")`, which encodes only the first slash. Every
+character is now percent-encoded (`@scope%2Fname` for scoped names, checked
+live against the registry), and a test asserts `a/b/c` cannot add a path
+segment (red with the old replace).
+
 Worth knowing for support: `fsevents` 1.0.0 to 1.2.10 is now pinned
 (MAL-2023-462, the hijacked binary bucket, CVE-2023-45311). Correct, and
 OSV-Scanner reports it too, but projects with very old lockfiles will see it.

@@ -124,7 +124,17 @@ describe("resolveBoundedNpmRanges", () => {
     expect(result.entries.map((e: { value: string }) => e.value)).toEqual(["@scg/hijacked@2.0.1", "@scg/hijacked@2.0.2"]);
     expect(result.entries.every((e: { value: string }) => e.value.includes("@2.0."))).toBe(true);
     expect(result.unresolved).toEqual([]);
-    expect(calls[0]).toMatch(/@scg%2fhijacked$/);
+    expect(calls[0]).toMatch(/\/@scg%2Fhijacked$/);
+  });
+
+  // A name can never add a path segment to the registry request.
+  it("percent-encodes every slash in the name", async () => {
+    const { resolveBoundedNpmRanges } = await load();
+    const calls: string[] = [];
+    await resolveBoundedNpmRanges([pending("a/b/c", [{ introduced: "0" }, { fixed: "1.0.0" }])], {
+      fetchImpl: registry({}, calls),
+    });
+    expect(calls[0]).toBe("https://registry.npmjs.org/a%2Fb%2Fc");
   });
 
   it("pins only the explicit versions of a package the registry deleted", async () => {

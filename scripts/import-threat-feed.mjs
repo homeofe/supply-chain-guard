@@ -762,7 +762,10 @@ export async function resolveBoundedNpmRanges(
   const documents = new Map();
   const names = [...new Set(pending.map((p) => p.name))];
   await mapConcurrent(names, concurrency, async (name) => {
-    const url = `${registryUrl}/${name.replace("/", "%2f")}`;
+    // Every character percent-encoded, every slash included: the registry
+    // takes a scoped name as `@scope%2Fname`, and a name may never add a
+    // path segment to the request.
+    const url = `${registryUrl}/${name.startsWith("@") ? `@${encodeURIComponent(name.slice(1))}` : encodeURIComponent(name)}`;
     let response;
     try {
       response = await fetchImpl(url, {
