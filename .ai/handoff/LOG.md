@@ -11,6 +11,14 @@
 
 ---
 
+## [2026-10-06] v6.5.1
+
+Threat intel for 2026-10-06: 113 package entries from the GitHub Advisory Database and OpenSSF (111 to the bundle, 2 to the catalog). Among them a RubyGems crypto-wallet typosquat wave (80...
+
+Full notes: CHANGELOG.md, section [6.5.1].
+
+---
+
 ## [2026-10-05] v6.5.0
 
 IDE extensions from the DataDog dataset: 116 extension versions that both the VS Code Marketplace and Open VSX have since removed, pinned under both prefixes (232 entries), among them the Amazon Q...
@@ -80,11 +88,3 @@ Full notes: CHANGELOG.md, section [6.3.1].
 Terraform / OpenTofu provider matching (src/terraform-scanner.ts, rule TERRAFORM_MALICIOUS_PROVIDER). A directory scan now resolves the providers a configuration pulls in, from required_providers...
 
 Full notes: CHANGELOG.md, section [6.3.0].
-
----
-
-## [2026-09-23] v6.2.5
-
-281 package indicators from the GitHub Advisory Database malware feed and the OpenSSF malicious-packages index: 117 in the bundle and 164 in the catalog. The catalog-bound entries all carry a...
-
-Full notes: CHANGELOG.md, section [6.2.5].

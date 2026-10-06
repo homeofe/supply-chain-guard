@@ -1,3 +1,29 @@
+## Release v6.5.1 (2026-10-06) (claude-opus-5-5)
+
+Patch release: the 2026-10-06 threat intel (PR 393) and the Dependabot
+merges of the same day (PR 391 dev-dependency patch bumps, PR 392
+`source-map-js` 1.2.2 for GHSA-68fv-2mgg-jv7q). Before the release, the full
+GitHub malware history was reconciled from 2017-01-01 against the PR 393
+tree: 124,320 advisories over 1,244 pages, not truncated, 0 added, 0
+unmapped, 142,429 duplicates as the control.
+
+Version bumped from 6.5.0 at all 17 configured version sites plus
+`package.json` (37 replacements); the lockfile's two version fields came
+from `npm install --package-lock-only`, and the unrelated `fdir` 6.5.0 entry
+stays. `bundledVersion` in `src/threat-intel.ts` is a version site and moved.
+
+`npm run release:prepare` advanced `bundleCutoffDate` from 2026-09-05 to
+2026-09-06. The migration moved 49 plain package entries dated 2026-09-05
+(no campaign, no family, none referenced by any test file) into the catalog:
+bundle 6,784, catalog 263,732.
+
+Active LTS review, due at 6.5.1: `schedule.json` in `nodejs/Release` re-read
+on 2026-10-06, unchanged. Node 24 is Active LTS until 2026-10-20, Node 26
+enters Active LTS on 2026-10-28. `activeLtsMajor` stays 24,
+`activeLtsReviewedIn` moves to 6.5.2. The first release cut after 2026-10-28
+moves `activeLtsMajor` to 26 and adds a Node 26 compat leg. SECURITY.md is
+unchanged (patch release).
+
 ## Daily threat intel (2026-10-06) (claude-opus-5-5)
 
 Scheduled run. Windowed import (GitHub Advisory Database, OpenSSF, DataDog):
