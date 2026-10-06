@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [6.5.1] - 2026-10-06
+
 ### Added
 
 - Threat intel for 2026-10-06: 113 package entries from the GitHub Advisory
@@ -19,6 +21,18 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 - The exfil host of the May 2026 npm dependency-confusion stealer
   (`oob[.]moika[.]tech`), as a known C2 domain and a curated bundle entry
   (single-source, confidence 0.85).
+
+### Changed
+
+- The bundle cutoff advanced from 2026-09-05 to 2026-09-06, moving 49
+  package indicators dated 2026-09-05 from the bundle into the catalog (the
+  bundle now holds 6,784 entries, the catalog 263,732). None of them is
+  asserted by a test, and none carries a campaign or family. They stay
+  enforced after `feed refresh`.
+- Development dependencies: `@types/node` 26.6.3, `vitest` and
+  `@vitest/coverage-v8` 5.0.2, and `source-map-js` 1.2.2, which fixes
+  GHSA-68fv-2mgg-jv7q in the test toolchain. None of these ships in the
+  published package.
 
 ## [6.5.0] - 2026-10-05
 
@@ -7159,7 +7173,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.5.0...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.5.1...HEAD
+[6.5.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.1
 [6.5.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.0
 [6.4.3]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.4.3
 [6.4.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.4.2
