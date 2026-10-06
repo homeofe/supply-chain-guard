@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1791215348",
-    "timestamp": "2026-10-05T15:49:08Z",
-    "commit": "96d15d5",
+    "session_id": "cli-1791264977",
+    "timestamp": "2026-10-06T05:36:17Z",
+    "commit": "cc258d6",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:1035d2ef645a81c55ee77b47327f0ab43e35c2d91260bcd7fa96fdca2c0a8bf2",
-      "updated": "2026-10-05T15:48:56Z",
-      "lines": 13802,
-      "summary": "Minor release: the full reconcile of all three sources (PRs 381 to 389)."
+      "checksum": "sha256:c30016516ba3af082dfd225e3ed17b3338cb67f252cb427dd131cce2bd3d773b",
+      "updated": "2026-10-06T05:35:52Z",
+      "lines": 13833,
+      "summary": "Scheduled run. Windowed import (GitHub Advisory Database, OpenSSF, DataDog): 113 new package entries, 111 to the bundle and 2 to the catalog (both..."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:f27868897c5e9bc22e60d6747ee5d4deac7d90f86f523838f42e72039d20e081",
@@ -41,8 +41,8 @@
       "summary": "LOG archive index: 5 entries."
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:d3892290000096516a8265b40c1b4d4612b97e27ecb1a6ad453556ef6319ed0c",
-      "updated": "2026-10-05T15:49:01Z",
+      "checksum": "sha256:2099a32e8476da201230628afca4d00008f402ad25fbcedab1e641c0e66e3c83",
+      "updated": "2026-10-06T05:36:11Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "Minor release: the full reconcile of all three sources (PRs 381 to 389). Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Scheduled run. Windowed import (GitHub Advisory Database, OpenSSF, DataDog): 113 new package entries, 111 to the bundle and 2 to the catalog (both... Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 895,
-    "manifest_plus_core": 205651,
-    "full_read": 219366
+    "manifest_only": 933,
+    "manifest_plus_core": 206150,
+    "full_read": 219865
   }
 }

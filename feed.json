@@ -2,8 +2,8 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "6.5.0",
-  "entryCount": 6721,
-  "generatedAt": "2026-10-05T00:00:00.000Z",
+  "entryCount": 6833,
+  "generatedAt": "2026-10-06T00:00:00.000Z",
   "entries": [
     {
       "type": "domain",
@@ -56385,6 +56385,903 @@
       "confidence": 0.9,
       "source": "datadog-malicious-packages",
       "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "pypi:zencleaner@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4493-p4qp-qw6p, MAL-2026-17629",
+      "firstSeen": "2026-10-03"
+    },
+    {
+      "type": "package",
+      "value": "pypi:zencleaner@1.0.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4493-p4qp-qw6p, MAL-2026-17629",
+      "firstSeen": "2026-10-03"
+    },
+    {
+      "type": "package",
+      "value": "pypi:zencleaner@1.0.3.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4493-p4qp-qw6p, MAL-2026-17629",
+      "firstSeen": "2026-10-03"
+    },
+    {
+      "type": "package",
+      "value": "virgil-cli@0.1.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6j8f-g5mj-4wcj, MAL-2026-17630",
+      "firstSeen": "2026-10-03"
+    },
+    {
+      "type": "package",
+      "value": "dotenv-async",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gp83-4g76-4qg5, MAL-2026-17504 (amazon-inspector+ghsa-malware)",
+      "firstSeen": "2026-10-04"
+    },
+    {
+      "type": "package",
+      "value": "pypi:erc7730-hackathon@99.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-vcg2-mffq-hjmg, MAL-2026-17628 (kam193)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:web3-eth-utils@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-847r-2824-c2jx, MAL-2026-17616",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:web3-sign-helper@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5878-j847-4p4p, MAL-2026-17617",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:tx-broadcast-utils@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-m56c-f68h-prj5, MAL-2026-17612",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:lightning-invoice-utils@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-q96g-6p3p-r5cx, MAL-2026-17608",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:wallet-crypto-utils@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rj9g-9jcf-cfww, MAL-2026-17615",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:utxo-set-utils@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6gvx-6r6p-9rgm, MAL-2026-17613",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:ethereum-tx-helper@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gm98-33j2-hm68, MAL-2026-17601",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:wallet-backup-tool@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fw9f-g4v7-9xpf, MAL-2026-17614",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:ligbtning-invoice@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-vv4j-hg36-54f8, MAL-2026-17605",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:etherdum.rb@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-f6c2-r38w-6v9x, MAL-2026-17599",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:hdkey-derive-helper@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-q82p-2pwq-fvp4, MAL-2026-17602",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:tron-rb@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-pfxv-45h9-p87w, MAL-2026-17611",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:bitcoin-rpc-lite@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xw7g-6j29-52jp, MAL-2026-17587",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:eth-address-utils@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cg29-22qj-86m4, MAL-2026-17597",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:keccka@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9c95-4459-6pcw, MAL-2026-17604",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:etheremu.rb@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-r55r-pjq3-j9f4, MAL-2026-17600",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:crypto-mnemonic-tools@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-q7p5-w99x-qqcw, MAL-2026-17595",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:btc-wallet-tools@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-65q2-732f-r3gg, MAL-2026-17589",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:cryoto-toolbox@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-f8ww-m74w-j9mq, MAL-2026-17592",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:solaan-ruby@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-vwg4-2hf7-g55g, MAL-2026-17610",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:merkle-proof-lite@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-f56x-cg82-pmmp, MAL-2026-17609",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:crylto-toolbox@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gxwc-r8hg-vg7r, MAL-2026-17591",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:lightinng-invoice@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-w83g-v5ww-697g, MAL-2026-17607",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:coinmarket-utils@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-f63h-97qr-7h9q, MAL-2026-17590",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:kecack@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fj4h-hgwh-qmc6, MAL-2026-17603",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:eth-keystore-utils@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3chv-pqgw-55f8, MAL-2026-17598",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:lighthing-invoice@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-j2pr-fmc4-v7mw, MAL-2026-17606",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:crypti-toolbox@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-pv2w-f5fh-p8xw, MAL-2026-17593",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:electrum-protocol-lite@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8cm7-334g-4377, MAL-2026-17596",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:crypto-key-utils@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9vq6-8jf2-mh9q, MAL-2026-17594",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:blockchain-sync-utils@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fp5m-6565-9wg5, MAL-2026-17588",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:bitcoin-address-utils@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-pmhw-48q6-rhv3, MAL-2026-17586",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:bitcion-ruby@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-f4x2-825c-fcpf, MAL-2026-17584",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:bitcoij-ruby@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-pcwg-prxf-h78h, MAL-2026-17585",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:base58-check-helper@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x2ww-x56w-2rx4, MAL-2026-17580",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "css-vvgsze-polyfill@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hcp6-vwm8-q8x9, MAL-2026-17577 (amazon-inspector)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "css-yhpodl-polyfill@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2jxx-gxxm-qqfv, MAL-2026-17578 (amazon-inspector)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:bitciin@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3vmj-h443-7xj5, MAL-2026-17582",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:bip39-wordlist-utils@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-q6hm-54j8-82qc, MAL-2026-17581",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "css-gwqyid-polyfill@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x6w7-8rr6-f834, MAL-2026-17574 (amazon-inspector)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "css-nrmgzn-polyfill@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6qc5-m3jm-2rg5, MAL-2026-17576 (amazon-inspector)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "css-eqxcdx-polyfill@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4q3v-p549-vp7m, MAL-2026-17573 (amazon-inspector)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "with-cte@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3gw4-w474-rj2f, MAL-2026-17579 (amazon-inspector)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "css-kfvwax-polyfill@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-c9cg-4hcw-x27p, MAL-2026-17575 (amazon-inspector)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "checkmate-remediation-assistant@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x239-w7m5-vrjh, MAL-2026-17572 (amazon-inspector)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:bitcion@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7w6w-pjr6-527m, MAL-2026-17583",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "documenclient",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-648r-w4vm-vvvp, MAL-2026-17624 (ghsa-malware)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "serpacksven",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-297h-8m5x-925p, MAL-2026-17625 (amazon-inspector+ghsa-malware)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "serpacksven2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4pg5-wvv5-w7fg, MAL-2026-17627 (amazon-inspector+ghsa-malware)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "serpacksven1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-696v-rr55-26pc, MAL-2026-17626 (amazon-inspector+ghsa-malware)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "internallib_v275",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-f6rc-jhj3-4p2w, MAL-2026-17510 (amazon-inspector+ghsa-malware)",
+      "firstSeen": "2026-10-04"
+    },
+    {
+      "type": "package",
+      "value": "dzyclutch",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-36rj-4crv-cmgm, MAL-2026-17619 (ghsa-malware)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "dzyclutch-baileys",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-c936-2h58-8v2f, MAL-2026-17620 (ghsa-malware)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "dzyhaxz-libsignal",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-jjrx-mg27-p6ww, MAL-2026-17623 (ghsa-malware)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "dzyhaxz-baileys",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-xwv2-25hq-j64g, MAL-2026-17622 (ghsa-malware)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "dzyclutch-libsignal-node",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-f74h-98gv-73jv, MAL-2026-17621 (ghsa-malware)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "@diezyclutch/baileys",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-5f29-482c-j4rr, MAL-2026-17618 (ghsa-malware)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:throttle-requests",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-w9p5-4fpg-4c6w, MAL-2026-17570 (amazon-inspector)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:request-guard",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-f88f-66w3-r384, MAL-2026-17569 (amazon-inspector)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:rate-limit-mini",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9g4m-4wcw-xqhw, MAL-2026-17567 (amazon-inspector)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:req-throttle-mini",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mvgr-wfjm-xr5v, MAL-2026-17568 (amazon-inspector)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "hardhat-init@2.21.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "MAL-2026-17636 (amazon-inspector)",
+      "firstSeen": "2026-10-06"
+    },
+    {
+      "type": "package",
+      "value": "internallib_v30@1.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "MAL-2026-17633 (amazon-inspector)",
+      "firstSeen": "2026-10-06"
+    },
+    {
+      "type": "package",
+      "value": "internallib_v86@1.0.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "MAL-2026-17634 (amazon-inspector)",
+      "firstSeen": "2026-10-06"
+    },
+    {
+      "type": "package",
+      "value": "internallib_v23@1.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "MAL-2026-17632 (amazon-inspector)",
+      "firstSeen": "2026-10-06"
+    },
+    {
+      "type": "package",
+      "value": "internallib_v875@1.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "MAL-2026-17635 (amazon-inspector)",
+      "firstSeen": "2026-10-06"
+    },
+    {
+      "type": "package",
+      "value": "@pinecone-experience/messages@99.9.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "MAL-2026-17631 (amazon-inspector)",
+      "firstSeen": "2026-10-06"
+    },
+    {
+      "type": "package",
+      "value": "ruby:cryoto-toolbox",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17592 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:solaan-ruby",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17610 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:crypto-mnemonic-tools",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17595 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:crypto-key-utils",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17594 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:ethereum-tx-helper",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17601 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:kecack",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17603 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:utxo-set-utils",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17613 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:lighthing-invoice",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17606 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:bitcoin-address-utils",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17586 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:ligbtning-invoice",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17605 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:coinmarket-utils",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17590 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:web3-sign-helper",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17617 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:etherdum.rb",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17599 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:btc-wallet-tools",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17589 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:lightning-invoice-utils",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17608 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:wallet-backup-tool",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17614 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:bitcion-ruby",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17584 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:bitcoin-rpc-lite",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17587 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:merkle-proof-lite",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17609 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:wallet-crypto-utils",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17615 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:blockchain-sync-utils",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17588 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:lightinng-invoice",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17607 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:web3-eth-utils",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17616 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:bitciin",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17582 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:eth-address-utils",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17597 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:crylto-toolbox",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17591 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:electrum-protocol-lite",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17596 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:keccka",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17604 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:base58-check-helper",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17580 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:eth-keystore-utils",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17598 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:etheremu.rb",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17600 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:hdkey-derive-helper",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17602 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:bitcion",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17583 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:crypti-toolbox",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17593 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:tron-rb",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "MAL-2026-17611 (amazon-inspector)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:tx-broadcast-utils",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "MAL-2026-17612 (amazon-inspector)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:bip39-wordlist-utils",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "MAL-2026-17581 (amazon-inspector)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:bitcoij-ruby",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "MAL-2026-17585 (amazon-inspector)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "domain",
+      "value": "oob.moika.tech",
+      "severity": "critical",
+      "confidence": 0.85,
+      "campaign": "Moika OOB npm dependency-confusion stealer",
+      "source": "safedep oob-moika-tech campaign analysis (single-source)",
+      "firstSeen": "2026-05-27"
     }
   ]
 }
