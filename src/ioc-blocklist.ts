@@ -539,6 +539,12 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // server. Koi Security research, quoted by the Phoenix Security MPI corpus;
   // both trace to one original analysis, so the feed confidence is 0.85.
   "aihao123.cn",
+  // oob[.]moika[.]tech dependency-confusion stealer (May 2026): 183 npm
+  // packages across @cloudplatform-single-spa, @mlspace, @car-loans,
+  // @fb-deposit, @debit-ib and later scopes POSTed environment variables to
+  // /report and pulled per-OS stage-two payloads from /payload/. safedep
+  // analysis only, so the feed confidence is 0.85.
+  "oob.moika.tech",
 ];
 
 // ---------------------------------------------------------------------------

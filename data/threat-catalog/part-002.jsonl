@@ -63679,3 +63679,5 @@
 {"type":"package","value":"pypi:xxxxssss","severity":"critical","confidence":0.9,"source":"datadog-malicious-packages","firstSeen":"2023-05-15"}
 {"type":"package","value":"pypi:youhans","severity":"critical","confidence":0.9,"source":"datadog-malicious-packages","firstSeen":"2023-04-13"}
 {"type":"package","value":"pypi:zwhrce","severity":"critical","confidence":0.9,"source":"datadog-malicious-packages","firstSeen":"2023-05-16"}
+{"type":"package","value":"diezyclutch-baileys","severity":"critical","confidence":1,"source":"GHSA-89rf-mgch-fg9m, MAL-2026-13482 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-06"}
+{"type":"package","value":"tailwind-contact-forms@0.5.9","severity":"critical","confidence":0.9,"source":"MAL-2026-15925 (amazon-inspector)","firstSeen":"2026-09-04"}

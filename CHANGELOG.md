@@ -7,6 +7,19 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat intel for 2026-10-06: 113 package entries from the GitHub Advisory
+  Database and OpenSSF (111 to the bundle, 2 to the catalog). Among them a
+  RubyGems crypto-wallet typosquat wave (80 entries, e.g. `bitcion`,
+  `etherdum.rb`, `lightinng-invoice`), npm WhatsApp library lookalikes
+  (`dzyclutch-baileys`, `dzyhaxz-libsignal`), `dotenv-async`, `hardhat-init`
+  2.21.0 and PyPI `zencleaner`. Every npm name block is a registry security
+  holding package, and every RubyGems name block is removed from rubygems.org.
+- The exfil host of the May 2026 npm dependency-confusion stealer
+  (`oob[.]moika[.]tech`), as a known C2 domain and a curated bundle entry
+  (single-source, confidence 0.85).
+
 ## [6.5.0] - 2026-10-05
 
 ### Added

