@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1791270219",
-    "timestamp": "2026-10-06T07:03:39Z",
-    "commit": "44ee677",
+    "session_id": "cli-1791351007",
+    "timestamp": "2026-10-07T05:30:07Z",
+    "commit": "49e0034",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:36d25b182407d5acea10cbc8885b3b30ccfce01b0e11ec4249ba791bf081440f",
-      "updated": "2026-10-06T07:00:14Z",
-      "lines": 13859,
-      "summary": "Patch release: the 2026-10-06 threat intel (PR 393) and the Dependabot merges of the same day (PR 391 dev-dependency patch bumps, PR 392..."
+      "checksum": "sha256:ca0fc7eb0bb44343e0957d2699948b8d2be266b717860754f74aa613e5d1d5a7",
+      "updated": "2026-10-07T05:29:52Z",
+      "lines": 13890,
+      "summary": "Scheduled run. Windowed import (GitHub Advisory Database, OpenSSF, DataDog): 6 new package entries, all 6 to the bundle and 0 to the catalog."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:9292eff33390cc3fa6d1e6caee49bc65663582563f23cf8f7140d146dfe7cfb6",
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "Patch release: the 2026-10-06 threat intel (PR 393) and the Dependabot merges of the same day (PR 391 dev-dependency patch bumps, PR 392... Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Scheduled run. Windowed import (GitHub Advisory Database, OpenSSF, DataDog): 6 new package entries, all 6 to the bundle and 0 to the catalog. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 928,
-    "manifest_plus_core": 206494,
-    "full_read": 220208
+    "manifest_only": 929,
+    "manifest_plus_core": 206968,
+    "full_read": 220682
   }
 }

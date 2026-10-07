@@ -38,7 +38,7 @@ export type FeedIOCInput = Omit<FeedIOC, "confidence"> & {
  * Generation timestamp for the bundled IOC feed (v5.29, issue #208).
  * Pure function of feed updates; preserved across builds.
  */
-export const FEED_GENERATED_AT = "2026-10-06T00:00:00.000Z";
+export const FEED_GENERATED_AT = "2026-10-07T00:00:00.000Z";
 
 // ---------------------------------------------------------------------------
 // Default bundled feed (curated by supply-chain-guard)
@@ -8113,6 +8113,25 @@ const FEED_CHUNK_25: FeedIOC[] = [
   // Hand-added enrichment (2026-10-06): exfil host of the May 2026 npm
   // dependency-confusion stealer, single-source (safedep), so confidence 0.85.
   { type: "domain", value: "oob.moika.tech", severity: "critical", confidence: 0.85, campaign: "Moika OOB npm dependency-confusion stealer", source: "safedep oob-moika-tech campaign analysis (single-source)", firstSeen: "2026-05-27" },
+
+  // Imported from GitHub Advisory Database (2026-09-23) - see docs/threat-feed-sources.md
+  { type: "package", value: "pypi:lore-cs@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-r95v-h8pf-wxhj, MAL-2026-17639 (kam193)", firstSeen: "2026-10-06" },
+  { type: "package", value: "css-jptvix-polyfill@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-m6m7-6f4x-c5v3, MAL-2026-17638 (amazon-inspector)", firstSeen: "2026-10-06" },
+  { type: "package", value: "captchetat-angularv8", severity: "critical", confidence: 0.9, source: "GHSA-7crr-x792-cp3w, MAL-2026-17637 (ghsa-malware)", firstSeen: "2026-10-06" },
+  { type: "package", value: "tailwind-forms-kit@0.5.3", severity: "critical", confidence: 1.0, source: "GHSA-w873-w35f-2523, MAL-2026-17310 (amazon-inspector)", firstSeen: "2026-09-30" },
+  { type: "package", value: "cleandisk-linux-arm64", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-07" },
+  { type: "package", value: "sushiro-cli-win32-x64", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-07" },
+
+  // Hand-added enrichment (2026-10-07): SubQuery @subql/common 5.8.3
+  // compromise. The package pin came from the importer (GHSA-9333-3c4x-x3h5);
+  // these are the C2 host, its IP and the published hashes. Domain, IP and
+  // tarball hash appear in two independent write-ups (StepSecurity, Flatt
+  // Security); the loader and decoded-payload hashes are StepSecurity only.
+  { type: "domain", value: "ci-artifacts.dev", severity: "critical", confidence: 0.95, campaign: "SubQuery @subql/common compromise", source: "StepSecurity + Flatt Security SubQuery write-ups", firstSeen: "2026-10-05" },
+  { type: "ip", value: "185.146.234.137", severity: "critical", confidence: 0.9, campaign: "SubQuery @subql/common compromise", source: "Flatt Security SubQuery write-up", firstSeen: "2026-10-05" },
+  { type: "hash", value: "031267ee37c5a84c25cb0542cbfeb49f30d5604305b0bdccdeafbedcbbe6849b", severity: "critical", confidence: 0.95, campaign: "SubQuery @subql/common compromise", source: "StepSecurity + Flatt Security SubQuery write-ups", firstSeen: "2026-10-05" },
+  { type: "hash", value: "f0c8b0cde86b98a2869a22fd43ffcf61f1dcca252729e2be291e590e3dc5f49a", severity: "critical", confidence: 0.85, campaign: "SubQuery @subql/common compromise", source: "StepSecurity SubQuery write-up (single-source)", firstSeen: "2026-10-05" },
+  { type: "hash", value: "7b2807bfb5bfec2383b46ba8226f47edb330ae6b32178eab61e377f3c3486c47", severity: "critical", confidence: 0.85, campaign: "SubQuery @subql/common compromise", source: "StepSecurity SubQuery write-up (single-source)", firstSeen: "2026-10-05" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips

@@ -545,6 +545,10 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // /report and pulled per-OS stage-two payloads from /payload/. safedep
   // analysis only, so the feed confidence is 0.85.
   "oob.moika.tech",
+  // SubQuery @subql/common compromise (October 2026): the poisoned release
+  // workflow fetched the payload tarball from this host, which is also the
+  // exfiltration and reverse-shell C2 (StepSecurity + Flatt Security).
+  "ci-artifacts.dev",
 ];
 
 // ---------------------------------------------------------------------------
@@ -804,6 +808,9 @@ export const KNOWN_C2_IPS: string[] = [
   // second-stage executable on port 700 (kam193, MAL-2026-17191).
   // Single-source.
   "104.234.65.75",
+  // SubQuery @subql/common compromise (October 2026). Resolves the
+  // ci-artifacts[.]dev C2 (Flatt Security).
+  "185.146.234.137",
 ];
 
 // ---------------------------------------------------------------------------
@@ -1541,6 +1548,10 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   "f8ccdd1da7dff1aef16377a2842bc7acf7c516e32122dd6e42dc4a4e57653fce": "MemTensor sckit Go worm implant binary, darwin-arm64 (SHA256)",
   "56cd3416d2ec2aa7e7cec2a06010cf0b58eb09c0a5486809df52afeaca8f14be": "MemTensor sckit Go worm implant binary, windows-amd64 (SHA256)",
   "d6b3e77c36ee8017c9bf30d1da7218ec0ea843768d313eb8e35845c8a9b38a26": "MemTensor sckit Go worm implant binary, windows-arm64 (SHA256)",
+  // SubQuery @subql/common compromise (October 2026)
+  "031267ee37c5a84c25cb0542cbfeb49f30d5604305b0bdccdeafbedcbbe6849b": "SubQuery compromise: malicious @subql/common 5.8.3 tarball (SHA256)",
+  "f0c8b0cde86b98a2869a22fd43ffcf61f1dcca252729e2be291e590e3dc5f49a": "SubQuery compromise: manifest-cache.js loader in @subql/common 5.8.3 (SHA256)",
+  "7b2807bfb5bfec2383b46ba8226f47edb330ae6b32178eab61e377f3c3486c47": "SubQuery compromise: decoded credential-stealer and reverse-shell payload (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
@@ -2859,6 +2870,13 @@ export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; descri
   "@dforge-core/dforge-mcp": {
     versions: ["0.2.21"],
     description: "GHAPPIER loader: remote shell loader fired on MCP server start, published from a hijacked maintainer account via trusted publishing (CloudSEK, September 2026)",
+  },
+  // SubQuery @subql/common compromise (October 2026). Legitimate package
+  // published through its own trusted publisher from a poisoned release
+  // workflow; 5.8.2 is clean, so the name must never be blocked.
+  "@subql/common": {
+    versions: ["5.8.3"],
+    description: "SubQuery compromise: install-time and import-time credential stealer with reverse shell, published via a poisoned trusted-publishing workflow (StepSecurity + Flatt Security, October 2026)",
   },
 };
 
