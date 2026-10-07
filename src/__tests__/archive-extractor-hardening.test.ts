@@ -31,6 +31,7 @@ type ZipFixtureEntry = {
   declaredUncompressedSize?: number;
   compressionMethod?: 0 | 8;
   localOffsetOverride?: number;
+  crc32?: number;
 };
 
 type TarFixtureEntry = {
@@ -44,7 +45,19 @@ type TarFixtureEntry = {
   linkBytes?: Buffer;
   declaredSize?: number;
   omitPayload?: boolean;
+  prefix?: string;
+  versionBytes?: Buffer;
 };
+
+/** Independent CRC-32 oracle for the fixtures (not the implementation under test). */
+function fixtureCrc32(data: Buffer): number {
+  let crc = 0xffffffff;
+  for (const byte of data) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit++) crc = (crc & 1) !== 0 ? 0xedb88320 ^ (crc >>> 1) : crc >>> 1;
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
 
 function makeZip(entries: ZipFixtureEntry[]): Buffer {
   const localRecords: Buffer[] = [];
@@ -59,12 +72,13 @@ function makeZip(entries: ZipFixtureEntry[]): Buffer {
     const localExtra = fixture.localExtra ?? Buffer.alloc(0);
     const centralExtra = fixture.centralExtra ?? Buffer.alloc(0);
     const declared = fixture.declaredUncompressedSize ?? data.length;
+    const crc = fixture.crc32 ?? fixtureCrc32(data);
     const local = Buffer.alloc(30 + name.length + localExtra.length + compressed.length);
     local.writeUInt32LE(0x04034b50, 0);
     local.writeUInt16LE(20, 4);
     local.writeUInt16LE(flags, 6);
     local.writeUInt16LE(compressionMethod, 8);
-    local.writeUInt32LE(0, 14);
+    local.writeUInt32LE(crc, 14);
     local.writeUInt32LE(compressed.length, 18);
     local.writeUInt32LE(declared, 22);
     local.writeUInt16LE(name.length, 26);
@@ -80,7 +94,7 @@ function makeZip(entries: ZipFixtureEntry[]): Buffer {
     central.writeUInt16LE(20, 6);
     central.writeUInt16LE(flags, 8);
     central.writeUInt16LE(compressionMethod, 10);
-    central.writeUInt32LE(0, 16);
+    central.writeUInt32LE(crc, 16);
     central.writeUInt32LE(compressed.length, 20);
     central.writeUInt32LE(declared, 24);
     central.writeUInt16LE(name.length, 28);
@@ -128,7 +142,9 @@ function makeTarHeader(fixture: TarFixtureEntry): Buffer {
     writeOctal(header, 345, 12, fixture.gnuAtime ?? 0);
   } else if (fixture.format !== "v7") {
     header.write("ustar\0", 257, 6, "ascii");
-    header.write("00", 263, 2, "ascii");
+    if (fixture.versionBytes) fixture.versionBytes.copy(header, 263);
+    else header.write("00", 263, 2, "ascii");
+    if (fixture.prefix) header.write(fixture.prefix, 345, 155, "utf8");
   }
   let checksum = 0;
   for (const byte of header) checksum += byte;
@@ -236,61 +252,116 @@ describe("archive extraction preflight hardening", () => {
     ], true));
     const extractDir = path.join(root, "-extract;&");
 
-    extractZip(zipPath, extractDir, true);
-    extractTarGz(tarPath, extractDir);
+    const zipResult = extractZip(zipPath, extractDir, true);
+    const tarDir = path.join(root, "-extract-tar;&");
+    const result = extractTarGz(tarPath, tarDir);
 
-    const windowsTar = path.win32.join(
-      process.env.SystemRoot || "C:\\Windows",
-      "System32",
-      "tar.exe",
-    );
-    expect(childProcess.execFileSync).toHaveBeenNthCalledWith(
-      1,
-      process.platform === "win32" ? windowsTar : "unzip",
-      process.platform === "win32"
-        ? ["-x", "-f", zipPath, "-C", extractDir]
-        : ["-q", "-o", zipPath, "-d", extractDir],
-      { stdio: "pipe" },
-    );
-    expect(childProcess.execFileSync).toHaveBeenNthCalledWith(
-      2, "tar", ["xzf", tarPath, "-C", extractDir], { stdio: "pipe" },
-    );
+    // Neither archive is extracted by a spawned process: the members that were
+    // validated are the members written. Links resolving to a regular file in
+    // the archive are written as plain copies, never created as links.
+    expect(fs.readFileSync(path.join(extractDir, "payload.txt"), "utf8")).toBe("safe");
+    expect(zipResult.skippedLinks).toEqual([]);
+    expect(fs.readFileSync(path.join(extractDir, "safe", "link"), "utf8")).toBe("safe");
+    expect(fs.lstatSync(path.join(extractDir, "safe", "link")).isSymbolicLink()).toBe(false);
+    expect(result.skippedLinks).toEqual([]);
+    expect(fs.readFileSync(path.join(tarDir, "copy.txt"), "utf8")).toBe("safe");
+    expect(fs.lstatSync(path.join(tarDir, "copy.txt")).isSymbolicLink()).toBe(false);
+    expect(childProcess.execFileSync).not.toHaveBeenCalled();
+  });
+
+  it("extracts a normal ZIP byte-identically without spawning a process", () => {
+    const binary = Buffer.from([0, 1, 2, 255, 254, 0, 13, 10, 128]);
+    const zipPath = fixture("normal.zip", makeZip([
+      { name: "pkg/", mode: 0o040755 },
+      { name: "pkg/a.bin", data: binary },
+      { name: "pkg/deflated.txt", data: "hello ".repeat(500), compressionMethod: 8 },
+      { name: "empty.txt" },
+    ]));
+    const extractDir = path.join(root, "normal-out");
+    const result = extractZip(zipPath, extractDir);
+    expect(result.skippedLinks).toEqual([]);
+    expect(fs.readFileSync(path.join(extractDir, "pkg", "a.bin")).equals(binary)).toBe(true);
+    expect(fs.readFileSync(path.join(extractDir, "pkg", "deflated.txt"), "utf8")).toBe("hello ".repeat(500));
+    expect(fs.readFileSync(path.join(extractDir, "empty.txt"), "utf8")).toBe("");
+    expect(childProcess.execFileSync).not.toHaveBeenCalled();
   });
 
   it("keeps existing ZIP files unless overwrite is explicitly enabled", () => {
-    const zipPath = fixture("payload.zip", makeZip([{ name: "payload.txt", data: "safe" }]));
+    const zipPath = fixture("payload.zip", makeZip([
+      { name: "payload.txt", data: "fresh" },
+      { name: "new.txt", data: "added" },
+    ]));
     const extractDir = path.join(root, "keep-existing");
+    fs.mkdirSync(extractDir);
+    fs.writeFileSync(path.join(extractDir, "payload.txt"), "old");
 
     extractZip(zipPath, extractDir);
+    expect(fs.readFileSync(path.join(extractDir, "payload.txt"), "utf8")).toBe("old");
+    expect(fs.readFileSync(path.join(extractDir, "new.txt"), "utf8")).toBe("added");
 
-    if (process.platform === "win32") {
-      const windowsTar = path.win32.join(
-        process.env.SystemRoot || "C:\\Windows",
-        "System32",
-        "tar.exe",
-      );
-      expect(childProcess.execFileSync).toHaveBeenCalledWith(
-        windowsTar,
-        ["-x", "-k", "-f", zipPath, "-C", extractDir],
-        { stdio: "pipe" },
-      );
-    } else {
-      expect(childProcess.execFileSync).toHaveBeenCalledWith(
-        "unzip",
-        ["-q", zipPath, "-d", extractDir],
-        { stdio: "pipe" },
-      );
-    }
-    expect(fs.statSync(extractDir).isDirectory()).toBe(true);
+    extractZip(zipPath, extractDir, true);
+    expect(fs.readFileSync(path.join(extractDir, "payload.txt"), "utf8")).toBe("fresh");
+    expect(childProcess.execFileSync).not.toHaveBeenCalled();
   });
 
-  it("keeps generic tar autodetection on an argv array for PyPI sdists", () => {
+  it("never replaces a directory or a link with an overwriting ZIP extraction", () => {
+    const zipPath = fixture("clash.zip", makeZip([{ name: "target", data: "payload" }]));
+    const extractDir = path.join(root, "clash");
+    fs.mkdirSync(path.join(extractDir, "target"), { recursive: true });
+    expect(() => extractZip(zipPath, extractDir, true)).toThrow(ArchiveSecurityError);
+    expect(fs.statSync(path.join(extractDir, "target")).isDirectory()).toBe(true);
+
+    const outside = path.join(root, "outside.txt");
+    fs.writeFileSync(outside, "untouched");
+    const linkDir = path.join(root, "linkdir");
+    fs.mkdirSync(linkDir);
+    // A file symlink needs a privilege on Windows; a junction does not.
+    let linked = true;
+    try { fs.symlinkSync(outside, path.join(linkDir, "target")); }
+    catch {
+      try { fs.symlinkSync(root, path.join(linkDir, "target"), "junction"); } catch { linked = false; }
+    }
+    if (linked) {
+      expect(() => extractZip(zipPath, linkDir, true)).toThrow(ArchiveSecurityError);
+      expect(fs.readFileSync(outside, "utf8")).toBe("untouched");
+      expect(fs.lstatSync(path.join(linkDir, "target")).isSymbolicLink()).toBe(true);
+    }
+  });
+
+  it("writes a ZIP symlink to a file as a copy and reports a symlink to a directory", () => {
+    const zipPath = fixture("links.zip", makeZip([
+      { name: "real.txt", data: "content" },
+      { name: "dir/", mode: 0o040755 },
+      { name: "dir/inner.txt", data: "inner" },
+      { name: "alias.txt", data: "real.txt", mode: 0o120777 },
+      { name: "dirlink", data: "dir", mode: 0o120777 },
+    ]));
+    const extractDir = path.join(root, "links-out");
+    const result = extractZip(zipPath, extractDir);
+    expect(fs.readFileSync(path.join(extractDir, "alias.txt"), "utf8")).toBe("content");
+    expect(fs.lstatSync(path.join(extractDir, "alias.txt")).isSymbolicLink()).toBe(false);
+    expect(result.skippedLinks).toEqual(["dirlink"]);
+    expect(fs.existsSync(path.join(extractDir, "dirlink"))).toBe(false);
+  });
+
+  it("refuses a ZIP member whose payload fails its CRC-32", () => {
+    const zipPath = fixture("badcrc.zip", makeZip([
+      { name: "ok.txt", data: "fine" },
+      { name: "bad.txt", data: "tampered", crc32: 0xdeadbeef },
+    ]));
+    const extractDir = path.join(root, "badcrc-out");
+    expect(() => extractZip(zipPath, extractDir)).toThrow(/CRC-32/);
+    expect(fs.existsSync(path.join(extractDir, "ok.txt"))).toBe(false);
+    expect(() => preflightZipArchive(zipPath)).toThrow(ArchiveSecurityError);
+    expect(childProcess.execFileSync).not.toHaveBeenCalled();
+  });
+
+  it("extracts generic tar archives for PyPI sdists without spawning tar", () => {
     const tarPath = fixture("package.archive", makeTar([{ name: "package/a.py", data: "pass" }]));
     const extractDir = path.join(root, "out");
     extractTar(tarPath, extractDir);
-    expect(childProcess.execFileSync).toHaveBeenCalledWith(
-      "tar", ["xf", tarPath, "-C", extractDir], { stdio: "pipe" },
-    );
+    expect(fs.readFileSync(path.join(extractDir, "package", "a.py"), "utf8")).toBe("pass");
+    expect(childProcess.execFileSync).not.toHaveBeenCalled();
   });
 
   it.each(["../escape", "/absolute", "C:/drive", "dir\\windows-escape"])(
@@ -306,7 +377,8 @@ describe("archive extraction preflight hardening", () => {
     "rejects unsafe tar member path %s before tar",
     (name) => {
       const archive = fixture("unsafe.tar", makeTar([{ name }]));
-      expect(() => extractTar(archive, root)).toThrow(ArchiveSecurityError);
+      expect(() => extractTar(archive, path.join(root, "out"))).toThrow(ArchiveSecurityError);
+      expect(fs.existsSync(path.join(root, "out"))).toBe(false);
       expect(childProcess.execFileSync).not.toHaveBeenCalled();
     },
   );
@@ -472,7 +544,7 @@ describe("archive extraction preflight hardening", () => {
     expect(() => preflightTarArchive(archive)).toThrow(/resolution work exceeds/);
   });
 
-  it("uses stream order when PAX and GNU path overrides are mixed", () => {
+  it("lets PAX win over GNU path overrides regardless of stream order", () => {
     const paxThenGnu = fixture("pax-then-gnu.tar", makeTar([
       { name: "PaxHeader", type: "x", data: paxRecord("path", "../discarded") },
       { name: "././@LongLink", type: "L", data: "safe.txt\0" },
@@ -484,11 +556,11 @@ describe("archive extraction preflight hardening", () => {
       { name: "placeholder", data: "payload" },
     ]));
 
-    expect(() => preflightTarArchive(paxThenGnu)).not.toThrow();
+    expect(() => preflightTarArchive(paxThenGnu)).toThrow(/traverses outside/);
     expect(() => preflightTarArchive(gnuThenPax)).toThrow(/traverses outside/);
   });
 
-  it("uses stream order when PAX and GNU link overrides are mixed", () => {
+  it("lets PAX win over GNU link overrides regardless of stream order", () => {
     const paxThenGnu = fixture("pax-then-gnu-link.tar", makeTar([
       { name: "PaxHeader", type: "x", data: paxRecord("linkpath", "../discarded") },
       { name: "././@LongLink", type: "K", data: "safe-target\0" },
@@ -500,7 +572,7 @@ describe("archive extraction preflight hardening", () => {
       { name: "link", type: "2" },
     ]));
 
-    expect(() => preflightTarArchive(paxThenGnu)).not.toThrow();
+    expect(() => preflightTarArchive(paxThenGnu)).toThrow(/escapes the extraction root/);
     expect(() => preflightTarArchive(gnuThenPax)).toThrow(/escapes the extraction root/);
   });
 
@@ -695,6 +767,157 @@ describe("archive extraction preflight hardening", () => {
     expect(() => extractZip(zip, root)).toThrow(/nested below non-directory/);
     expect(() => extractTar(tar, root)).toThrow(/nested below non-directory/);
     expect(childProcess.execFileSync).not.toHaveBeenCalled();
+  });
+
+  describe("tar members are written by the extractor, not by a system tar (F9)", () => {
+    function listTree(dir: string, base = dir): string[] {
+      const out: string[] = [];
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        const rel = path.relative(base, full).split(path.sep).join("/");
+        if (entry.isDirectory()) out.push(`${rel}/`, ...listTree(full, base));
+        else out.push(rel);
+      }
+      return out.sort();
+    }
+
+    it("extracts a normal npm-style tarball byte-identically", () => {
+      const binary = Buffer.from(Array.from({ length: 1500 }, (_, index) => (index * 7) % 256));
+      const archive = fixture("npm.tgz", makeTar([
+        { name: "package/", type: "5" },
+        { name: "package/package.json", data: '{"name":"x","version":"1.0.0"}' },
+        { name: "package/lib/", type: "5" },
+        { name: "package/lib/index.js", data: "module.exports = 1;\n" },
+        { name: "package/lib/blob.bin", data: binary },
+        { name: "package/empty.txt" },
+      ], true));
+      const out = path.join(root, "npm-out");
+
+      const result = extractTarGz(archive, out);
+
+      expect(result.skippedLinks).toEqual([]);
+      expect(listTree(out)).toEqual([
+        "package/",
+        "package/empty.txt",
+        "package/lib/",
+        "package/lib/blob.bin",
+        "package/lib/index.js",
+        "package/package.json",
+      ]);
+      expect(fs.readFileSync(path.join(out, "package/lib/blob.bin")).equals(binary)).toBe(true);
+      expect(fs.readFileSync(path.join(out, "package/package.json"), "utf8")).toBe('{"name":"x","version":"1.0.0"}');
+      expect(fs.readFileSync(path.join(out, "package/empty.txt")).length).toBe(0);
+      expect(childProcess.execFileSync).not.toHaveBeenCalled();
+    });
+
+    it("x-then-K: the PAX linkpath wins over a GNU K record, so the unsafe target is refused", () => {
+      const archive = fixture("x-then-k.tar", makeTar([
+        { name: "PaxHeader", type: "x", data: paxRecord("linkpath", "/etc/passwd") },
+        { name: "././@LongLink", type: "K", data: "README.md\0" },
+        { name: "package/link", type: "2" },
+      ]));
+      expect(() => extractTar(archive, path.join(root, "out"))).toThrow(/absolute target/);
+    });
+
+    it("x-then-L: the PAX path wins over a GNU L record and is the path that is written", () => {
+      const archive = fixture("x-then-l.tar", makeTar([
+        { name: "PaxHeader", type: "x", data: paxRecord("path", "package/from-pax.txt") },
+        { name: "././@LongLink", type: "L", data: "package/from-L.txt\0" },
+        { name: "package/from-header.txt", data: "body" },
+      ]));
+      const out = path.join(root, "out");
+      extractTar(archive, out);
+      expect(listTree(out)).toEqual(["package/", "package/from-pax.txt"]);
+    });
+
+    it("refuses PAX global records that carry path or linkpath", () => {
+      const globalPath = fixture("g-path.tar", makeTar([
+        { name: "PaxGlobal", type: "g", data: paxRecord("path", "package/from-g.txt") },
+        { name: "package/from-header.txt", data: "body" },
+      ]));
+      const globalLink = fixture("g-linkpath.tar", makeTar([
+        { name: "PaxGlobal", type: "g", data: paxRecord("linkpath", "README.md") },
+        { name: "package/link", type: "2", link: "README.md" },
+      ]));
+      expect(() => extractTar(globalPath, path.join(root, "out-a"))).toThrow(/global record/);
+      expect(() => extractTar(globalLink, path.join(root, "out-b"))).toThrow(/global record/);
+      expect(fs.existsSync(path.join(root, "out-a"))).toBe(false);
+    });
+
+    it("honours the ustar prefix for any ustar magic, whatever the version bytes", () => {
+      const archive = fixture("ustar-version.tar", makeTar([{
+        name: "payload.txt",
+        prefix: "package/from-prefix",
+        versionBytes: Buffer.from([0, 0]),
+        data: "body",
+      }]));
+      const out = path.join(root, "out");
+      extractTar(archive, out);
+      expect(listTree(out)).toEqual(["package/", "package/from-prefix/", "package/from-prefix/payload.txt"]);
+    });
+
+    it("refuses a regular file or directory that carries a PAX linkpath", () => {
+      const regular = fixture("reg-linkpath.tar", makeTar([
+        { name: "PaxHeader", type: "x", data: paxRecord("linkpath", "Windows/win.ini") },
+        { name: "package/reg.txt", data: "body" },
+      ]));
+      const directory = fixture("dir-linkpath.tar", makeTar([
+        { name: "././@LongLink", type: "K", data: "elsewhere\0" },
+        { name: "package/dir/", type: "5" },
+      ]));
+      expect(() => extractTar(regular, path.join(root, "out-a"))).toThrow(/carries a linkpath/);
+      expect(() => extractTar(directory, path.join(root, "out-b"))).toThrow(/carries a linkpath/);
+    });
+
+    it("never creates links: copies file links, reports the rest, keeps children inside the root", () => {
+      const archive = fixture("links.tar", makeTar([
+        { name: "package/target.txt", data: "t" },
+        { name: "package/sym", type: "2", link: "target.txt" },
+        { name: "package/hard", type: "1", link: "package/target.txt" },
+        { name: "package/sym/child.txt", data: "c" },
+      ]));
+      const out = path.join(root, "out");
+      const result = extractTar(archive, out);
+      // package/sym's path is already a directory (its child was written), so
+      // it is reported; package/hard resolves to a file and becomes a copy.
+      expect(result.skippedLinks).toEqual(["package/sym"]);
+      expect(fs.readFileSync(path.join(out, "package/hard"), "utf8")).toBe("t");
+      expect(fs.lstatSync(path.join(out, "package/hard")).isSymbolicLink()).toBe(false);
+      expect(fs.lstatSync(path.join(out, "package/sym")).isSymbolicLink()).toBe(false);
+      expect(fs.readFileSync(path.join(out, "package/sym/child.txt"), "utf8")).toBe("c");
+    });
+
+    it("scans a symlinked file's content and reports a link to a directory", () => {
+      const archive = fixture("license-link.tar", makeTar([
+        { name: "package/LICENSE.txt", data: "MIT" },
+        { name: "package/LICENSE", type: "2", link: "LICENSE.txt" },
+        { name: "package/lib/", type: "5" },
+        { name: "package/lib/a.js", data: "module.exports = 1;" },
+        { name: "package/alias", type: "2", link: "lib" },
+      ]));
+      const out = path.join(root, "out");
+      const result = extractTar(archive, out);
+      expect(fs.readFileSync(path.join(out, "package/LICENSE"), "utf8")).toBe("MIT");
+      expect(result.skippedLinks).toEqual(["package/alias"]);
+      expect(fs.existsSync(path.join(out, "package/alias"))).toBe(false);
+    });
+
+    it("refuses to overwrite existing files or write through an existing link", () => {
+      const archive = fixture("clobber.tar", makeTar([{ name: "package/a.txt", data: "new" }]));
+      const out = path.join(root, "out");
+      extractTar(archive, out);
+      expect(() => extractTar(archive, out)).toThrow(/cannot be created exclusively/);
+      expect(fs.readFileSync(path.join(out, "package/a.txt"), "utf8")).toBe("new");
+
+      const outside = path.join(root, "outside");
+      fs.mkdirSync(outside);
+      const linked = path.join(root, "linked");
+      fs.mkdirSync(linked);
+      try { fs.symlinkSync(outside, path.join(linked, "package"), "junction"); }
+      catch { return; }
+      expect(() => extractTar(archive, linked)).toThrow(ArchiveSecurityError);
+      expect(fs.readdirSync(outside)).toEqual([]);
+    });
   });
 
   it("keeps production archive scanners free of shell-string execution", () => {

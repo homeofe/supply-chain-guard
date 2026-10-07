@@ -1,11 +1,13 @@
 /**
- * Archive extraction helpers. Every member is validated before an argv-array
- * extractor invocation so an archive cannot write outside the extraction root.
+ * Archive extraction helpers. Every member is validated and then written by
+ * this module itself (no extractor process), so an archive cannot write outside
+ * the extraction root and the validated path is the written path.
  */
 
-import { execFileSync } from "node:child_process";
+import { execToolSync } from "./safe-exec.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import * as zlib from "node:zlib";
 import { gunzipSync, inflateRawSync } from "node:zlib";
 
 export const ARCHIVE_MAX_ENTRIES = 100_000;
@@ -28,7 +30,9 @@ const UNICODE_DEFAULT_IGNORABLE = /\p{Default_Ignorable_Code_Point}/u;
 
 type ArchiveEntryKind = "file" | "directory" | "symlink" | "hardlink";
 interface ArchiveEntry { path: string; kind: ArchiveEntryKind; target?: string }
-interface ZipEntry extends ArchiveEntry {
+/** A validated member together with its inflated payload (files only). */
+interface ArchiveMember extends ArchiveEntry { data?: Buffer }
+interface ZipEntry extends ArchiveMember {
   compressedSize: number;
   uncompressedSize: number;
   compressionMethod: number;
@@ -451,7 +455,27 @@ function decodeZipPayload(entry: ZipEntry, compressed: Buffer): Buffer {
     unsafe(`member "${entry.path || "."}" payload cannot be decompressed safely`);
   }
 }
-export function preflightZipArchive(archivePath: string): void {
+
+/** CRC-32 (IEEE 802.3), as ZIP stores it. `zlib.crc32` exists from Node 22.2; engines allows 22.0. */
+let crcTable: Uint32Array | undefined;
+function crc32Of(data: Buffer): number {
+  const native = (zlib as { crc32?: (data: Buffer, value?: number) => number }).crc32;
+  if (typeof native === "function") return native(data) >>> 0;
+  if (crcTable === undefined) {
+    crcTable = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = (c & 1) !== 0 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+      crcTable[n] = c >>> 0;
+    }
+  }
+  let crc = 0xffffffff;
+  for (let index = 0; index < data.length; index++) crc = crcTable[(crc ^ data[index]!) & 0xff]! ^ (crc >>> 8);
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+/** Validate a ZIP and return its members with the payloads that were validated. */
+function parseZipArchive(archivePath: string): ArchiveMember[] {
   const content = readBoundedArchive(path.resolve(archivePath));
   const eocdOffset = findZipEndOfCentralDirectory(content);
   const location = parseZipDirectoryLocation(content, eocdOffset);
@@ -512,6 +536,9 @@ export function preflightZipArchive(archivePath: string): void {
   for (const entry of entries) {
     const local = zipLocalPayload(content, entry, location.centralOffset);
     const expanded = decodeZipPayload(entry, local.compressed);
+    // The central directory's CRC is what every other reader trusts; a payload
+    // that disagrees was altered or corrupted after it was described.
+    if (crc32Of(expanded) !== entry.crc32) unsafe(`member "${entry.path || "."}" fails its CRC-32 check`);
     if (entry.kind === "directory" && expanded.length !== 0) unsafe(`directory "${entry.path || "."}" has a payload`);
     if (entry.kind === "symlink") {
       if (expanded.length > MAX_LINK_TARGET_BYTES) unsafe(`link "${entry.path}" target is too large`);
@@ -519,7 +546,7 @@ export function preflightZipArchive(archivePath: string): void {
         entry.path,
         decodeZipPortableString(expanded, entry.flags, `ZIP link "${entry.path}" target`),
       );
-    }
+    } else if (entry.kind === "file") entry.data = expanded;
     localRegions.push({ start: local.start, end: local.end, path: entry.path || "." });
   }
   localRegions.sort((left, right) => left.start - right.start || left.end - right.end);
@@ -528,7 +555,13 @@ export function preflightZipArchive(archivePath: string): void {
       unsafe(`local ZIP regions for "${localRegions[index - 1]!.path}" and "${localRegions[index]!.path}" overlap`);
     }
   }
-  validateArchiveGraph(entries.filter((entry) => entry.path.length > 0));
+  const members = entries.filter((entry) => entry.path.length > 0);
+  validateArchiveGraph(members);
+  return members;
+}
+
+export function preflightZipArchive(archivePath: string): void {
+  parseZipArchive(archivePath);
 }
 
 function parseTarNumber(field: Buffer, label: string): number {
@@ -614,7 +647,7 @@ function decompressTarArchive(archivePath: string, content: Buffer): Buffer {
   const isXz = content.length >= 6 && content.subarray(0, 6).equals(Buffer.from([0xfd, 0x37, 0x7a, 0x58, 0x5a, 0x00]));
   if (isBzip2 || isXz) {
     try {
-      return execFileSync(isBzip2 ? "bzip2" : "xz", ["-dc", archivePath], {
+      return execToolSync(isBzip2 ? "bzip2" : "xz", ["-dc", archivePath], {
         encoding: "buffer", maxBuffer: ARCHIVE_MAX_EXPANDED_BYTES + 1, stdio: ["ignore", "pipe", "pipe"],
       });
     } catch { unsafe(`${isBzip2 ? "bzip2" : "xz"}-compressed tar data cannot be inspected safely`); }
@@ -622,19 +655,35 @@ function decompressTarArchive(archivePath: string, content: Buffer): Buffer {
   return content;
 }
 
-export function preflightTarArchive(archivePath: string): void {
+/** A validated tar member; `data` is set for regular files only. */
+/**
+ * Parse and validate every tar header, returning the members exactly as the
+ * extractor will write them. Metadata precedence (one rule, documented here
+ * because GNU tar and bsdtar disagree on several corners):
+ *   - a PAX `x` record applies to the next member and wins over GNU `L`/`K`
+ *     long-name records, whatever order they appear in;
+ *   - a GNU `L`/`K` record wins over the header fields;
+ *   - a PAX `g` record may carry neither `path` nor `linkpath` (the two
+ *     extractors disagree on it, so the archive is refused).
+ * Nothing here is delegated to a system `tar`, so no dialect can resolve a
+ * member to a different path than the one validated.
+ */
+function parseTarArchive(archivePath: string): ArchiveMember[] {
   const resolvedArchivePath = path.resolve(archivePath);
   const compressed = readBoundedArchive(resolvedArchivePath);
   const content = decompressTarArchive(resolvedArchivePath, compressed);
   if (content.length > ARCHIVE_MAX_EXPANDED_BYTES) unsafe(`tar expansion exceeds ${ARCHIVE_MAX_EXPANDED_BYTES} bytes`);
   if (content.length % TAR_BLOCK_SIZE !== 0) unsafe("tar data is not block-aligned");
-  const entries: ArchiveEntry[] = [];
+  const entries: ArchiveMember[] = [];
   let expandedBytes = 0;
   let headerCount = 0;
   let cursor = 0;
   let sawEndMarker = false;
-  let nextOverrides: TarOverrides = {};
+  let paxOverrides: TarOverrides = {};
+  let gnuOverrides: TarOverrides = {};
   let globalOverrides: TarOverrides = {};
+  const pendingMetadata = (): boolean =>
+    Object.keys(paxOverrides).length > 0 || Object.keys(gnuOverrides).length > 0;
   while (cursor + TAR_BLOCK_SIZE <= content.length) {
     const header = content.subarray(cursor, cursor + TAR_BLOCK_SIZE);
     if (header.every((byte) => byte === 0)) {
@@ -647,21 +696,21 @@ export function preflightTarArchive(archivePath: string): void {
     if (headerCount > ARCHIVE_MAX_ENTRIES) unsafe(`entry count exceeds ${ARCHIVE_MAX_ENTRIES}`);
     verifyTarChecksum(header);
     const headerNameBytes = tarFieldBytes(header, 0, 100);
+    // Any `ustar\0` magic is POSIX ustar whatever the two version bytes say:
+    // GNU tar and bsdtar both honour the prefix field then.
     const posixUstar =
-      header.subarray(257, 263).equals(Buffer.from([0x75, 0x73, 0x74, 0x61, 0x72, 0x00])) &&
-      header[263] === 0x30 &&
-      header[264] === 0x30;
+      header.subarray(257, 263).equals(Buffer.from([0x75, 0x73, 0x74, 0x61, 0x72, 0x00]));
     // Bytes 345..499 are a pathname prefix only in POSIX ustar/PAX. Old-GNU
-    // uses the same region for timestamps and sparse metadata; V7 leaves it
-    // outside the header. Treating either as a prefix validates a path that the
-    // extractor never writes.
+    // (`ustar  `) uses the same region for timestamps and sparse metadata; V7
+    // leaves it outside the header. Treating either as a prefix would validate
+    // a path the extractor never writes.
     const prefixBytes = posixUstar
       ? tarFieldBytes(header, 345, 155)
       : Buffer.alloc(0);
     const rawHeaderLinkBytes = tarFieldBytes(header, 157, 100);
     const typeFlag = header[156] === 0 ? "0" : String.fromCharCode(header[156]!);
     const headerSize = parseTarNumber(header.subarray(124, 136), "tar entry size");
-    const overrides = { ...globalOverrides, ...nextOverrides };
+    const overrides = { ...globalOverrides, ...gnuOverrides, ...paxOverrides };
     const metadataRecord = typeFlag === "x" || typeFlag === "g" ||
       typeFlag === "L" || typeFlag === "K";
     const size = metadataRecord ? headerSize : (overrides.size ?? headerSize);
@@ -675,8 +724,12 @@ export function preflightTarArchive(archivePath: string): void {
     if (!Number.isSafeInteger(nextCursor) || nextCursor > content.length) unsafe("tar entry padding is truncated");
     if (typeFlag === "x" || typeFlag === "g") {
       const parsed = parsePax(payload);
-      if (typeFlag === "g") globalOverrides = { ...globalOverrides, ...parsed };
-      else nextOverrides = { ...nextOverrides, ...parsed };
+      if (typeFlag === "g") {
+        if (parsed.path !== undefined || parsed.linkpath !== undefined) {
+          unsafe("a PAX global record carries path or linkpath, which extractors apply inconsistently");
+        }
+        globalOverrides = { ...globalOverrides, ...parsed };
+      } else paxOverrides = { ...paxOverrides, ...parsed };
       cursor = nextCursor;
       continue;
     }
@@ -687,13 +740,14 @@ export function preflightTarArchive(archivePath: string): void {
         nul === -1 ? payload : payload.subarray(0, nul),
         "GNU tar long-name record",
       );
-      nextOverrides = typeFlag === "L"
-        ? { ...nextOverrides, path: value }
-        : { ...nextOverrides, linkpath: value };
+      gnuOverrides = typeFlag === "L"
+        ? { ...gnuOverrides, path: value }
+        : { ...gnuOverrides, linkpath: value };
       cursor = nextCursor;
       continue;
     }
-    const selectedOverrides = { ...globalOverrides, ...nextOverrides };
+    // PAX `x` over GNU `L`/`K`, independent of record order (see above).
+    const selectedOverrides = { ...gnuOverrides, ...paxOverrides };
     let rawPath = selectedOverrides.path;
     if (rawPath === undefined) {
       const headerName = decodeLegacyTarString(headerNameBytes, "tar header name");
@@ -704,11 +758,19 @@ export function preflightTarArchive(archivePath: string): void {
     if (rawLink === undefined && (typeFlag === "1" || typeFlag === "2")) {
       rawLink = decodeLegacyTarString(rawHeaderLinkBytes, "tar header link target");
     }
+    const carriesLinkpath = rawLink !== undefined;
     rawLink ??= "";
-    nextOverrides = {};
+    paxOverrides = {};
+    gnuOverrides = {};
     const normalizedPath = normalizeMemberPath(rawPath, "entry path", typeFlag === "5");
-    let entry: ArchiveEntry;
-    if (typeFlag === "0" || typeFlag === "7") entry = { path: normalizedPath, kind: "file" };
+    // bsdtar turns a regular file that carries a linkpath into a hardlink while
+    // GNU tar writes a regular file, so the member type would depend on the
+    // extractor. Refuse it.
+    if (carriesLinkpath && (typeFlag === "0" || typeFlag === "7" || typeFlag === "5")) {
+      unsafe(`member "${normalizedPath}" is not a link but carries a linkpath`);
+    }
+    let entry: ArchiveMember;
+    if (typeFlag === "0" || typeFlag === "7") entry = { path: normalizedPath, kind: "file", data: payload };
     else if (typeFlag === "5") {
       if (size !== 0) unsafe(`directory "${normalizedPath}" has a data payload`);
       entry = { path: normalizedPath, kind: "directory" };
@@ -725,49 +787,155 @@ export function preflightTarArchive(archivePath: string): void {
   }
   if (!sawEndMarker) unsafe("tar end marker is missing");
   if (!content.subarray(cursor).every((byte) => byte === 0)) unsafe("tar contains non-zero data after its end marker");
-  if (Object.keys(nextOverrides).length > 0) unsafe("tar ends with metadata that does not describe a member");
+  if (pendingMetadata()) unsafe("tar ends with metadata that does not describe a member");
   validateArchiveGraph(entries.filter((entry) => entry.path.length > 0));
+  return entries;
 }
 
-export function extractZip(archivePath: string, extractDir: string, overwrite = false): void {
-  const resolvedArchivePath = path.resolve(archivePath);
-  const resolvedExtractDir = path.resolve(extractDir);
-  preflightZipArchive(resolvedArchivePath);
-  fs.mkdirSync(resolvedExtractDir, { recursive: true });
+export function preflightTarArchive(archivePath: string): void {
+  parseTarArchive(archivePath);
+}
 
-  if (process.platform === "win32") {
-    // Modern Windows ships bsdtar in System32. It auto-detects ZIP and avoids
-    // making runtime extraction depend on a separately installed Info-ZIP.
-    const windowsRoot = process.env.SystemRoot || "C:\\Windows";
-    const tarPath = path.win32.join(windowsRoot, "System32", "tar.exe");
-    if (!fs.existsSync(tarPath)) {
-      throw new Error(
-        `ZIP extraction backend is unavailable: expected Windows bsdtar at ${tarPath}`,
-      );
+export interface TarExtractionResult {
+  /**
+   * Symlink and hardlink members whose content was NOT written. A link that
+   * resolves to a regular file in the archive is written as a copy of that file
+   * instead; only links to directories (or whose path a directory already
+   * occupies) land here. No link is ever created on disk. Callers report each
+   * as an incomplete path so the result is partial, not silently clean.
+   */
+  skippedLinks: string[];
+}
+
+/** Create `rel` below `root` one component at a time, refusing anything that is not a plain directory. */
+function ensureContainedDirectory(root: string, rootReal: string, rel: string, verified: Set<string>): string {
+  let current = root;
+  let built = "";
+  for (const component of rel === "" ? [] : rel.split("/")) {
+    built = built === "" ? component : `${built}/${component}`;
+    current = path.join(current, component);
+    let stat: fs.Stats | undefined;
+    try { stat = fs.lstatSync(current); } catch { stat = undefined; }
+    if (stat === undefined) fs.mkdirSync(current);
+    else if (!stat.isDirectory()) unsafe(`"${built}" already exists and is not a directory`);
+  }
+  if (!verified.has(rel)) {
+    const real = fs.realpathSync(current);
+    if (real !== rootReal && !real.startsWith(rootReal + path.sep)) {
+      unsafe(`"${rel || "."}" resolves outside the extraction root`);
     }
-    const args = ["-x"];
-    if (!overwrite) args.push("-k");
-    args.push("-f", resolvedArchivePath, "-C", resolvedExtractDir);
-    execFileSync(tarPath, args, { stdio: "pipe" });
-    return;
+    verified.add(rel);
+  }
+  return current;
+}
+
+/**
+ * Write the validated members ourselves: regular files and directories only,
+ * every file created with `wx` so nothing existing is followed or replaced.
+ */
+function writeArchiveMembers(
+  members: ArchiveMember[],
+  extractDir: string,
+  existing: "refuse" | "keep" | "replace" = "refuse",
+): TarExtractionResult {
+  fs.mkdirSync(extractDir, { recursive: true });
+  const rootReal = fs.realpathSync(extractDir);
+  const verified = new Set<string>();
+  const skippedLinks: string[] = [];
+
+  const writeFile = (memberPath: string, data: Buffer): void => {
+    const slash = memberPath.lastIndexOf("/");
+    const parentRel = slash === -1 ? "" : memberPath.slice(0, slash);
+    const parent = ensureContainedDirectory(extractDir, rootReal, parentRel, verified);
+    const target = path.join(parent, memberPath.slice(slash + 1));
+    let fd: number | undefined;
+    try { fd = fs.openSync(target, "wx", 0o644); } catch { /* handled below */ }
+    if (fd === undefined) {
+      let stat: fs.Stats | undefined;
+      try { stat = fs.lstatSync(target); } catch { stat = undefined; }
+      if (stat === undefined || existing === "refuse") unsafe(`"${memberPath}" cannot be created exclusively`);
+      // Keep: an existing entry of any kind stays as it is. Replace: only a
+      // plain regular file is replaced, never a link or directory.
+      if (existing === "keep") return;
+      if (!stat.isFile()) unsafe(`"${memberPath}" already exists and is not a regular file`);
+      try {
+        fs.unlinkSync(target);
+        fd = fs.openSync(target, "wx", 0o644);
+      } catch { unsafe(`"${memberPath}" cannot be replaced`); }
+    }
+    try {
+      let written = 0;
+      while (written < data.length) written += fs.writeSync(fd, data, written, data.length - written);
+    } finally {
+      fs.closeSync(fd);
+    }
+  };
+
+  const links: ArchiveMember[] = [];
+  for (const member of members) {
+    if (member.path.length === 0) continue;
+    if (member.kind === "symlink" || member.kind === "hardlink") {
+      links.push(member);
+      continue;
+    }
+    if (member.kind === "directory") {
+      ensureContainedDirectory(extractDir, rootReal, member.path, verified);
+      continue;
+    }
+    writeFile(member.path, member.data ?? Buffer.alloc(0));
   }
 
-  const args = ["-q"];
-  if (overwrite) args.push("-o");
-  args.push(resolvedArchivePath, "-d", resolvedExtractDir);
-  execFileSync("unzip", args, { stdio: "pipe" });
+  // Links are never created on disk. A link the preflight resolved to a
+  // regular FILE inside the archive is written as a copy of that file's bytes,
+  // so the scan reads exactly what the link would show without a path anything
+  // could follow out of the root; a symlinked LICENSE or README in an sdist must
+  // not make the whole scan partial. A link to a directory, or one whose path is
+  // already taken by a directory, is reported to the caller as skipped.
+  const byPath = new Map<string, ArchiveMember>();
+  for (const member of members) {
+    if (member.path.length > 0) byPath.set(portableMemberPathKey(member.path), member);
+  }
+  const context: ArchiveResolutionContext = { resolvedPaths: new Map(), work: 0 };
+  for (const link of links) {
+    const resolved = link.kind === "hardlink"
+      ? resolveVirtualPath(link.target ?? "", byPath, true, context)
+      : resolveVirtualPath(link.path, byPath, true, context);
+    const target = byPath.get(portableMemberPathKey(resolved));
+    let taken = false;
+    try { fs.lstatSync(path.join(extractDir, link.path)); taken = true; } catch { /* free */ }
+    if (target?.kind !== "file" || (taken && existing === "refuse")) {
+      skippedLinks.push(link.path);
+      continue;
+    }
+    writeFile(link.path, target.data ?? Buffer.alloc(0));
+  }
+  return { skippedLinks };
 }
 
-export function extractTar(archivePath: string, extractDir: string): void {
-  const resolvedArchivePath = path.resolve(archivePath);
-  const resolvedExtractDir = path.resolve(extractDir);
-  preflightTarArchive(resolvedArchivePath);
-  execFileSync("tar", ["xf", resolvedArchivePath, "-C", resolvedExtractDir], { stdio: "pipe" });
+/**
+ * Extract a ZIP by writing the members the parser validated, never by spawning
+ * `unzip` or bsdtar: a tool may read names, extra fields or entry types
+ * differently from what was validated. Default keeps files that already exist;
+ * `overwrite` replaces an existing regular file (never a link or directory).
+ */
+export function extractZip(archivePath: string, extractDir: string, overwrite = false): TarExtractionResult {
+  return writeArchiveMembers(
+    parseZipArchive(archivePath),
+    path.resolve(extractDir),
+    overwrite ? "replace" : "keep",
+  );
 }
 
-export function extractTarGz(archivePath: string, extractDir: string): void {
-  const resolvedArchivePath = path.resolve(archivePath);
-  const resolvedExtractDir = path.resolve(extractDir);
-  preflightTarArchive(resolvedArchivePath);
-  execFileSync("tar", ["xzf", resolvedArchivePath, "-C", resolvedExtractDir], { stdio: "pipe" });
+/**
+ * Extract a tar (gzip, bzip2 and xz are autodetected) by writing the members
+ * the parser validated, never by spawning the PATH `tar`. This keeps the
+ * validated path identical to the written path and works the same on every
+ * host, including Windows machines whose PATH puts GNU tar before System32.
+ */
+export function extractTar(archivePath: string, extractDir: string): TarExtractionResult {
+  return writeArchiveMembers(parseTarArchive(archivePath), path.resolve(extractDir));
+}
+
+export function extractTarGz(archivePath: string, extractDir: string): TarExtractionResult {
+  return extractTar(archivePath, extractDir);
 }

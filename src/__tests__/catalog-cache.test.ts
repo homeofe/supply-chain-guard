@@ -311,7 +311,7 @@ describe("feed and catalog caches are independent", () => {
     const feedOnly = entryFor("feed-only-fixture-pkg@9.9.9");
     fs.writeFileSync(
       path.join(dir, FEED_CACHE_FILE),
-      JSON.stringify({ timestamp: new Date().toISOString(), entries: [feedOnly] }),
+      JSON.stringify({ timestamp: new Date().toISOString(), unsigned: true, entries: [feedOnly] }),
     );
     writeCatalog(dir, {}, REAL_CATALOG);
 

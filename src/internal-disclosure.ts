@@ -71,7 +71,7 @@ import * as path from "node:path";
 import type { Finding, PatternEntry, PolicyConfig, Severity } from "./types.js";
 import { isPatternMatchAccepted, validatePatternSet } from "./patterns.js";
 import { hasContainedExistingAncestor, isContainedPath } from "./pattern-scanner.js";
-import { hasNestedUnboundedQuantifier } from "./regex-complexity.js";
+import { hasNestedUnboundedQuantifier, unsafeScannedTreeRegexConstruct } from "./regex-complexity.js";
 import { buildTestFilePattern } from "./pattern-applicability.js";
 import { trimLeading, trimTrailing } from "./text-lines.js";
 
@@ -1925,10 +1925,11 @@ export function emptyInternalDisclosureRuntime(): InternalDisclosureRuntime {
  * exactly as it did before this bound existed. A `scanned-tree` entry travels
  * with the repository under test, so its regular expressions are bounded in
  * length and refused when their shape matches the one `hasNestedUnboundedQuantifier`
- * recognises; a refusal is returned rather than thrown, because it has to reach
- * the report. That classifier is not exhaustive, and neither the refusal nor
- * the budget below bounds a single catastrophic match: see the note on
- * SCANNED_TREE_MATCHER_BUDGET_MS.
+ * recognises, or when they leave the safe subset checked by
+ * `unsafeScannedTreeRegexConstruct` (no quantified group, backreference or
+ * lookaround). A refusal is returned rather than thrown, because it has to
+ * reach the report. The budget below still cannot interrupt a single match: see
+ * the note on SCANNED_TREE_MATCHER_BUDGET_MS.
  */
 function compileDenyEntry(
   raw: string,
@@ -1973,6 +1974,18 @@ function compileDenyEntry(
         refusal:
           "the regular expression quantifies a group that already contains a variable quantifier, a shape whose failure to match can take exponential time",
       };
+    }
+    // The classifier above is not exhaustive (overlapping alternation and a
+    // bounded outer repetition pass it and are catastrophic), so a pattern from
+    // the scanned tree must also sit inside a subset that cannot backtrack
+    // exponentially. Issue 169.
+    if (origin === "scanned-tree") {
+      const unsafe = unsafeScannedTreeRegexConstruct(source);
+      if (unsafe) {
+        return {
+          refusal: `the regular expression contains ${unsafe}, which is not accepted in a pattern supplied by the scanned tree because it can take exponential time to fail; use a literal, or a quantified single character or character class`,
+        };
+      }
     }
     return { matcher: { kind: "regex", regex, redact, label, origin } };
   }

@@ -9,6 +9,11 @@ export const DEFAULT_EXTRACTED_WALK_MAX_ENTRIES = 100_000;
 
 export interface ExtractedWalkOptions {
   shouldEnterDirectory?: (name: string, relativePath: string) => boolean;
+  /**
+   * Called with the public path of every directory `shouldEnterDirectory`
+   * declined, so the caller can account for what it chose not to walk.
+   */
+  onSkippedDirectory?: (name: string, publicPath: string, relativePath: string) => void;
   maxDepth?: number;
   /** Maximum public directory entries expanded, including symlink aliases. */
   maxEntries?: number;
@@ -173,6 +178,7 @@ export function collectExtractedFiles(
 
       if (entry.isSymbolicLink()) {
         if (options.shouldEnterDirectory?.(entry.name, relativePath) === false) {
+          options.onSkippedDirectory?.(entry.name, publicPath, relativePath);
           continue;
         }
         let targetRealPath: string;
@@ -197,7 +203,10 @@ export function collectExtractedFiles(
       }
 
       if (isDirectory) {
-        if (options.shouldEnterDirectory?.(entry.name, relativePath) === false) continue;
+        if (options.shouldEnterDirectory?.(entry.name, relativePath) === false) {
+          options.onSkippedDirectory?.(entry.name, publicPath, relativePath);
+          continue;
+        }
         walk(publicPath, nextAncestors, depth + 1);
       } else if (isFile) {
         files.push(publicPath);

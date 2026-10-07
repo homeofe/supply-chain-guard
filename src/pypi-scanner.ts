@@ -28,6 +28,9 @@ import {
 } from "./patterns.js";
 import { hasPartialScanFinding, matchPatternInFile, recordUnreadablePath } from "./pattern-scanner.js";
 import { collectExtractedFiles } from "./extracted-file-walker.js";
+import { ARCHIVE_EXCLUDED_DIRECTORY_NAMES } from "./scan-exclusions.js";
+import { isMarkupOrScriptHostExtension } from "./script-language.js";
+import { decodeTextBytes } from "./text-decoding.js";
 import {
   downloadHttpsFile,
   fetchHttpsBuffer,
@@ -104,6 +107,19 @@ export class PyPIArtifactAcquisitionError extends Error {
   constructor(readonly artifactFilename: string) {
     super(`Could not download, verify, or extract PyPI artifact: ${artifactFilename}`);
     this.name = "PyPIArtifactAcquisitionError";
+  }
+}
+
+/**
+ * The downloaded bytes were fetched fine but their SHA-256 differs from the
+ * digest the registry metadata advertises: a mirror, CDN or on-path party
+ * served different content. A distinct class so the signal is not folded into
+ * the generic "could not be downloaded" coverage finding.
+ */
+export class PyPIArtifactDigestMismatchError extends PyPIArtifactAcquisitionError {
+  constructor(artifactFilename: string) {
+    super(artifactFilename);
+    this.name = "PyPIArtifactDigestMismatchError";
   }
 }
 
@@ -444,6 +460,7 @@ export async function scanPypiReleaseArtifacts(
     const representative = group.candidates[0]!;
     const failureArtifactIdentity = getArtifactIdentity(representative, index);
     let scanned = false;
+    const digestMismatchFilenames = new Set<string>();
 
     for (const artifact of group.candidates) {
       const artifactFindings: Finding[] = [];
@@ -472,7 +489,25 @@ export async function scanPypiReleaseArtifacts(
         // Acquisition, archive, and digest failures may be alias-specific.
         // Scanner logic failures are operational errors and must propagate.
         if (!(error instanceof PyPIArtifactAcquisitionError)) throw error;
+        if (error instanceof PyPIArtifactDigestMismatchError) {
+          digestMismatchFilenames.add(artifact.filename);
+        }
       }
+    }
+
+    // Only when no alias could be scanned: that is where the generic coverage
+    // finding below used to swallow the signal. An alias that failed its digest
+    // while another alias passed it did not change what was scanned.
+    if (!scanned && digestMismatchFilenames.size > 0) {
+      appendArtifactFindings(findings, [{
+        rule: "ARTIFACT_DIGEST_MISMATCH",
+        description: `PyPI artifact "${[...digestMismatchFilenames].join('", "')}" was downloaded, but its SHA-256 does not match the digest the registry metadata advertises. The served bytes differ from what the registry published (compromised mirror, CDN or on-path tampering).`,
+        severity: "high",
+        confidence: 0.9,
+        category: "supply-chain",
+        recommendation:
+          "Do not install this artifact. Re-download it from the canonical registry over a trusted network and compare the SHA-256 against the registry's published value.",
+      }], failureArtifactIdentity);
     }
 
     if (!scanned) {
@@ -550,13 +585,19 @@ async function downloadAndScanSdist(
         expectedSha256 !== undefined &&
         !(await verifyArtifactSha256(archivePath, expectedSha256))
       ) {
-        throw new PyPIArtifactAcquisitionError(artifact.filename);
+        throw new PyPIArtifactDigestMismatchError(artifact.filename);
       }
       fs.mkdirSync(extractDir, { recursive: true });
       if (artifact.filename.toLowerCase().endsWith(".zip")) {
-        extractZip(archivePath, extractDir);
+        for (const skipped of extractZip(archivePath, extractDir).skippedLinks) {
+          recordUnreadablePath(findings, skipped);
+        }
       } else {
-        extractTar(archivePath, extractDir);
+        // Links are not written (see TarExtractionResult); each becomes a
+        // coverage finding so the scan reports partial instead of clean.
+        for (const skipped of extractTar(archivePath, extractDir).skippedLinks) {
+          recordUnreadablePath(findings, skipped);
+        }
       }
     } catch (error) {
       if (error instanceof PyPIArtifactAcquisitionError) throw error;
@@ -597,10 +638,12 @@ async function downloadAndScanWheel(
         expectedSha256 !== undefined &&
         !(await verifyArtifactSha256(wheelPath, expectedSha256))
       ) {
-        throw new PyPIArtifactAcquisitionError(artifact.filename);
+        throw new PyPIArtifactDigestMismatchError(artifact.filename);
       }
       fs.mkdirSync(extractDir, { recursive: true });
-      extractZip(wheelPath, extractDir);
+      for (const skipped of extractZip(wheelPath, extractDir).skippedLinks) {
+        recordUnreadablePath(findings, skipped);
+      }
     } catch (error) {
       if (error instanceof PyPIArtifactAcquisitionError) throw error;
       throw new PyPIArtifactAcquisitionError(artifact.filename);
@@ -621,13 +664,9 @@ export function scanExtractedFiles(
   findings: Finding[],
 ): { totalFiles: number; filesScanned: number } {
   const files = collectExtractedFiles(extractDir, findings, {
-    shouldEnterDirectory: (name) =>
-      name !== "__pycache__" &&
-      name !== ".git" &&
-      name !== "node_modules" &&
-      name !== ".tox" &&
-      name !== ".venv" &&
-      name !== "venv",
+    // An archive is the package: only version-control metadata is left out
+    // (scan-exclusions.ts), so a payload cannot hide under venv/ or __pycache__/.
+    shouldEnterDirectory: (name) => !ARCHIVE_EXCLUDED_DIRECTORY_NAMES.has(name),
   });
   let filesScanned = 0;
 
@@ -635,11 +674,16 @@ export function scanExtractedFiles(
     const ext = path.extname(filePath).toLowerCase();
     const basename = path.basename(filePath);
     const relativePath = path.relative(extractDir, filePath);
-    const isPython = PYTHON_EXTENSIONS.has(ext);
+    // .pth: Python runs its `import` lines at interpreter start.
+    const isPython = PYTHON_EXTENSIONS.has(ext) || ext === ".pth";
     const isSetupFile = PYPI_SETUP_FILES.has(basename);
 
     // Only scan known file types
-    if (!SCANNABLE_EXTENSIONS.has(ext) && !isPython) continue;
+    if (
+      !SCANNABLE_EXTENSIONS.has(ext) &&
+      !isPython &&
+      !isMarkupOrScriptHostExtension(ext)
+    ) continue;
 
     let stat: fs.Stats;
     try {
@@ -656,7 +700,7 @@ export function scanExtractedFiles(
 
     let content: string;
     try {
-      content = fs.readFileSync(filePath, "utf-8");
+      content = decodeTextBytes(fs.readFileSync(filePath));
     } catch {
       recordUnreadablePath(findings, relativePath);
       continue;

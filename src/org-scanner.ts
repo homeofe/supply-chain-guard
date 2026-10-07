@@ -5,7 +5,7 @@
  * malicious patterns, compromised maintainers, and suspicious clusters.
  */
 
-import { execFileSync } from "node:child_process";
+import { execToolSync } from "./safe-exec.js";
 import type { Finding } from "./types.js";
 
 // GitHub org / user names: alphanumeric with hyphens, up to 39 chars, and may
@@ -22,7 +22,7 @@ export function listOrgRepos(org: string, limit = 50): string[] {
     return [];
   }
   try {
-    const output = execFileSync(
+    const output = execToolSync(
       "gh",
       ["repo", "list", org, "--limit", String(limit), "--json", "url", "--jq", ".[].url"],
       { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] },

@@ -128,8 +128,7 @@ describe("Lockfile Checker (T-006)", () => {
           version: "1.0.0",
           resolved:
             "https://registry.npmjs.org/good-pkg/-/good-pkg-1.0.0.tgz",
-          integrity:
-            "sha512-abcdefghijklmnopqrstuvwxyz1234567890ABCDEFGHIJKLMNOP==",
+          integrity: `sha512-${Buffer.alloc(64, 7).toString("base64")}`,
         },
       },
     };

@@ -153,14 +153,17 @@ export function formatPackageCacheKey(
   // Package identity is ecosystem-specific. Lowercasing every coordinate made
   // distinct Go, Maven, Swift and Conan packages share an authoritative cache
   // entry. Only normalize registries whose identity rules are case-insensitive.
+  // npm is NOT among them: legacy npm names are case-sensitive, and the OSV query
+  // sends the name as written, so folding `Foo` onto `foo` let the first lookup
+  // answer for the other for a day. cargo treats `-` and `_` as the same crate.
   const cleanName =
     normalizedPrefix === "pypi:"
       ? trimmedName.toLowerCase().replace(/[-_.]+/g, "-")
-      : ["npm:", "ruby:", "composer:", "nuget:", "cargo:", "hex:", "cran:", "pub:"].includes(
-            normalizedPrefix,
-          )
-        ? trimmedName.toLowerCase()
-        : trimmedName;
+      : normalizedPrefix === "cargo:"
+        ? trimmedName.toLowerCase().replace(/_/g, "-")
+        : ["ruby:", "composer:", "nuget:", "hex:", "cran:", "pub:"].includes(normalizedPrefix)
+          ? trimmedName.toLowerCase()
+          : trimmedName;
   const cleanVersion = version ? version.trim() : "*";
   return `${normalizedPrefix}${cleanName}@${cleanVersion}`;
 }
@@ -223,6 +226,29 @@ const DEFAULT_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
  * no request is made. Keep it short enough that the next scan retries.
  */
 export const LOOKUP_FAILURE_TTL_MS = 60 * 1000; // 1 minute
+
+/**
+ * Longest a NEGATIVE verdict ("no malware signature", "not in KEV") is honoured
+ * when it is read back from disk. A cache file in a per-user directory has no
+ * secret to sign it with, so an attacker who can write it could plant a clean
+ * answer for a malicious package; this bounds how long that stays useful. A
+ * positive verdict only makes the scanner stricter, so it keeps its full TTL.
+ */
+const PERSISTED_NEGATIVE_MAX_AGE_MS = 15 * 60 * 1000;
+
+function isFallbackStatus(data: unknown): boolean {
+  if (!data || typeof data !== "object") return false;
+  const status = (data as { status?: unknown }).status;
+  return status === "unavailable" || status === "invalid";
+}
+
+function isFallbackOrNegative(data: unknown): boolean {
+  if (!data || typeof data !== "object") return false;
+  const d = data as { hasMalwareSignature?: unknown; inKev?: unknown; status?: unknown };
+  return (
+    d.hasMalwareSignature === false || d.inKev === false || d.status === "not-found" || isFallbackStatus(data)
+  );
+}
 
 const MAX_CACHE_FILE_BYTES = 5 * 1024 * 1024;
 const MAX_CACHE_ENTRIES = 20_000;
@@ -417,7 +443,13 @@ export class ThreatIntelCache {
     if (!this.cacheFilePath || !fs.existsSync(this.cacheFilePath)) return;
     try {
       const stat = fs.lstatSync(this.cacheFilePath);
-      if (stat.isSymbolicLink() || stat.size > MAX_CACHE_FILE_BYTES) return;
+      if (stat.isSymbolicLink() || !stat.isFile() || stat.size > MAX_CACHE_FILE_BYTES) return;
+      // POSIX only: a cache file owned by another user, or writable by group or
+      // other, is not ours to trust. (Windows has no uid; its per-user LOCALAPPDATA
+      // ACL is the boundary there.)
+      if (typeof process.getuid === "function") {
+        if (stat.uid !== process.getuid() || (stat.mode & 0o022) !== 0) return;
+      }
       const raw = fs.readFileSync(this.cacheFilePath, "utf-8");
       const parsed = JSON.parse(raw) as unknown;
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return;
@@ -425,8 +457,24 @@ export class ThreatIntelCache {
       if (cacheFile.version !== 1 || !cacheFile.entries || typeof cacheFile.entries !== "object") return;
       const now = Date.now();
       for (const [key, candidate] of Object.entries(cacheFile.entries).slice(0, MAX_CACHE_ENTRIES)) {
-        if (!candidate || typeof candidate !== "object") continue;
+        if (!candidate || typeof candidate !== "object" || key.length > 2048) continue;
         const entry = candidate as Partial<CacheEntry<unknown>>;
+        // A persisted entry is only as trustworthy as the directory it came from.
+        // Never let it claim more lifetime than the code would have given it, and
+        // never let a "no malware" / "not in KEV" answer outlive a short window.
+        if (key.startsWith("osv:") && !isOsvQueryResult(entry.data)) continue;
+        if (
+          typeof entry.cachedAt === "number" &&
+          typeof entry.ttlMs === "number" &&
+          Number.isFinite(entry.ttlMs) &&
+          entry.ttlMs > 0 &&
+          entry.ttlMs <= DEFAULT_TTL_MS // an over-long TTL is rejected below, never clamped into validity
+        ) {
+          const data = entry.data;
+          const cap = isFallbackOrNegative(data) ? PERSISTED_NEGATIVE_MAX_AGE_MS : DEFAULT_TTL_MS;
+          const fallbackCap = isFallbackStatus(data) ? LOOKUP_FAILURE_TTL_MS : cap;
+          entry.ttlMs = Math.min(entry.ttlMs, fallbackCap);
+        }
         if (
           typeof entry.cachedAt === "number" &&
           Number.isFinite(entry.cachedAt) &&

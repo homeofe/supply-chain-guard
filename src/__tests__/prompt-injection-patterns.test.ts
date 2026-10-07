@@ -49,10 +49,12 @@ describe("Prompt-injection patterns", () => {
       expect(p!.onlyFilePattern!.test("docs/usage.md")).toBe(false);
     });
 
-    it("excludes scanner source so we do not self-flag", () => {
-      expect(p!.notFilePattern).toBeDefined();
-      expect(p!.notFilePattern!.test("src/patterns.ts")).toBe(true);
-      expect(p!.notFilePattern!.test("dist/patterns.js")).toBe(true);
+    it("is not exempted by a scanner-module file name", () => {
+      // The scanned package names its own files, so a basename such as
+      // `reporter.js` must never switch a rule off. The scanner's own sources
+      // are recognised by content hash instead.
+      expect(p!.notFilePattern?.test("src/patterns.ts") ?? false).toBe(false);
+      expect(p!.notFilePattern?.test("dist/patterns.js") ?? false).toBe(false);
     });
   });
 
@@ -206,9 +208,9 @@ describe("Prompt-injection patterns", () => {
       }
     });
 
-    it("every pattern excludes scanner source files", () => {
+    it("no pattern is exempted by a scanner-module file name, and every one skips test files", () => {
       for (const p of PROMPT_INJECTION_PATTERNS) {
-        expect(p.notFilePattern, `${p.rule} should exclude SCANNER_SRC`).toBeDefined();
+        expect(p.notFilePattern?.test("reporter.js") ?? false, `${p.rule} must not exempt reporter.js`).toBe(false);
         expect(p.notTestFile, `${p.rule} should skip test files`).toBe(true);
       }
     });

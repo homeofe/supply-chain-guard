@@ -31,12 +31,12 @@ describe("score consistency", () => {
           "node_modules/direct": {
             version: "1.0.0",
             resolved: "https://registry.npmjs.org/direct/-/direct-1.0.0.tgz",
-            integrity: `sha512-${"A".repeat(80)}`,
+            integrity: `sha512-${Buffer.alloc(64, 1).toString("base64")}`,
           },
           "node_modules/transitive": {
             version: "1.0.0",
             resolved: "https://registry.npmjs.org/transitive/-/transitive-1.0.0.tgz",
-            integrity: `sha512-${"B".repeat(80)}`,
+            integrity: `sha512-${Buffer.alloc(64, 2).toString("base64")}`,
           },
         },
       }),

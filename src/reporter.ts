@@ -115,6 +115,7 @@ const CATALOG_REASON_LABEL: Record<NonNullable<DetectionSetCatalog["reason"]>, s
   "version-mismatch": "the cached catalog was built for a different release",
   "digest-mismatch": "the cached catalog does not match this release",
   corrupt: "the cached catalog failed its checksum",
+  removed: "the installed catalog was deleted",
 };
 
 /**
@@ -583,6 +584,13 @@ function formatText(
         lines.push(`    - ${policyEntryText(entry)}`);
       }
     }
+    lines.push("");
+  }
+  if (report.riskLevelBeforePolicy) {
+    lines.push(
+      `${BOLD}RISK BEFORE POLICY${RESET}  ${report.riskLevelBeforePolicy} ` +
+        `(highest severity ${report.maxSeverityBeforePolicy ?? "none"}); reported risk: ${report.riskLevel}`,
+    );
     lines.push("");
   }
 
@@ -1106,10 +1114,13 @@ function formatSarif(report: ScanReport): string {
         }
       : undefined;
 
-  const versionControlProvenance = report.commit
+  // SARIF versionControlDetails requires repositoryUri. Without a (sanitised)
+  // remote there is no repository URI to state, and the local target path is not
+  // one: it is a filesystem location the report must not publish as provenance.
+  const versionControlProvenance = report.commit && report.repositoryUri
     ? [
         {
-          repositoryUri: report.repositoryUri ?? report.target,
+          repositoryUri: report.repositoryUri,
           revisionId: report.commit,
           ...(report.branch ? { branch: report.branch } : {}),
         },

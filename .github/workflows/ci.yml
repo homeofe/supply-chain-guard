@@ -525,9 +525,38 @@ jobs:
       - name: Audit the pinned npm
         run: node scripts/audit-publish-toolchain.mjs --audit-level=high
 
+  # Windows resolves a bare program name in the CURRENT directory before PATH
+  # (cmd.exe and CreateProcess alike). That is why a tool planted in a scanned
+  # directory could run (GHSA-cq59-vmg7-pmqv), and why no Linux leg could see
+  # it. This job runs the tests that cover how the scanner starts external
+  # tools, guards the package manager and writes archive members, on a Windows
+  # runner where that lookup rule is real. Like the Docker job it is wired into
+  # the "Build and Test" aggregator, so it blocks a merge without a new
+  # required context. It runs the covering files, not the full suite: the full
+  # suite is the compat legs' job, and on Windows it takes hours.
+  windows-exec:
+    name: Windows tool lookup
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Tool lookup, install guard and archive tests on Windows
+        run: npx vitest run src/__tests__/safe-exec.test.ts src/__tests__/install-guard.test.ts src/__tests__/install-guard-security.test.ts src/__tests__/archive-extractor-hardening.test.ts src/__tests__/diff-scanner-security.test.ts
+
   build:
     name: Build and Test
-    needs: [compat, docker, publish-preflight]
+    needs: [compat, docker, publish-preflight, windows-exec]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -536,11 +565,17 @@ jobs:
           COMPAT_RESULT: ${{ needs.compat.result }}
           DOCKER_RESULT: ${{ needs.docker.result }}
           PREFLIGHT_RESULT: ${{ needs.publish-preflight.result }}
+          WINDOWS_RESULT: ${{ needs.windows-exec.result }}
         run: |
           echo "Node compatibility matrix: $COMPAT_RESULT"
           echo "Docker image build:          $DOCKER_RESULT"
           echo "Publish toolchain preflight: $PREFLIGHT_RESULT"
+          echo "Windows tool lookup:         $WINDOWS_RESULT"
           fail=0
+          if [ "$WINDOWS_RESULT" != "success" ]; then
+            echo "::error title=Windows tool lookup::The Windows exec, install-guard or archive tests did not pass."
+            fail=1
+          fi
           if [ "$COMPAT_RESULT" != "success" ]; then
             echo "::error title=Node compatibility::At least one Node major did not pass. Open the compat legs to see which."
             fail=1
@@ -843,6 +878,18 @@ jobs:
       - name: Fetch the published tarball and its npm provenance
         run: node scripts/release-provenance.mjs "${GITHUB_REF_NAME#v}" release-assets
 
+      # The threat feed is signed with Ed25519 so a client can tell the feed this
+      # release published from anything else served under the same name. The
+      # private key exists only as this secret and is passed to this one step.
+      # scripts/sign-feed.mjs verifies its own output against the public key
+      # compiled into the package and exits non-zero on a mismatch, so a wrong
+      # or rotated secret fails the job here, before the release step below
+      # makes an immutable release that clients would then refuse.
+      - name: Sign the threat feed
+        run: node scripts/sign-feed.mjs feed.json feed.json.sig
+        env:
+          FEED_SIGNING_KEY: ${{ secrets.FEED_SIGNING_KEY }}
+
       - name: Create GitHub Release
         run: |
           # The catalog assets and the provenance are uploaded with the release
@@ -851,10 +898,20 @@ jobs:
           # that are not there yet. Releases on this repository are immutable,
           # so there is no second chance to attach them.
           VERSION="${GITHUB_REF_NAME#v}"
+          # GitHub marks every new release `latest` by default. `feed refresh`
+          # reads the signed feed of the latest release, so only the highest
+          # version may take that mark: a patch on an older major must not.
+          highest=$(gh api "repos/$GITHUB_REPOSITORY/tags" --paginate --jq '.[].name' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+          if [ -z "$highest" ]; then echo "::error title=Release::could not read the release tags"; exit 1; fi
+          latest=false
+          if [ "$highest" = "$GITHUB_REF_NAME" ]; then latest=true; fi
+          echo "Highest release tag: $highest; $GITHUB_REF_NAME latest=$latest"
           gh release create "$GITHUB_REF_NAME" \
             --title "supply-chain-guard $GITHUB_REF_NAME" \
             --notes-file release_notes.md \
+            --latest="$latest" \
             catalog-index.json catalog-*.json.gz \
+            feed.json feed.json.sig \
             "release-assets/supply-chain-guard-${VERSION}.tgz" \
             "release-assets/supply-chain-guard-${VERSION}.tgz.sigstore.json"
         env:

@@ -18,7 +18,9 @@ vi.mock("node:child_process", async (importOriginal) => {
   return {
     ...actual,
     execFileSync: (file: string, args?: readonly string[], options?: unknown): unknown => {
-      if (file === "git" && args?.[0] === "clone" && cloneHarness.sourceDir) {
+      // git arrives by absolute path (safe-exec.ts), so match the file name.
+      const tool = file.split(/[\\/]/).pop()?.replace(/\.exe$/i, "");
+      if (tool === "git" && args?.[0] === "clone" && cloneHarness.sourceDir) {
         const destination = args.at(-1);
         if (!destination) throw new Error("Missing clone destination");
         fsModule.cpSync(cloneHarness.sourceDir, destination, { recursive: true });

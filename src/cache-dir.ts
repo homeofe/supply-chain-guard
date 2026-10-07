@@ -24,6 +24,85 @@
 import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs";
+import { randomUUID } from "node:crypto";
+
+/**
+ * Raised when a cache file must not be written because its target is a link or
+ * otherwise not the plain file this tool created. Distinct from an I/O error so
+ * `feed refresh` can fail the whole command instead of reporting a catalog
+ * problem on the side.
+ */
+export class CacheTargetRefusedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CacheTargetRefusedError";
+  }
+}
+
+/**
+ * Refuse a cache target that is a symlink, a junction, a directory or a regular
+ * file with more than one hard link. A missing target is fine: it is created.
+ *
+ * Why. The cache directory can sit inside a checkout (`--cache-dir .scg-cache`)
+ * and a pull request can commit a link under the cache file's name. A plain
+ * write through it clobbers whatever the link points at; a hard link is the
+ * variant lstat cannot see as a link, only as a link count above one.
+ */
+export function assertCacheTargetSafe(target: string): void {
+  let st: fs.Stats;
+  try {
+    st = fs.lstatSync(target);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
+    throw new CacheTargetRefusedError(
+      `refusing to write ${target}: it could not be inspected (${(error as Error).message})`,
+    );
+  }
+  if (st.isSymbolicLink()) {
+    throw new CacheTargetRefusedError(
+      `refusing to write ${target}: it is a symbolic link or junction. Remove it and run the refresh again.`,
+    );
+  }
+  if (!st.isFile()) {
+    throw new CacheTargetRefusedError(
+      `refusing to write ${target}: it exists and is not a regular file.`,
+    );
+  }
+  if (st.nlink > 1) {
+    throw new CacheTargetRefusedError(
+      `refusing to write ${target}: it has ${st.nlink} hard links, so a write could change another file. Remove it and run the refresh again.`,
+    );
+  }
+}
+
+/**
+ * Write a cache file atomically: a temporary file in the same directory opened
+ * with `wx` and mode 0600, flushed to disk, then renamed over the target. A
+ * killed or full-disk run therefore leaves the previous file intact instead of
+ * a truncated one, and nothing is ever written through an existing link.
+ */
+export function writeCacheFileAtomic(cacheDir: string, fileName: string, content: string | Buffer): string {
+  fs.mkdirSync(cacheDir, { recursive: true });
+  const target = path.join(cacheDir, fileName);
+  assertCacheTargetSafe(target);
+  const temporary = path.join(cacheDir, `.scg-${fileName}-${randomUUID()}.tmp`);
+  try {
+    const fd = fs.openSync(temporary, "wx", 0o600);
+    try {
+      fs.writeFileSync(fd, content);
+      fs.fsyncSync(fd);
+    } finally {
+      fs.closeSync(fd);
+    }
+    // Checked again right before the rename: the first check is an early,
+    // readable refusal, this one narrows the window in which a link can appear.
+    assertCacheTargetSafe(target);
+    fs.renameSync(temporary, target);
+  } finally {
+    try { fs.rmSync(temporary, { force: true }); } catch { /* no temporary file */ }
+  }
+  return target;
+}
 
 /** The former default, relative to the working directory. */
 export const LEGACY_CACHE_DIR = ".scg-cache";

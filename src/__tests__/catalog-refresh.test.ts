@@ -23,6 +23,11 @@ import { CATALOG_CACHE_FILE, FEED_CACHE_FILE } from "../threat-intel.js";
 import { CATALOG_DIGEST } from "../catalog-digest.js";
 import { readCatalogEntries, buildCatalog } from "../../scripts/generate-catalog.mjs";
 
+const NO_FLOOR = { minEntries: 0 }; // fixtures hold a few entries, far below half the bundled feed
+// These suites exercise transport, cache safety and catalog behaviour with unsigned local
+// routes; feed-signature.test.ts covers the signature check itself.
+const ALLOW_UNSIGNED = { allowUnsigned: true };
+
 const sha = (s: string | Buffer) =>
   createHash("sha256").update(typeof s === "string" ? Buffer.from(s, "utf8") : s).digest("hex");
 
@@ -160,7 +165,7 @@ describe("refreshFeed installs the catalog", () => {
   it("verifies the chain and writes the catalog cache", async () => {
     serve(realRoutes());
 
-    const result = await refreshFeed(DEFAULT_FEED_URL, tmpDir);
+    const result = await refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR, ALLOW_UNSIGNED);
     expect(result.entryCount).toBe(1);
     expect(result.catalogError).toBeUndefined();
     expect(result.catalog).toBeDefined();
@@ -190,7 +195,7 @@ describe("refreshFeed installs the catalog", () => {
     });
     serve({ [FEED_PATH]: FEED_DOC, [`${RELEASE_BASE}/catalog-index.json`]: tampered });
 
-    const result = await refreshFeed(DEFAULT_FEED_URL, tmpDir);
+    const result = await refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR, ALLOW_UNSIGNED);
     expect(result.catalog).toBeUndefined();
     expect(result.catalogError).toMatch(/index digest .* does not match/);
     expect(fs.existsSync(path.join(tmpDir, CATALOG_CACHE_FILE))).toBe(false);
@@ -208,7 +213,7 @@ describe("refreshFeed installs the catalog", () => {
     );
     serve(routes);
 
-    const result = await refreshFeed(DEFAULT_FEED_URL, tmpDir);
+    const result = await refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR, ALLOW_UNSIGNED);
     expect(result.catalog).toBeUndefined();
     expect(result.catalogError).toMatch(/shard .* digest .* does not match/);
     expect(fs.existsSync(path.join(tmpDir, CATALOG_CACHE_FILE))).toBe(false);
@@ -216,7 +221,7 @@ describe("refreshFeed installs the catalog", () => {
 
   it("still writes the feed cache when the catalog is unavailable", async () => {
     serve({ [FEED_PATH]: FEED_DOC });
-    const result = await refreshFeed(DEFAULT_FEED_URL, tmpDir);
+    const result = await refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR, ALLOW_UNSIGNED);
 
     expect(result.entryCount).toBe(1);
     expect(fs.existsSync(path.join(tmpDir, FEED_CACHE_FILE))).toBe(true);
@@ -229,7 +234,7 @@ describe("refreshFeed installs the catalog", () => {
   // one worth acting on.
   it("reports a digest mismatch differently from a missing asset", async () => {
     serve({ [FEED_PATH]: FEED_DOC });
-    const missing = await refreshFeed(DEFAULT_FEED_URL, tmpDir);
+    const missing = await refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR, ALLOW_UNSIGNED);
 
     serve({
       [FEED_PATH]: FEED_DOC,
@@ -238,7 +243,7 @@ describe("refreshFeed installs the catalog", () => {
         shards: [],
       }),
     });
-    const mismatched = await refreshFeed(DEFAULT_FEED_URL, tmpDir);
+    const mismatched = await refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR, ALLOW_UNSIGNED);
 
     expect(missing.catalogError).toBeTruthy();
     expect(mismatched.catalogError).toMatch(/digest/);
@@ -247,7 +252,7 @@ describe("refreshFeed installs the catalog", () => {
 
   it("fetches the catalog from the same origin as a custom feed URL", async () => {
     serve({ "/scg/feed.json": FEED_DOC });
-    await refreshFeed("https://mirror.invalid/scg/feed.json", tmpDir);
+    await refreshFeed("https://mirror.invalid/scg/feed.json", tmpDir, NO_FLOOR, ALLOW_UNSIGNED);
 
     const calls = (https.get as unknown as { mock: { calls: unknown[][] } }).mock.calls;
     const hosts = calls.map((c) => (c[0] as { hostname?: string }).hostname);

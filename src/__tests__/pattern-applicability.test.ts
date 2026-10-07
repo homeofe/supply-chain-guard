@@ -338,7 +338,7 @@ describe("coverage transparency", () => {
   });
 });
 describe("entry-point guard parity", () => {
-  it("npm tarball scanning skips test fixtures but still scans production files", () => {
+  it("npm tarball scanning reports a critical payload under a test path as well as in production", () => {
     const dir = makeTempDir("scg-applicability-npm-");
     const fixtureDir = path.join(dir, "test", "fixtures");
     fs.mkdirSync(fixtureDir, { recursive: true });
@@ -348,13 +348,16 @@ describe("entry-point guard parity", () => {
     const findings: Finding[] = [];
     scanExtractedNpmFiles(dir, findings);
 
+    // A critical malware verdict is not hidden by the path: the scanned
+    // package chooses its own directory names.
     const evalHits = findings.filter((finding) => finding.rule === "EVAL_ATOB");
-    expect(evalHits.map((finding) => finding.file?.replace(/\\/g, "/"))).toEqual([
+    expect(evalHits.map((finding) => finding.file?.replace(/\\/g, "/")).sort()).toEqual([
       "payload.js",
+      "test/fixtures/payload.js",
     ]);
   });
 
-  it("PyPI package scanning skips test fixtures but scans production modules", () => {
+  it("PyPI package scanning reports a critical payload under a test path as well as in production", () => {
     const dir = makeTempDir("scg-applicability-pypi-");
     const fixtureDir = path.join(dir, "tests");
     fs.mkdirSync(fixtureDir, { recursive: true });
@@ -365,8 +368,9 @@ describe("entry-point guard parity", () => {
     scanExtractedPypiFiles(dir, findings);
 
     const evalHits = findings.filter((finding) => finding.rule === "EVAL_ATOB");
-    expect(evalHits.map((finding) => finding.file?.replace(/\\/g, "/"))).toEqual([
+    expect(evalHits.map((finding) => finding.file?.replace(/\\/g, "/")).sort()).toEqual([
       "payload.py",
+      "tests/payload.py",
     ]);
   });
 

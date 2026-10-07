@@ -6,7 +6,7 @@
  * Uses `gh` CLI for API access (no token configuration needed).
  */
 
-import { execFileSync } from "node:child_process";
+import { execToolSync } from "./safe-exec.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding } from "./types.js";
@@ -48,7 +48,7 @@ interface Release {
  */
 function hasGhCli(): boolean {
   try {
-    execFileSync("gh", ["--version"], { stdio: "pipe" });
+    execToolSync("gh", ["--version"], { stdio: "pipe" });
     return true;
   } catch {
     return false;
@@ -78,7 +78,7 @@ function validGitHubName(owner: string, repo: string): boolean {
  */
 function fetchRepoMetadata(owner: string, repo: string): RepoMetadata | null {
   try {
-    const json = execFileSync(
+    const json = execToolSync(
       "gh",
       ["api", `repos/${owner}/${repo}`, "--jq", '{stars: .stargazers_count, forks: .forks_count, openIssues: .open_issues_count, hasIssues: .has_issues, createdAt: .created_at, pushedAt: .pushed_at, isOrg: (.owner.type == "Organization"), ownerLogin: .owner.login, defaultBranch: .default_branch}'],
       { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] },
@@ -88,7 +88,7 @@ function fetchRepoMetadata(owner: string, repo: string): RepoMetadata | null {
     // Fetch owner account age
     let ownerCreatedAt: string | undefined;
     try {
-      const ownerJson = execFileSync(
+      const ownerJson = execToolSync(
         "gh",
         ["api", `users/${owner}`, "--jq", ".created_at"],
         { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] },
@@ -99,7 +99,7 @@ function fetchRepoMetadata(owner: string, repo: string): RepoMetadata | null {
     // Fetch commit count
     let commitCount: number | undefined;
     try {
-      const commitJson = execFileSync(
+      const commitJson = execToolSync(
         "gh",
         ["api", `repos/${owner}/${repo}/commits?per_page=1`, "--jq", "length"],
         { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] },
@@ -110,7 +110,7 @@ function fetchRepoMetadata(owner: string, repo: string): RepoMetadata | null {
     // Fetch contributor count
     let contributorCount: number | undefined;
     try {
-      const contribJson = execFileSync(
+      const contribJson = execToolSync(
         "gh",
         ["api", `repos/${owner}/${repo}/contributors?per_page=5`, "--jq", "length"],
         { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] },
@@ -143,7 +143,7 @@ function fetchRepoMetadata(owner: string, repo: string): RepoMetadata | null {
  */
 function fetchReleases(owner: string, repo: string): Release[] {
   try {
-    const json = execFileSync(
+    const json = execToolSync(
       "gh",
       ["api", `repos/${owner}/${repo}/releases?per_page=5`, "--jq", "[.[] | {tagName: .tag_name, name: .name, createdAt: .created_at, assets: [.assets[] | {name: .name, size: .size, downloadCount: .download_count}]}]"],
       { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] },

@@ -536,7 +536,7 @@ jobs:
     expect(findings.find((f) => f.rule === "SLSA_UNSIGNED_ARTIFACTS")?.severity).toBe("info");
   });
 
-  it("should emit no findings for level 3 project", () => {
+  it("should emit only the not-verified note for a level 3 project with no attestation", () => {
     mkWorkflow(tmpDir, "release.yml", `
 on:
   workflow_call:
@@ -545,7 +545,8 @@ jobs:
     uses: slsa-framework/slsa-github-generator@abc1234567890abcdef1234567890abcdef123456
 `);
     const findings = verifySLSA(tmpDir);
-    expect(findings).toHaveLength(0);
+    expect(findings.map((f) => f.rule)).toEqual(["SLSA_SIGNATURE_NOT_VERIFIED"]);
+    expect(findings[0]!.severity).toBe("info");
   });
 
   it("should include recommendation in SLSA_LEVEL_0 finding", () => {
@@ -636,7 +637,7 @@ jobs:
     expect(res.subjectCount).toBe(1);
   });
 
-  it("should emit no findings for L3 npm-native path (--provenance + id-token: write)", () => {
+  it("should emit only the not-verified note for the L3 npm-native path (--provenance + id-token: write)", () => {
     mkWorkflow(tmpDir, "ci.yml", `
 on:
   push:
@@ -650,7 +651,7 @@ jobs:
       - run: npm publish --provenance
 `);
     const findings = verifySLSA(tmpDir);
-    expect(findings).toHaveLength(0);
+    expect(findings.map((f) => f.rule)).toEqual(["SLSA_SIGNATURE_NOT_VERIFIED"]);
   });
 
   it("should mention both L3 paths in the SLSA_UNSIGNED_ARTIFACTS recommendation", () => {

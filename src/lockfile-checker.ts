@@ -24,6 +24,7 @@ import * as path from "node:path";
 import type { Finding } from "./types.js";
 import { checkBadVersion } from "./ioc-blocklist.js";
 import { parseJsonObject } from "./json-utils.js";
+import { isTrustedResolved } from "./dependency-governance.js";
 import { lockfileFeedFindings } from "./lockfile-feed.js";
 import { loadThreatIntel, type FeedIOC } from "./threat-intel.js";
 import {
@@ -31,14 +32,6 @@ import {
   readOptionalUtf8File,
 } from "./pattern-scanner.js";
 
-/** Valid integrity hash prefixes */
-const VALID_INTEGRITY_PREFIXES = ["sha512-", "sha256-", "sha1-"];
-
-/** Known alternative registries that are generally trusted */
-const TRUSTED_REGISTRIES = [
-  "https://registry.npmjs.org/",
-  "https://registry.yarnpkg.com/",
-];
 
 /** Minimum expected lockfile version for modern projects */
 const MIN_LOCKFILE_VERSION = 2;
@@ -275,6 +268,8 @@ function checkPackages(
     // Extract package name from path (e.g. "node_modules/lodash" -> "lodash")
     const pkgName = pkgPath.replace(/^node_modules\//, "");
 
+    if (!entry || typeof entry !== "object") continue;
+
     // Check integrity hash format
     if (entry.integrity) {
       checkIntegrityHash(entry.integrity, pkgName, "package-lock.json", findings);
@@ -304,6 +299,7 @@ function checkDependencies(
   findings: Finding[],
 ): void {
   for (const [name, entry] of Object.entries(dependencies)) {
+    if (!entry || typeof entry !== "object") continue;
     // Check integrity
     if (entry.integrity) {
       checkIntegrityHash(entry.integrity, name, "package-lock.json", findings);
@@ -380,16 +376,48 @@ function checkParsedDependency(
  * Verify integrity hash matches expected format.
  */
 function checkIntegrityHash(
-  integrity: string,
+  rawIntegrity: unknown,
   pkgName: string,
   lockfileName: string,
   findings: Finding[],
 ): void {
-  const hasValidPrefix = VALID_INTEGRITY_PREFIXES.some((prefix) =>
-    integrity.startsWith(prefix),
-  );
+  if (typeof rawIntegrity !== "string") {
+    findings.push({
+      rule: "LOCKFILE_INVALID_INTEGRITY",
+      description: `Package "${pkgName}" has a non-string integrity value in ${lockfileName}.`,
+      severity: "high",
+      file: lockfileName,
+      match: `${pkgName}: ${JSON.stringify(rawIntegrity)?.substring(0, 50)}`,
+      recommendation: "Regenerate the lockfile. An integrity field must be an SRI string.",
+    });
+    return;
+  }
+  const integrity = rawIntegrity;
+  // Parse every whitespace-separated SRI token: known algorithm, valid base64,
+  // exact decoded length. A prefix test alone passed "sha512-AAAA..." garbage.
+  const tokens = integrity.trim().split(/\s+/).filter((t) => t !== "");
+  const wellFormed: string[] = [];
+  const malformed: string[] = [];
+  let knownAlgorithmSeen = false;
+  for (const token of tokens) {
+    const named = /^(sha512|sha384|sha256|sha1)-/i.exec(token);
+    if (!named) continue;
+    knownAlgorithmSeen = true;
+    const algorithm = named[1]!.toLowerCase();
+    const body = token.slice(named[0].length).replace(/\?.*$/, "");
+    const encoded = body.replace(/-/g, "+").replace(/_/g, "/");
+    const expected = SRI_DIGEST_BYTES[algorithm]!;
+    if (
+      /^[A-Za-z0-9+/]+={0,2}$/.test(encoded) &&
+      Buffer.from(encoded, "base64").length === expected
+    ) {
+      wellFormed.push(algorithm);
+    } else {
+      malformed.push(token);
+    }
+  }
 
-  if (!hasValidPrefix) {
+  if (!knownAlgorithmSeen) {
     findings.push({
       rule: "LOCKFILE_INVALID_INTEGRITY",
       description: `Package "${pkgName}" has an integrity hash with unexpected format: "${integrity.substring(0, 30)}..."`,
@@ -401,36 +429,135 @@ function checkIntegrityHash(
     });
   }
 
-  // Check for suspiciously short hashes (potential truncation/tampering)
+  // Suspiciously short hashes (potential truncation/tampering)
   const hashPart = integrity.split("-")[1] ?? "";
-  if (hashPart.length < 20) {
+  if (!knownAlgorithmSeen && hashPart.length < 20) {
+    findings.push(shortIntegrityFinding(pkgName, lockfileName, integrity));
+  }
+
+  for (const token of malformed) {
+    const body = token.slice(token.indexOf("-") + 1);
+    if (body.length < 20) {
+      findings.push(shortIntegrityFinding(pkgName, lockfileName, token));
+    } else {
+      findings.push({
+        rule: "LOCKFILE_INVALID_INTEGRITY",
+        description: `Package "${pkgName}" has a malformed integrity hash (not valid base64 or wrong digest length for its algorithm): "${token.substring(0, 30)}..."`,
+        severity: "high",
+        file: lockfileName,
+        match: `${pkgName}: ${token.substring(0, 50)}`,
+        recommendation:
+          "A sha512 digest decodes to 64 bytes, sha384 to 48, sha256 to 32 and sha1 to 20. A mismatching value may indicate tampering; regenerate the lockfile and compare.",
+      });
+    }
+  }
+
+  // Only a legacy sha1 digest verifies the tarball: collision-weak, so a
+  // tampered artifact is cheaper to forge. Old npm lockfiles carry it
+  // legitimately for some packages, hence low severity.
+  if (
+    malformed.length === 0 &&
+    wellFormed.length > 0 &&
+    wellFormed.every((algorithm) => algorithm === "sha1")
+  ) {
     findings.push({
-      rule: "LOCKFILE_SHORT_INTEGRITY",
-      description: `Package "${pkgName}" has a suspiciously short integrity hash. This may indicate tampering.`,
-      severity: "high",
+      rule: "LOCKFILE_WEAK_INTEGRITY",
+      description: `Package "${pkgName}" is verified only by a sha1 integrity hash. SHA-1 is collision-weak, so a replaced tarball is easier to forge.`,
+      severity: "low",
       file: lockfileName,
-      match: `${pkgName}: ${integrity}`,
+      match: `${pkgName}: ${integrity.substring(0, 50)}`,
       recommendation:
-        "Regenerate the lockfile and compare integrity values.",
+        "Regenerate the lockfile with a current package manager so the entry carries a sha512 integrity hash.",
     });
   }
+}
+
+const SRI_DIGEST_BYTES: Record<string, number> = {
+  sha512: 64,
+  sha384: 48,
+  sha256: 32,
+  sha1: 20,
+};
+
+function shortIntegrityFinding(
+  pkgName: string,
+  lockfileName: string,
+  value: string,
+): Finding {
+  return {
+    rule: "LOCKFILE_SHORT_INTEGRITY",
+    description: `Package "${pkgName}" has a suspiciously short integrity hash. This may indicate tampering.`,
+    severity: "high",
+    file: lockfileName,
+    match: `${pkgName}: ${value}`,
+    recommendation: "Regenerate the lockfile and compare integrity values.",
+  };
+}
+
+/**
+ * Whether a non-trusted `resolved` URL is dressed up as a trusted registry:
+ * the host (or userinfo) mentions npmjs / yarnpkg but the parsed host is not
+ * exactly a trusted one. Ordinary private registries do not match.
+ */
+function imitatesTrustedRegistry(resolved: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(resolved);
+  } catch {
+    return /npmjs|yarnpkg/i.test(resolved.split(/[/?#]/)[2] ?? "");
+  }
+  if (url.protocol !== "https:" && url.protocol !== "http:") return false;
+  // The real registry host over plain HTTP is LOCKFILE_HTTP_RESOLVED's case.
+  if (
+    (url.hostname === "registry.npmjs.org" || url.hostname === "registry.yarnpkg.com") &&
+    url.username === "" &&
+    url.port === ""
+  ) {
+    return false;
+  }
+  const authority = `${url.username} ${url.hostname}`;
+  return /npmjs|yarnpkg/i.test(authority);
 }
 
 /**
  * Check if a resolved URL points to a non-registry source.
  */
 function checkResolvedUrl(
-  resolved: string,
+  resolvedRaw: unknown,
   pkgName: string,
   lockfileName: string,
   findings: Finding[],
 ): void {
-  // Skip if it's a known trusted registry
-  const isTrusted = TRUSTED_REGISTRIES.some((registry) =>
-    resolved.startsWith(registry),
-  );
+  if (typeof resolvedRaw !== "string") {
+    findings.push({
+      rule: "LOCKFILE_UNUSUAL_RESOLVED",
+      description: `Package "${pkgName}" has a non-string resolved value in ${lockfileName}.`,
+      severity: "medium",
+      file: lockfileName,
+      recommendation: "Regenerate the lockfile. A resolved field must be a URL string.",
+    });
+    return;
+  }
+  const resolved = resolvedRaw;
+  // Trusted only when the PARSED host is exactly a known registry (no
+  // credentials, no port): a prefix test treats lookalike hosts as ordinary.
+  const isTrusted = !resolved.startsWith("file:") && isTrustedResolved(resolved);
 
   if (!isTrusted) {
+    if (imitatesTrustedRegistry(resolved)) {
+      findings.push({
+        rule: "DEPENDENCY_UNTRUSTED_SOURCE",
+        description: `Package "${pkgName}" resolves from a host that imitates a trusted registry: ${resolved.substring(0, 80)}`,
+        severity: "high",
+        file: lockfileName,
+        match: `${pkgName}: ${resolved.substring(0, 100)}`,
+        confidence: 0.8,
+        category: "supply-chain",
+        recommendation:
+          "The URL looks like the npm or yarn registry but points at a different host (lookalike domain, userinfo trick or extra port). Treat the tarball as untrusted and regenerate the lockfile from the real registry.",
+      });
+      return;
+    }
     // GitHub tarball URLs are somewhat common but still worth flagging
     if (
       resolved.startsWith("https://github.com/") ||

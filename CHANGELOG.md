@@ -21,6 +21,94 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   in the known-bad npm versions (5.8.2 stays clean). Curated bundle entries
   with a campaign, from the StepSecurity and Flatt Security write-ups.
 
+### Security
+
+- **Windows: a tool planted in the scanned directory no longer runs during a
+  scan** (GHSA-cq59-vmg7-pmqv). External tools (`git`, `tar`, `unzip`, `xz`,
+  `bzip2`, `gh`) and the package manager behind `install-guard` were started
+  by bare name. Windows resolves a bare name in the current directory before
+  `PATH`, so a `git.bat`, `git.cmd` or `git.exe` inside the scanned project ran
+  when `scan` read its git provenance; the MCP `scan_directory` tool and the
+  Action on a Windows runner reached the same code, and `install-guard` ran an
+  `npm.cmd` from the directory it was started in. On Linux and macOS the same
+  happened when `PATH` held an empty or relative entry. Every tool is now
+  resolved to an absolute path from the absolute `PATH` entries only
+  (`src/safe-exec.ts`) and started without a shell.
+- **A policy or comment inside the scanned tree can no longer hide severe
+  findings unseen.** A `.scg.yml` shipped in a cloned GitHub repository or an
+  MCP `scan_directory` target is no longer read (`trustTargetPolicy`), and
+  there an `scg-ignore-next-line` comment cannot suppress a high or critical
+  finding. A local scan still honours both, but every high or critical finding
+  they remove is listed in the new `POLICY_SUPPRESSED_SEVERE` finding, and the
+  report carries `riskLevelBeforePolicy` and `maxSeverityBeforePolicy`
+  (GHSA-wrr5-263w-wvmh).
+- **Deny-list regexes from the scanned tree are restricted to a safe subset.**
+  A quantified group, a backreference or a lookaround in a tree-supplied
+  `internalDisclosure` pattern is refused (`INTERNAL_DENYLIST_REFUSED`, partial
+  scan); `(a|a)+$` used to hang the scan. Operator patterns are unchanged
+  (GHSA-frvv-hf2w-gwf7).
+- **Content a scanned package controls no longer turns a critical result
+  clean.** A UTF-8 BOM or UTF-16 encoding no longer blinds the rules; a root
+  `package.json` that does not parse is a partial scan; critical rules now
+  fire in test-shaped paths (`x-test.js`, `tests/`, `fixtures/`, `conftest.py`)
+  and in files named like the scanner's own modules; `.txt` is not exempt
+  from critical rules or known-indicator matching; files a script loads with
+  `require`/`import` are read whatever their extension; `.pth`, `.vbs`,
+  `.wsf`, `.hta`, `.jse` and `.html` are read; bundled or hook-referenced
+  `node_modules` packages are scanned; a root `feed.json` is exempt only as
+  this project's own byte-identical file.
+- **Detection of light obfuscation**: `process["env"]`, escaped identifiers,
+  string concatenation and environment aliases no longer hide the
+  environment-exfiltration rules, and the new `JS_EXEC_REMOTE_SHELL_PIPE`
+  (high) flags a script that executes a downloaded file through a shell.
+- **Tar and ZIP archives are written by the scanner itself**, not by the
+  system `tar`, `unzip` or bsdtar, so the members written are exactly the
+  members validated; ZIP members are checked against their CRC-32. Links are
+  never created: a link to a file in the archive is written as a copy of that
+  file, any other link is reported as a partial scan.
+- **Catalog and feed cache**: both are written atomically and refused through
+  a symlink or hard link; a catalog that is present but broken, truncated or
+  replaced is now `THREAT_FEED_CATALOG_UNAVAILABLE` (high, partial scan), and
+  so is a catalog that `feed refresh` installed and that was later deleted
+  (`catalog-installed.json` marker); a refresh that would roll the feed back,
+  shrink it below half the bundled feed, or carry a far-future date is refused.
+- **The threat feed is signed.** Each release signs `feed.json` with Ed25519
+  and publishes `feed.json` and `feed.json.sig` as release assets. `feed
+  refresh` now downloads the feed from the latest release, verifies the
+  signature against the public key built into the package before parsing, and
+  verifies the cached copy again on every load; an unsigned, wrongly signed or
+  altered feed is refused (`THREAT_FEED_CACHE_UNREADABLE` for a cache). A
+  custom `--url` must be signed by the same key unless `--allow-unsigned-feed`
+  is given. Threat intel merged between two releases reaches `feed refresh`
+  with the next release. Only the highest release is marked `latest`, and
+  when the latest release carries no signed feed (a patch on an older major)
+  `feed refresh` reads the newest release that does, still verifying its
+  signature. Key fingerprint in SECURITY.md.
+- **MCP server**: UNC and other network paths are refused before they are
+  touched (GHSA-hpmp-48p8-f32h); a long scan no longer blocks other calls and
+  times out; matched
+  secrets are redacted in tool results; an oversized input line is answered
+  with an error instead of ending the server; launchers (`cmd /c`, `sh -c`,
+  `pnpm dlx`, `npm exec`, `uvx --from`, version ranges) and both `mcpServers`
+  and `servers` keys are understood by the MCP config scanner.
+- **Install guard**: `npm it`, `link`, `exec` with flags, `pnpm dlx`,
+  `yarn dlx` and `bun x` are checked, boolean flags no longer swallow the
+  package name, and an argument containing a line break is refused.
+- **Integrity checks**: lockfile SRI values are parsed (algorithm, base64,
+  exact length) instead of prefix-tested, sha1-only entries are reported
+  (`LOCKFILE_WEAK_INTEGRITY`), lookalike registry hosts are high
+  (`DEPENDENCY_UNTRUSTED_SOURCE`), a malformed strong npm `integrity` token can
+  no longer let a weaker one decide, and a PyPI digest mismatch is its own
+  high finding (`ARTIFACT_DIGEST_MISMATCH`). SLSA provenance subjects are
+  compared with the artifact (`SLSA_SUBJECT_DIGEST_MISMATCH`) and every
+  attestation is reported as not signature-verified.
+- **Other**: `--since` keeps changed files with non-ASCII names and accepts
+  `HEAD~1`; git remotes with a credential-shaped path are dropped from reports
+  and SARIF no longer falls back to the local path; cached OSV "clean" answers
+  are re-checked after 15 minutes and the cache file is validated on load;
+  npm cache keys no longer fold case; files over 5 MiB that are not read as
+  code are still checked against the known-malware digests up to 64 MiB.
+
 ## [6.5.1] - 2026-10-06
 
 ### Added

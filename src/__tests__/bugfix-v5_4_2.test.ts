@@ -80,8 +80,12 @@ describe("v5.4.2: policy-suppressed findings do not leak into incidents", () => 
     fs.rmSync(path.join(tmpDir, ".scg-history"), { recursive: true, force: true });
     const clean = await scan({ target: tmpDir, format: "json" });
 
-    // A fully-suppressed scan must score like a clean scan (no hidden boost).
-    expect(suppressed.score).toBe(clean.score);
+    // A fully-suppressed scan must score like a clean scan (no hidden boost),
+    // plus exactly the one medium POLICY_SUPPRESSED_SEVERE finding (5 points)
+    // that says severe findings were suppressed.
+    const note = suppressed.findings.filter((f) => f.rule === "POLICY_SUPPRESSED_SEVERE");
+    expect(note).toHaveLength(1);
+    expect(suppressed.score - 5).toBe(clean.score);
   });
 });
 

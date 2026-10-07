@@ -3153,7 +3153,10 @@ function c2DomainRegexes(): Array<{ domain: string; regex: RegExp }> {
 // malware IOCs in threat-intel write-ups, changelog entries, and blog posts.
 // The IOC blocklist exists to flag actual references in source code, not to
 // hit research discussion. Same rationale as patterns.ts BENIGN_DOC_FILES.
-const BENIGN_DOC_FILES = /\.(md|markdown|txt|rst)$/i;
+// `.txt` is deliberately NOT a document here: Node executes `require("./a.txt")`
+// as JavaScript, and the scanner now reads a .txt a script loads, so exempting
+// it would give a payload a hiding place for a known C2 (security review F6/F8).
+const BENIGN_DOC_FILES = /\.(md|markdown|rst)$/i;
 
 export function checkIOCBlocklist(
   content: string,

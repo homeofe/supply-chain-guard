@@ -23,7 +23,9 @@ export function buildSelfScanManifest(root = repoRoot) {
   const files = {};
   for (const relativePath of [...paths].sort()) {
     const normalized = relativePath.replaceAll("\\", "/");
-    if (!normalized.startsWith("src/") || normalized.includes("../")) {
+    // feed.json is the one non-src file: the published threat feed at the root,
+    // recognised by digest so no other root feed.json can claim its exemption.
+    if (!(normalized === "feed.json" || normalized.startsWith("src/")) || normalized.includes("../")) {
       throw new Error(`Unsafe self-scan manifest path: ${relativePath}`);
     }
     const absolutePath = join(root, ...normalized.split("/"));

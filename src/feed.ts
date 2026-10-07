@@ -26,15 +26,24 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { gunzipSync } from "node:zlib";
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import { fetchHttpsBuffer, type RemoteRequestLimits } from "./remote-download.js";
 import type { Finding } from "./types.js";
 import { CATALOG_DIGEST } from "./catalog-digest.js";
-import { resolveCacheDir } from "./cache-dir.js";
+import {
+  resolveCacheDir,
+  writeCacheFileAtomic,
+  assertCacheTargetSafe,
+  CacheTargetRefusedError,
+} from "./cache-dir.js";
+import { assertFeedSignature, FEED_SIGNATURE_FILE, FEED_SIGNED_COPY_FILE } from "./feed-signing-key.js";
 import {
   FEED_CACHE_FILE,
   CATALOG_CACHE_FILE,
+  CATALOG_MARKER_FILE,
+  FEED_GENERATED_AT,
   FEED_REMOTE_LIMITS,
+  getBundledFeedRef,
   isValidFeedIOC,
   type CatalogState,
   normalizeFeedIOC,
@@ -42,9 +51,61 @@ import {
   type FeedLimitOverrides,
 } from "./threat-intel.js";
 
-/** Published feed location: the committed feed.json on the main branch. */
+/**
+ * Published feed location: the feed.json attached to the latest GitHub Release,
+ * next to feed.json.sig, the detached Ed25519 signature the release job makes.
+ */
 export const DEFAULT_FEED_URL =
-  "https://raw.githubusercontent.com/homeofe/supply-chain-guard/main/feed.json";
+  "https://github.com/homeofe/supply-chain-guard/releases/latest/download/feed.json";
+
+/** Releases API, read only when `latest` carries no signed feed. */
+const RELEASES_API_URL = "https://api.github.com/repos/homeofe/supply-chain-guard/releases?per_page=50";
+
+/**
+ * The feed URL of the newest release (highest semver, not draft, not
+ * prerelease) that carries both feed.json and feed.json.sig.
+ *
+ * GitHub marks every newly published release as `latest` by default, so a
+ * patch on an older major (5.x is still supported) would point `latest` at a
+ * release whose workflow publishes no signed feed, and every refresh would
+ * fail until the next 6.x release. The signature is still verified on what
+ * this returns, so the fallback can choose a release but never weaken the
+ * check; the rollback guard still refuses a feed older than the cached one.
+ */
+export async function newestSignedReleaseFeedUrl(
+  limits: RemoteRequestLimits,
+  fetcher: typeof fetchHttpsBuffer = fetchHttpsBuffer,
+): Promise<string> {
+  const body = (await fetcher(RELEASES_API_URL, {
+    ...limits,
+    headers: { "User-Agent": "supply-chain-guard", Accept: "application/vnd.github+json" },
+  })).body.toString("utf-8");
+  const releases: unknown = JSON.parse(body);
+  if (!Array.isArray(releases)) throw new Error("the releases API did not return a list");
+  let best: { tag: string; key: number[] } | undefined;
+  for (const release of releases) {
+    if (!release || typeof release !== "object") continue;
+    const r = release as { tag_name?: unknown; draft?: unknown; prerelease?: unknown; assets?: unknown };
+    if (r.draft === true || r.prerelease === true || typeof r.tag_name !== "string") continue;
+    const m = /^v(\d+)\.(\d+)\.(\d+)$/.exec(r.tag_name);
+    if (!m || !Array.isArray(r.assets)) continue;
+    const names = new Set(r.assets.map((a) => (a && typeof a === "object" ? (a as { name?: unknown }).name : undefined)));
+    if (!names.has("feed.json") || !names.has("feed.json.sig")) continue;
+    const key = [Number(m[1]), Number(m[2]), Number(m[3])];
+    if (!best || key[0]! > best.key[0]! || (key[0] === best.key[0] && (key[1]! > best.key[1]! ||
+        (key[1] === best.key[1] && key[2]! > best.key[2]!)))) {
+      best = { tag: r.tag_name, key };
+    }
+  }
+  if (!best) throw new Error("no published release carries a signed feed (feed.json and feed.json.sig)");
+  return `https://github.com/homeofe/supply-chain-guard/releases/download/${best.tag}/feed.json`;
+}
+
+/** Where the detached signature of a feed lives: the feed URL plus `.sig`. */
+export function feedSignatureUrlFor(feedUrl: string): string {
+  const cut = feedUrl.search(/[?#]/);
+  return cut === -1 ? `${feedUrl}.sig` : `${feedUrl.slice(0, cut)}.sig${feedUrl.slice(cut)}`;
+}
 
 /** Where the catalog assets are published for a tagged release. */
 export const DEFAULT_CATALOG_URL_TEMPLATE =
@@ -133,6 +194,18 @@ export const FEED_STALE_RULE = "THREAT_FEED_STALE";
 /** The rule id for a catalog that could not be consulted. */
 export const CATALOG_MISSING_RULE = "THREAT_FEED_CATALOG_MISSING";
 
+/**
+ * The rule id for a catalog that IS on disk but could not be used: unreadable,
+ * truncated, built for another release or not matching the pinned digests.
+ *
+ * Separate from CATALOG_MISSING_RULE because it carries a different claim and a
+ * different consequence. `missing` is the ordinary state before a first
+ * refresh, so it stays an informational note. This one says an installed
+ * catalog was damaged, replaced or outdated underneath the scanner: the scan is
+ * partial (PARTIAL_SCAN_RULES), exactly like an unreadable feed cache.
+ */
+export const CATALOG_UNAVAILABLE_RULE = "THREAT_FEED_CATALOG_UNAVAILABLE";
+
 export interface FeedFreshness {
   /** `YYYY-MM-DD` of the newest usable indicator, or null if none was usable. */
   newestIndicator: string | null;
@@ -192,14 +265,30 @@ function indicatorDateMs(value: unknown): number | null {
 export function feedFreshness(
   feed: readonly FeedIOC[],
   now: number | Date = Date.now(),
+  cachedFeedGeneratedAt?: string,
 ): FeedFreshness {
   const nowMs = now instanceof Date ? now.getTime() : now;
   let newestMs: number | null = null;
   let datedEntries = 0;
 
+  // When the cached feed recorded its own generation time, an indicator cannot
+  // have been first seen after it (one day of slack, `firstSeen` is a date).
+  // The ceiling is the later of that and the bundled feed's generation time,
+  // so a refreshed cache stamped with a fabricated `firstSeen` of today cannot
+  // reset the staleness check. This reads the feed document, not this
+  // machine's clock, which says only when the refresh ran. With no recorded
+  // generation time the only ceiling is `now`, as before.
+  let ceilingMs = nowMs;
+  const cachedGeneratedMs =
+    cachedFeedGeneratedAt === undefined ? Number.NaN : Date.parse(cachedFeedGeneratedAt);
+  if (Number.isFinite(cachedGeneratedMs)) {
+    const generatedMs = Math.max(cachedGeneratedMs, Date.parse(FEED_GENERATED_AT));
+    ceilingMs = Math.min(nowMs, generatedMs + MS_PER_DAY);
+  }
+
   for (const ioc of feed) {
     const ms = indicatorDateMs((ioc as { firstSeen?: unknown }).firstSeen);
-    if (ms === null || ms > nowMs) continue;
+    if (ms === null || ms > ceilingMs) continue;
     datedEntries += 1;
     if (newestMs === null || ms > newestMs) newestMs = ms;
   }
@@ -285,6 +374,7 @@ const CATALOG_REASON_TEXT: Record<NonNullable<CatalogState["reason"]>, string> =
   "version-mismatch": "the cached catalog was built for a different release",
   "digest-mismatch": "the cached catalog does not match the digest this release pins",
   corrupt: "the cached catalog's entries do not match the checksum recorded beside them",
+  removed: "the catalog installed by `feed refresh` on this machine has been deleted",
 };
 
 /**
@@ -308,7 +398,13 @@ const CATALOG_REASON_TEXT: Record<NonNullable<CatalogState["reason"]>, string> =
  *
  * - `version-mismatch` is `low`: a catalog is present, it is simply the wrong
  *   release's. One refresh fixes it.
- * - `unreadable` is `medium`: the file is there and broken.
+ * - `unreadable` is `high`, like `corrupt`: the file is there and broken, which
+ *   is what a killed download, a truncated write or a hand-edited cache looks
+ *   like, and it silently removes the whole historical corpus from the scan.
+ *   It was `medium` until a garbage file measured as exit 0.
+ * - `removed` is `high`: a catalog was installed here (the marker `feed refresh`
+ *   leaves) and the file is gone, which is not how a first run looks. Without the
+ *   marker this would read as `absent` and exit 0 with the corpus unconsulted.
  * - `digest-mismatch` and `corrupt` are `high`: neither is a normal state. One
  *   means the cached catalog was built from a different catalog than this
  *   release pins, the other that its entries no longer match their own
@@ -324,9 +420,10 @@ const CATALOG_REASON_SEVERITY: Record<
 > = {
   absent: "info",
   "version-mismatch": "low",
-  unreadable: "medium",
+  unreadable: "high",
   "digest-mismatch": "high",
   corrupt: "high",
+  removed: "high",
 };
 
 /**
@@ -383,7 +480,7 @@ export function catalogFindings(
   if (missing === 0 && mode !== "required") return [];
 
   const reason = state.reason ?? "absent";
-  const built = state.cachedVersion ? ` (it was built for ${state.cachedVersion})` : "";
+  const built = state.cachedVersion && reason !== "removed" ? ` (it was built for ${state.cachedVersion})` : "";
   // A cache in the working directory is the former default location. It is
   // no longer read unless named, so say where the catalog is looked for now.
   const legacy = context.legacyCacheInWorkingDir
@@ -392,9 +489,23 @@ export function catalogFindings(
       "directory. Run the refresh once, or pass --cache-dir .scg-cache to keep using it."
     : "";
 
+  // `absent` is the one state that is an ordinary, expected condition (nothing
+  // was ever downloaded), so it keeps the informational rule and does not mark
+  // the scan partial: every first-time user would otherwise see partial
+  // results until they ran `feed refresh`, and `catalog: required` already
+  // raises it to critical for whoever needs the full corpus. `version-mismatch`
+  // is the other ordinary state: it is what every user who refreshed once sees
+  // right after upgrading, until the next refresh, so it is not partial either
+  // in optional mode. Forging an old version into the cache needs write access
+  // to the user's own cache directory, which already allows worse. Every other
+  // state means a catalog was installed and is now broken or replaced, so the
+  // scan is partial: the finding carries a rule id PARTIAL_SCAN_RULES recognises.
+  const ordinary = reason === "absent" || (reason === "version-mismatch" && mode !== "required");
+  const rule = ordinary ? CATALOG_MISSING_RULE : CATALOG_UNAVAILABLE_RULE;
+
   return [
     {
-      rule: CATALOG_MISSING_RULE,
+      rule,
       description:
         `${missing} historical indicators were not consulted by this scan, because ` +
         `${CATALOG_REASON_TEXT[reason]}${built}. Those indicators are published ` +
@@ -410,7 +521,7 @@ export function catalogFindings(
         "without it is narrower than a scan with it, and reports the same success.",
       recommendation:
         "Run `supply-chain-guard feed refresh` to download the catalog, which is " +
-        `cached for later scans. Exclude the ${CATALOG_MISSING_RULE} rule only if ` +
+        `cached for later scans. Exclude the ${rule} rule only if ` +
         "scanning against the bundled set alone is the intent.",
     },
   ];
@@ -444,6 +555,29 @@ export interface RefreshResult {
    * seeing.
    */
   catalogError?: string;
+  /**
+   * True when the feed was installed WITHOUT a signature check, because the
+   * caller passed allowUnsigned (`--allow-unsigned-feed`). The cache records it
+   * and the CLI prints a warning.
+   */
+  unsigned?: boolean;
+}
+
+/** Options for refreshFeed beyond the URL, cache directory and limits. */
+export interface RefreshOptions {
+  /**
+   * Install a feed that is not signed by the bundled key. Off by default and
+   * set only by the explicit `--allow-unsigned-feed` flag; there is no
+   * environment variable for it.
+   */
+  allowUnsigned?: boolean;
+  /**
+   * Finds the fallback release when `latest` carries no signed feed. Defaults
+   * to newestSignedReleaseFeedUrl (the GitHub releases API); tests inject a
+   * local one. It only chooses WHICH release to read: the signature of what
+   * it returns is verified exactly like the default source.
+   */
+  resolveSignedRelease?: (limits: RemoteRequestLimits) => Promise<string>;
 }
 
 /**
@@ -466,6 +600,20 @@ export function parseFeedPayload(
   raw: string,
   expectedKind: "feed" | "catalog" = "feed",
 ): FeedIOC[] {
+  return parseFeedDocument(raw, expectedKind).entries;
+}
+
+/**
+ * parseFeedPayload plus the document's own generation time.
+ *
+ * `generatedAt` is the feed's `generatedAt` field when it is a string, else
+ * undefined (the legacy raw-array form carries none). It is NOT validated here;
+ * refreshFeed decides what to do with it.
+ */
+export function parseFeedDocument(
+  raw: string,
+  expectedKind: "feed" | "catalog" = "feed",
+): { entries: FeedIOC[]; generatedAt?: string } {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
@@ -524,7 +672,103 @@ export function parseFeedPayload(
     normalizedEntries.push(normalizeFeedIOC(e));
   }
 
-  return normalizedEntries;
+  const generated = Array.isArray(parsed)
+    ? undefined
+    : (parsed as { generatedAt?: unknown } | null)?.generatedAt;
+  return {
+    entries: normalizedEntries,
+    ...(typeof generated === "string" ? { generatedAt: generated } : {}),
+  };
+}
+
+/** Clock skew tolerated between a feed's generation time and this machine. */
+const FEED_GENERATED_AT_SKEW_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * The smallest feed a refresh may install, as a share of the bundled feed.
+ *
+ * A published feed is a superset of the bundle of the release it belongs to, so
+ * one that holds less than half of it is not a newer corpus, it is a truncated,
+ * swapped or replayed document, and installing it would replace a good cache
+ * with a slice of one.
+ */
+const FEED_MIN_SHARE_OF_BUNDLE = 0.5;
+
+/**
+ * Decide whether a downloaded feed may replace the cached one. Throws with the
+ * reason. Everything here is a refusal on structure the feed itself declares;
+ * the feed is still unsigned, so none of this authenticates its origin (open:
+ * a detached signature).
+ *
+ *  - Its `generatedAt`, when present, must be a real date, not further in the
+ *    future than the clock skew allowance (a far-future value would otherwise
+ *    make every genuine later refresh look older than the cache), and not older
+ *    than the feed bundled with this release.
+ *  - It must not be older than the cached copy's own `generatedAt`, and a feed
+ *    that drops `generatedAt` is refused when the cached one has it, so the
+ *    check cannot be stepped around by omitting the field.
+ *  - It must hold at least half as many entries as the bundled feed.
+ */
+function assertFeedMayReplace(
+  entries: readonly FeedIOC[],
+  generatedAt: string | undefined,
+  cachedGeneratedAt: string | undefined,
+  minEntries: number,
+  nowMs: number,
+): void {
+  if (entries.length < minEntries) {
+    throw new Error(
+      `refusing the feed: it holds ${entries.length} entries, fewer than the ${minEntries} ` +
+        `(half of the bundled feed) a genuine feed holds. The previous cache stays in effect.`,
+    );
+  }
+
+  if (generatedAt === undefined) {
+    if (cachedGeneratedAt !== undefined) {
+      throw new Error(
+        `refusing the feed: it declares no generatedAt, but the cached feed (${cachedGeneratedAt}) does, ` +
+          `so it cannot be shown to be newer. The previous cache stays in effect.`,
+      );
+    }
+    return;
+  }
+
+  const generatedMs = Date.parse(generatedAt);
+  if (!Number.isFinite(generatedMs)) {
+    throw new Error(
+      `refusing the feed: generatedAt ${JSON.stringify(generatedAt).slice(0, 40)} is not a date.`,
+    );
+  }
+  if (generatedMs > nowMs + FEED_GENERATED_AT_SKEW_MS) {
+    throw new Error(
+      `refusing the feed: generatedAt ${generatedAt} is in the future. ` +
+        `Check this machine's clock, or the feed source.`,
+    );
+  }
+  const bundledMs = Date.parse(FEED_GENERATED_AT);
+  if (Number.isFinite(bundledMs) && generatedMs < bundledMs) {
+    throw new Error(
+      `refusing the feed: generatedAt ${generatedAt} is older than the feed bundled with this ` +
+        `release (${FEED_GENERATED_AT}). The previous cache stays in effect.`,
+    );
+  }
+  const cachedMs = cachedGeneratedAt === undefined ? NaN : Date.parse(cachedGeneratedAt);
+  if (Number.isFinite(cachedMs) && generatedMs < cachedMs) {
+    throw new Error(
+      `refusing the feed: generatedAt ${generatedAt} is older than the cached feed (${cachedGeneratedAt}). ` +
+        `The previous cache stays in effect.`,
+    );
+  }
+}
+
+/** The `generatedAt` of the feed cache currently on disk, if it has a usable one. */
+function readCachedGeneratedAt(cachePath: string): string | undefined {
+  try {
+    const cached = JSON.parse(fs.readFileSync(cachePath, "utf-8")) as { generatedAt?: unknown };
+    return typeof cached.generatedAt === "string" ? cached.generatedAt : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -578,25 +822,6 @@ export function decodeCatalogBody(body: Buffer): string {
     }
     throw new Error(`catalog is not valid gzip: ${message}`);
   }
-}
-
-/**
- * Download a URL over HTTPS and resolve with the response body.
- *
- * This used to be a hand-rolled https.get with no deadline and no cap, so a peer
- * that sent headers and then stalled held `feed refresh` open with no output and
- * no exit, and a peer that sent an oversized document was buffered in full. The
- * request now goes through the package's bounded downloader, which carries an
- * absolute deadline across every redirect hop, refuses a declared Content-Length
- * over the cap before reading a byte, and counts bytes while streaming when no
- * length is declared.
- */
-async function httpsGetBody(url: string, limits: RemoteRequestLimits): Promise<string> {
-  const { body } = await fetchHttpsBuffer(url, limits);
-  // Decode ONCE over the whole buffer. The previous reader did `data +=
-  // chunk.toString()` per chunk, which turns a multi-byte UTF-8 sequence split
-  // across a chunk boundary into replacement characters.
-  return body.toString("utf-8");
 }
 
 /**
@@ -693,10 +918,12 @@ async function installCatalog(
     );
   }
 
-  fs.mkdirSync(cacheDir, { recursive: true });
-  const cachePath = path.join(cacheDir, CATALOG_CACHE_FILE);
-  fs.writeFileSync(
-    cachePath,
+  // Written like the feed cache: temp file, `wx`, 0600, fsync, rename, and a
+  // refusal when the target is a link. A plain write here once followed a hard
+  // link onto another file and left a truncated catalog behind when killed.
+  const cachePath = writeCacheFileAtomic(
+    cacheDir,
+    CATALOG_CACHE_FILE,
     JSON.stringify({
       version,
       sha256: CATALOG_DIGEST.sha256,
@@ -708,6 +935,18 @@ async function installCatalog(
     }),
   );
 
+  // Recorded only after the catalog itself is in place, so the marker never
+  // claims an install that did not happen. See CATALOG_MARKER_FILE.
+  writeCacheFileAtomic(
+    cacheDir,
+    CATALOG_MARKER_FILE,
+    JSON.stringify({
+      version,
+      sha256: CATALOG_DIGEST.sha256,
+      installedAt: new Date().toISOString(),
+    }),
+  );
+
   return { entryCount: entries.length, cachePath };
 }
 
@@ -715,26 +954,114 @@ export async function refreshFeed(
   feedUrl: string = DEFAULT_FEED_URL,
   cacheDirOption?: string,
   limitOverrides: FeedLimitOverrides = {},
+  options: RefreshOptions = {},
 ): Promise<RefreshResult> {
-  const limits: RemoteRequestLimits = { ...FEED_REMOTE_LIMITS, ...limitOverrides };
+  const { minEntries: minEntriesOverride, ...networkOverrides } = limitOverrides;
+  const limits: RemoteRequestLimits = { ...FEED_REMOTE_LIMITS, ...networkOverrides };
   const cacheDir = resolveCacheDir(cacheDirOption);
   try {
-    const body = await httpsGetBody(feedUrl, limits);
-    const entries = parseFeedPayload(body);
-
-    fs.mkdirSync(cacheDir, { recursive: true });
-    const cachePath = path.join(cacheDir, FEED_CACHE_FILE);
-    const temporary = path.join(cacheDir, `.scg-feed-${randomUUID()}.tmp`);
-    try {
-      fs.writeFileSync(
-        temporary,
-        JSON.stringify({ timestamp: new Date().toISOString(), entries }, null, 2),
-        { flag: "wx", mode: 0o600 },
-      );
-      fs.renameSync(temporary, cachePath);
-    } finally {
-      try { fs.rmSync(temporary, { force: true }); } catch { /* no temporary file */ }
+    // Refuse a linked cache target up front, before a download is spent on it.
+    // The write helper checks again at write time.
+    assertCacheTargetSafe(path.join(cacheDir, FEED_CACHE_FILE));
+    assertCacheTargetSafe(path.join(cacheDir, CATALOG_CACHE_FILE));
+    assertCacheTargetSafe(path.join(cacheDir, CATALOG_MARKER_FILE));
+    assertCacheTargetSafe(path.join(cacheDir, FEED_SIGNED_COPY_FILE));
+    assertCacheTargetSafe(path.join(cacheDir, FEED_SIGNATURE_FILE));
+    // The default source is the latest release. When that release carries no
+    // signed feed (a patch on an older major became `latest`), fall back to the
+    // newest release that does. Custom URLs never fall back.
+    let sourceUrl = feedUrl;
+    let raw: Buffer;
+    let signatureBody: Buffer | undefined;
+    if (feedUrl !== DEFAULT_FEED_URL) {
+      raw = (await fetchHttpsBuffer(sourceUrl, limits)).body;
+    } else {
+      try {
+        raw = (await fetchHttpsBuffer(sourceUrl, limits)).body;
+        if (!options.allowUnsigned) {
+          signatureBody = (await fetchHttpsBuffer(feedSignatureUrlFor(sourceUrl), limits)).body;
+        }
+      } catch (latestErr) {
+        try {
+          sourceUrl = await (options.resolveSignedRelease ?? newestSignedReleaseFeedUrl)(limits);
+        } catch (resolveErr) {
+          const why = (e: unknown) => (e instanceof Error ? e.message : String(e));
+          throw new Error(
+            `refusing the feed: the latest release carries no signed feed (${why(latestErr)}), and no other ` +
+              `release with feed.json and feed.json.sig could be found (${why(resolveErr)}). ` +
+              `The previous cache stays in effect.`,
+          );
+        }
+        raw = (await fetchHttpsBuffer(sourceUrl, limits)).body;
+        signatureBody = undefined;
+      }
     }
+
+    // Authenticate the exact downloaded bytes BEFORE anything parses them. A
+    // feed the bundled key did not sign is refused outright, with the previous
+    // cache left in place, unless the caller opted out explicitly.
+    let signatureText: string | undefined;
+    if (!options.allowUnsigned) {
+      try {
+        signatureText = (signatureBody ?? (await fetchHttpsBuffer(feedSignatureUrlFor(sourceUrl), limits)).body).toString("utf-8");
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : String(err);
+        throw new Error(
+          `refusing the feed: its signature could not be downloaded from ${feedSignatureUrlFor(sourceUrl)} (${reason}). ` +
+            `A mirror must publish feed.json.sig beside the feed, or the caller must pass --allow-unsigned-feed. ` +
+            `The previous cache stays in effect.`,
+        );
+      }
+      try {
+        assertFeedSignature(raw, signatureText);
+      } catch (err) {
+        throw new Error(
+          `refusing the feed: ${err instanceof Error ? err.message : String(err)}. The previous cache stays in effect.`,
+        );
+      }
+    }
+
+    const { entries, generatedAt } = parseFeedDocument(raw.toString("utf-8"));
+
+    // Refuse before anything is written: a rollback, a replay of an older feed
+    // or a shrunken one must leave the previous cache in effect.
+    assertFeedMayReplace(
+      entries,
+      generatedAt,
+      readCachedGeneratedAt(path.join(cacheDir, FEED_CACHE_FILE)),
+      minEntriesOverride ?? Math.ceil(getBundledFeedRef().length * FEED_MIN_SHARE_OF_BUNDLE),
+      Date.now(),
+    );
+
+    // The feed's own generation time is stored beside the client-side refresh
+    // time. `timestamp` answers "when did this machine last refresh" (the 24h
+    // refresh-due check); `generatedAt` answers "how new is the intel", which
+    // the client clock cannot say.
+    // The signed bytes and their signature are kept beside the cache so every
+    // scan can re-verify the cache against the bundled key (loadThreatIntel).
+    // They are written first: a run killed between the writes leaves a cache
+    // that does not match them, which reads as unreadable, never as trusted.
+    if (signatureText !== undefined) {
+      writeCacheFileAtomic(cacheDir, FEED_SIGNED_COPY_FILE, raw);
+      writeCacheFileAtomic(cacheDir, FEED_SIGNATURE_FILE, signatureText.trim() + "\n");
+    }
+    const cachePath = writeCacheFileAtomic(
+      cacheDir,
+      FEED_CACHE_FILE,
+      JSON.stringify(
+        {
+          timestamp: new Date().toISOString(),
+          ...(generatedAt === undefined ? {} : { generatedAt }),
+          // Recorded so loadThreatIntel knows this cache was installed on
+          // purpose without a signature. Anyone who can write the cache can
+          // write this too; it is a statement of intent, not a defence.
+          ...(options.allowUnsigned ? { unsigned: true } : {}),
+          entries,
+        },
+        null,
+        2,
+      ),
+    );
 
     // The catalog is a second, independent document. Its failures are recorded
     // and returned, never thrown: a caller who asked to refresh the feed got
@@ -745,10 +1072,19 @@ export async function refreshFeed(
     try {
       catalog = await installCatalog(feedUrl, cacheDir, limits);
     } catch (err) {
+      // A refused write target is not "the catalog is unavailable": it is a link
+      // planted in the cache directory, and the command must fail, not shrug.
+      if (err instanceof CacheTargetRefusedError) throw err;
       catalogError = err instanceof Error ? err.message : String(err);
     }
 
-    return { entryCount: entries.length, cachePath, catalog, catalogError };
+    return {
+      entryCount: entries.length,
+      cachePath,
+      catalog,
+      catalogError,
+      ...(options.allowUnsigned ? { unsigned: true } : {}),
+    };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     throw new Error(`Failed to refresh threat feed from ${feedUrl}: ${message}`);

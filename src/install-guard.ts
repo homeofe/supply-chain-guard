@@ -12,6 +12,8 @@
  */
 
 import { spawnSync } from "node:child_process";
+import * as path from "node:path";
+import { resolveExecutable } from "./safe-exec.js";
 import { loadThreatIntel, matchPackageIOC, type FeedIOC } from "./threat-intel.js";
 import { checkBadVersion } from "./ioc-blocklist.js";
 import { analyzeDependencyRisks, resolveNpmAlias } from "./dependency-risk-analyzer.js";
@@ -41,25 +43,45 @@ const INSTALL_VERBS: Record<PackageManager, ReadonlySet<string>> = {
   npm: new Set([
     "install", "add", "i", "in", "ins", "inst", "insta", "instal",
     "isnt", "isnta", "isntal", "isntall",
+    // `npm it` / `install-test` install the named packages then run tests;
+    // `npm link <pkg>` (alias `ln`) installs the package globally and links it.
+    "it", "install-test", "link", "ln",
   ]),
   pnpm: new Set(["add", "install", "i"]),
   yarn: new Set(["add"]),
   bun: new Set(["add", "install", "i", "a"]),
 };
 
-// npm exec may download a missing package and immediately execute it. It is
-// package-bearing even though npm does not call it an install command.
-const NPM_EXEC_VERBS: ReadonlySet<string> = new Set(["exec", "x"]);
+// Verbs that download a package and immediately execute it. They are
+// package-bearing even though the manager does not call them install commands:
+// the first positional is the package, the rest are arguments for its binary.
+const EXEC_VERBS: Record<PackageManager, ReadonlySet<string>> = {
+  npm: new Set(["exec", "x"]),
+  pnpm: new Set(["dlx"]),
+  yarn: new Set(["dlx"]),
+  bun: new Set(["x"]),
+};
 
 // Flags that consume the NEXT token as their value. Their value must not be
 // mistaken for the install verb or a package spec (v5.6.0 gate finding M3 and
 // its low-severity sibling: `npm --prefix ./x install evil` and
-// `npm install --prefix x lodash`).
-const VALUE_FLAGS = new Set([
-  "--prefix", "-C", "--dir", "--cwd", "--registry", "--tag", "--workspace",
-  "-w", "--store-dir", "--cache", "--config", "--userconfig", "--globalconfig",
-  "--loglevel", "--network-timeout", "--filter", "--reporter", "--save-exact",
-]);
+// `npm install --prefix x lodash`). Per manager, because the same spelling is
+// a value flag in one and a boolean in another: `-w` is `--workspace <name>`
+// in npm but `--workspace-root` (boolean) in pnpm, and `--save-exact` is a
+// boolean everywhere. Listing a boolean as a value flag swallows the package
+// that follows it, so the guard answers "no package" and the install runs.
+const COMMON_VALUE_FLAGS: readonly string[] = [
+  "--registry", "--tag", "--cache", "--config", "--userconfig",
+  "--globalconfig", "--loglevel", "--network-timeout",
+];
+const VALUE_FLAGS: Record<PackageManager, ReadonlySet<string>> = {
+  npm: new Set([...COMMON_VALUE_FLAGS, "--prefix", "--workspace", "-w", "--call", "-c"]),
+  pnpm: new Set([
+    ...COMMON_VALUE_FLAGS, "-C", "--dir", "--filter", "-F", "--store-dir", "--reporter",
+  ]),
+  yarn: new Set([...COMMON_VALUE_FLAGS, "--cwd", "--cache-folder", "--modules-folder"]),
+  bun: new Set([...COMMON_VALUE_FLAGS, "--cwd", "--cache-dir"]),
+};
 
 function isPackageManager(manager: string): manager is PackageManager {
   return (SUPPORTED_MANAGERS as readonly string[]).includes(manager);
@@ -154,18 +176,19 @@ export function extractInstallSpecs(
   let verbIdx = -1;
   let verb: string | undefined;
   let npmExec = false;
+  const valueFlags = VALUE_FLAGS[manager];
 
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a.length === 0) continue;
     if (a.startsWith("-")) {
       // `--flag value` form: skip the value so it is never read as the verb.
-      if (VALUE_FLAGS.has(a) && i + 1 < args.length) i++;
+      if (valueFlags.has(a) && i + 1 < args.length) i++;
       continue;
     }
     if (verb === undefined) verb = a; // first bare token, for reporting
     if (verbs.has(a)) { verbIdx = i; verb = a; break; }
-    if (manager === "npm" && NPM_EXEC_VERBS.has(a)) {
+    if (EXEC_VERBS[manager].has(a)) {
       verbIdx = i;
       verb = a;
       npmExec = true;
@@ -204,7 +227,11 @@ export function extractInstallSpecs(
         if (spec) specs.push(spec);
         continue;
       }
-      if (token.startsWith("-")) continue;
+      if (token.startsWith("-")) {
+        // `--cache x evilpkg`: the value belongs to the flag, not to the package.
+        if (valueFlags.has(token) && i + 1 < rest.length) i++;
+        continue;
+      }
       const spec = parseSpecToken(token);
       if (spec) specs.push(spec);
       break;
@@ -215,7 +242,7 @@ export function extractInstallSpecs(
   for (let i = 0; i < rest.length; i++) {
     const token = rest[i];
     if (token.startsWith("-")) {
-      if (VALUE_FLAGS.has(token) && i + 1 < rest.length) i++; // skip flag value
+      if (valueFlags.has(token) && i + 1 < rest.length) i++; // skip flag value
       continue;
     }
     const spec = parseSpecToken(token);
@@ -531,19 +558,43 @@ export function escapeCmdShellArg(arg: string): string {
  * from the fixed four-manager allowlist. Everywhere else the manager is
  * spawned directly without any shell.
  */
+const LINE_BREAK_MESSAGE = "an argument contains a line break (CR or LF), which no package spec does";
+
+function hasLineBreak(arg: string): boolean {
+  return /[\r\n]/.test(arg);
+}
+
 const defaultSpawn: SpawnLike = (command, args, options) => {
-  if (process.platform === "win32" && command.toLowerCase().endsWith(".cmd")) {
-    const commandLine = [escapeCmdShellCommand(command), ...args.map(escapeCmdShellArg)].join(" ");
+  // Resolve the manager to an absolute path from PATH first. A bare name would
+  // let Windows run an npm.cmd sitting in the current directory, which is the
+  // checkout the user is installing into (resolveExecutable explains why).
+  const resolved = resolveExecutable(command, { allowShellScripts: true });
+  if (!resolved) {
+    return { status: null, error: new Error(`${command} was not found on PATH`) };
+  }
+  if (process.platform === "win32" && /\.(?:cmd|bat)$/i.test(resolved)) {
+    // CR and LF are not escapable for cmd.exe: the first line break ends the
+    // command line and everything after it is dropped or re-read as a new
+    // command. No package spec contains one, so refuse instead of spawning.
+    if (args.some(hasLineBreak)) {
+      return { status: null, error: new Error(LINE_BREAK_MESSAGE) };
+    }
+    const commandLine = [escapeCmdShellCommand(resolved), ...args.map(escapeCmdShellArg)].join(" ");
     const result = spawnSync(
-      process.env.comspec ?? "cmd.exe",
+      process.env.comspec ?? windowsCmdExe(),
       ["/d", "/s", "/c", `"${commandLine}"`],
       { stdio: options.stdio, windowsVerbatimArguments: true },
     );
     return { status: result.status, error: result.error };
   }
-  const result = spawnSync(command, args, options);
+  const result = spawnSync(resolved, args, options);
   return { status: result.status, error: result.error };
 };
+
+/** cmd.exe by absolute path, for the rare environment without %ComSpec%. */
+function windowsCmdExe(): string {
+  return path.win32.join(process.env.SystemRoot || "C:\\Windows", "System32", "cmd.exe");
+}
 
 export interface InstallGuardOptions {
   /** Proceed despite findings (loud warning). */
@@ -602,6 +653,14 @@ export function runInstallGuard(
   const log = options.log ?? ((line: string) => console.log(line));
 
   const analysis = analyzeInstallCommand(manager, managerArgs, options.feed);
+
+  // Refused on every platform, before any spawn: a line break cannot be
+  // escaped for cmd.exe (it truncates the command line) and is never part of a
+  // package spec, so the argument is either an attack or a mistake.
+  if (managerArgs.some(hasLineBreak)) {
+    log(`  BLOCKED: ${analysis.manager} was not invoked: ${LINE_BREAK_MESSAGE}.`);
+    return 2;
+  }
 
   if (analysis.blocked) {
     printVerdicts(analysis, log, "blocking");

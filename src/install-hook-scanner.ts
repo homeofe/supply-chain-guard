@@ -7,6 +7,7 @@
  */
 
 import type { Finding } from "./types.js";
+import { stripBom } from "./json-utils.js";
 import {
   AUTO_RUN_LIFECYCLE_HOOKS,
   type AutoRunLifecycleHook,
@@ -336,7 +337,7 @@ export function extractInstallScripts(
   content: string,
 ): InstallScripts | null {
   try {
-    const pkg = JSON.parse(content) as { scripts?: Record<string, string> };
+    const pkg = JSON.parse(stripBom(content)) as { scripts?: Record<string, string> };
     if (!pkg.scripts) return null;
     const scripts: InstallScripts = {};
     for (const hook of AUTO_RUN_LIFECYCLE_HOOKS) {

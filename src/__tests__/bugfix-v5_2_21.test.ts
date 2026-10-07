@@ -16,7 +16,7 @@ import {
   LURE_PATTERNS,
   PROMPT_INJECTION_PATTERNS,
 } from "../patterns.js";
-import { checkIOCBlocklist } from "../ioc-blocklist.js";
+import { checkIOCBlocklist, KNOWN_C2_DOMAINS } from "../ioc-blocklist.js";
 import { checkThreatIntel } from "../threat-intel.js";
 import type { FeedIOC } from "../threat-intel.js";
 
@@ -74,7 +74,7 @@ describe("v5.2.21: source-marker patterns skip documentation files", () => {
       it(`${name} entries all exclude documentation files`, () => {
         for (const p of arr) {
           expect(p.notFilePattern, `${p.rule} missing notFilePattern`).toBeDefined();
-          expect(p.notFilePattern!.test("README.md"), `${p.rule} should skip README.md`).toBe(true);
+          expect(p.notFilePattern?.test("README.md") ?? false, `${p.rule} should skip README.md`).toBe(true);
           expect(p.notFilePattern!.test("docs/threat.markdown"), `${p.rule} should skip .markdown`).toBe(true);
           expect(p.notFilePattern!.test("notes.txt"), `${p.rule} should skip .txt`).toBe(true);
           expect(p.notFilePattern!.test("INSTALL.rst"), `${p.rule} should skip .rst`).toBe(true);
@@ -103,7 +103,7 @@ describe("v5.2.21: source-marker patterns skip documentation files", () => {
     it("PROMPT_INJECTION_PATTERNS still scan README.md", () => {
       for (const p of PROMPT_INJECTION_PATTERNS) {
         expect(
-          p.notFilePattern!.test("README.md"),
+          p.notFilePattern?.test("README.md") ?? false,
           `${p.rule} would skip README.md - breaks prompt-injection detection`,
         ).toBe(false);
       }
@@ -128,9 +128,14 @@ describe("v5.2.21: source-marker patterns skip documentation files", () => {
       expect(findings).toHaveLength(0);
     });
 
-    it("returns no findings for .txt files", () => {
-      const findings = checkIOCBlocklist(content, "notes.txt");
-      expect(findings).toHaveLength(0);
+    // .txt is no longer a document: Node runs `require("./a.txt")` as code.
+    // A real known C2 domain, so the assertion can tell the exemption apart
+    // from content that simply matched nothing.
+    it("reports a known C2 domain in a .txt file, and still not in .md", () => {
+      const domain = KNOWN_C2_DOMAINS.find((d) => !d.includes("*"))!;
+      const ioc = `fetch("https://${domain}/x");`;
+      expect(checkIOCBlocklist(ioc, "notes.txt").length).toBeGreaterThan(0);
+      expect(checkIOCBlocklist(ioc, "README.md")).toHaveLength(0);
     });
 
     it("returns no findings for .rst files", () => {

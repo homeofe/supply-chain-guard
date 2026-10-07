@@ -23,7 +23,37 @@ import * as fs from "node:fs";
  */
 const EXTENSION_ALIASES: ReadonlyMap<string, string> = new Map([
   [".bats", ".bash"],
+  // Python executes the `import` lines of a .pth file at interpreter start, so
+  // it is Python source for every rule that is keyed on the language.
+  [".pth", ".py"],
 ]);
+
+/**
+ * Executable or auto-opened formats that no language-specific rule is written
+ * for. They are read as themselves: a rule scoped with `onlyExtensions` stays
+ * off, and the language-neutral rules (IOC, C2, exfiltration, obfuscation,
+ * campaign markers) apply. Windows script hosts (`wscript`, `mshta`) and a
+ * browser both execute these without any build step.
+ */
+const READ_AS_THEMSELVES: ReadonlySet<string> = new Set([
+  ".vbs",
+  ".vbe",
+  ".wsf",
+  ".hta",
+  ".jse",
+  ".html",
+  ".htm",
+]);
+
+/**
+ * Formats read for the language-neutral rules only. The scanner skips its
+ * disclosure and entropy passes for them: generated HTML (API docs, coverage
+ * reports, saved pages) is full of developer paths and inlined assets that are
+ * ordinary there.
+ */
+export function isMarkupOrScriptHostExtension(extension: string): boolean {
+  return READ_AS_THEMSELVES.has(extension);
+}
 
 /**
  * Interpreter basename (after `env`, version suffix removed) to the extension
@@ -177,6 +207,7 @@ export function scriptLanguageExtension(
 ): string | null {
   const alias = EXTENSION_ALIASES.get(extension);
   if (alias !== undefined) return alias;
+  if (READ_AS_THEMSELVES.has(extension)) return extension;
   if (extension !== "") return null;
 
   const bytes = head ?? readHead(filePath);

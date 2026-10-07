@@ -9,6 +9,7 @@
 
 import * as path from "node:path";
 import type { PatternEntry } from "./types.js";
+import { isSelfScanInertFile, isVerifiedSelfScanFile } from "./self-scan-trust.js";
 
 /**
  * Test directory names every test-path matcher agrees on. Test-path exemptions
@@ -79,6 +80,42 @@ export const TEST_FILE_PATTERN = buildTestFilePattern([
   "fakes?",
 ]);
 
+/**
+ * Test-path matcher for the `notTestFile` gate of the malware rules.
+ *
+ * Narrower than TEST_FILE_PATTERN on purpose. The scanned package names its
+ * own files, so every file-name form here is a name an attacker can pick: the
+ * separator-prefixed forms (`x-test.js`, `a_spec.js`, `a.stub.js`, `a-fake.js`)
+ * are conventions no test runner requires, and each one made a payload scan
+ * clean. Only the forms a runner itself discovers by name stay: `.test.` and
+ * `.spec.` (jest, vitest, mocha), `_test.go` and `_test.py` (go test, pytest),
+ * pytest's `conftest.py` and a Bats suite. The directory forms are shared.
+ */
+export const MALWARE_RULE_TEST_FILE_PATTERN = new RegExp(
+  `(?:^|\\/)(?:${[
+    ...SHARED_TEST_DIRS,
+    "specs?",
+    "snapshots?",
+    "test-fixtures?",
+    "mocks?",
+    "stubs?",
+    "fakes?",
+  ].join("|")})\\/|\\.(?:test|spec)\\.|_test\\.(?:go|py)$|(?:^|\\/)conftest\\.py$|\\.bats$`,
+  "i",
+);
+
+/**
+ * Credential-hygiene rules: a secret-shaped literal in a test fixture is an
+ * ordinary, expected thing (a security tool's own tests are full of them), so
+ * these keep the test-path exemption at every severity, and so do the README
+ * lure heuristics (prose aimed at someone reading the top-level README, never
+ * code that runs). Every other critical
+ * `notTestFile` rule is a malware verdict and is NOT exempted by path: the
+ * path is chosen by the scanned package, so exempting it let an encoded-eval payload
+ * in `x-test.js` or `tests/a.js` scan clean.
+ */
+const TEST_PATH_EXEMPT_CRITICAL_RULE = /^(?:SECRETS_|IAC_HARDCODED_SECRET$)|LURE/;
+
 export type ApplicablePattern = Pick<
   PatternEntry,
   | "onlyExtensions"
@@ -87,7 +124,8 @@ export type ApplicablePattern = Pick<
   | "notTestFile"
   | "requiresInFile"
   | "requiresInFileMatcher"
->;
+> &
+  Partial<Pick<PatternEntry, "severity" | "rule">>;
 
 /**
  * RegExp.prototype.test mutates lastIndex for global/sticky expressions.
@@ -115,6 +153,29 @@ export function satisfiesPatternContentRequirement(
     return false;
   }
   return true;
+}
+
+let lastOwnFileCheck: { path: string; content: string; verified: boolean } | undefined;
+
+/**
+ * Whether this file is one of the scanner's own reviewed files, byte-identical
+ * to the copy the running scanner ships a digest for. Those files spell out the
+ * signatures and fixtures the rules detect, and used to be skipped by NAME
+ * (a scanner-module basename, a test-shaped path). Name-based skipping is
+ * chosen by the scanned package, so the exemption is now earned by exact path
+ * plus content digest instead: a same-named third-party file, or any edit to
+ * the file, fails the check and is scanned in full.
+ *
+ * Single-entry memo: every pattern asks about the same file in a row, and the
+ * digest is only computed for the few paths on the allowlist.
+ */
+function isVerifiedOwnFile(normalizedPath: string, content: string): boolean {
+  if (!isSelfScanInertFile(normalizedPath)) return false;
+  const last = lastOwnFileCheck;
+  if (last && last.path === normalizedPath && last.content === content) return last.verified;
+  const verified = isVerifiedSelfScanFile(normalizedPath, Buffer.from(content, "utf8"));
+  lastOwnFileCheck = { path: normalizedPath, content, verified };
+  return verified;
 }
 
 /**
@@ -153,13 +214,32 @@ export function isPatternApplicableToFile(
   }
   if (
     pattern.notFilePattern &&
-    stableTest(pattern.notFilePattern, normalizedPath)
+    stableTest(pattern.notFilePattern, normalizedPath) &&
+    // `.txt` is not a prose-only format: Node executes `require("./a.txt")`.
+    // A critical rule is therefore not skipped on the strength of a `.txt`
+    // name; `.md`, `.markdown` and `.rst` (threat write-ups) stay exempt.
+    !(
+      pattern.severity === "critical" &&
+      /\.txt$/i.test(normalizedPath) &&
+      !stableTest(pattern.notFilePattern, normalizedPath.replace(/\.txt$/i, ".js"))
+    )
+  ) {
+    return false;
+  }
+  // A rule that carries a path exemption (notFilePattern or notTestFile) is
+  // also skipped for the scanner's own digest-verified files; see
+  // isVerifiedOwnFile.
+  if (
+    (pattern.notFilePattern || pattern.notTestFile) &&
+    isVerifiedOwnFile(normalizedPath, content)
   ) {
     return false;
   }
   if (
     pattern.notTestFile &&
-    stableTest(TEST_FILE_PATTERN, normalizedPath)
+    stableTest(MALWARE_RULE_TEST_FILE_PATTERN, normalizedPath) &&
+    (pattern.severity !== "critical" ||
+      TEST_PATH_EXEMPT_CRITICAL_RULE.test(pattern.rule ?? ""))
   ) {
     return false;
   }

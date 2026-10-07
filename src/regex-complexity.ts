@@ -136,6 +136,79 @@ export function hasNestedUnboundedQuantifier(source: string): boolean {
 }
 
 /**
+ * Allow-list check for a regular expression that arrives from the scanned tree
+ * (issue 169). Deciding whether an arbitrary pattern is free of catastrophic
+ * backtracking needs the NFA, and `hasNestedUnboundedQuantifier` documents the
+ * shapes it cannot see. So instead of classifying what is dangerous, accept
+ * only a subset that cannot backtrack exponentially:
+ *
+ *   - no quantified group at all (`(...)` followed by `*`, `+`, `?` or `{n,m}`),
+ *     which removes every `(a|a)+`, `(a|ab)+` and `(a+){2,30}` shape;
+ *   - no backreference (`\1`, `\k<name>`) and no lookaround.
+ *
+ * Literals, unquantified groups and quantified single atoms or character
+ * classes (`a+`, `[a-z]{2,8}`) remain allowed. Returns a reason, or undefined
+ * when the pattern is inside the subset.
+ */
+export function unsafeScannedTreeRegexConstruct(source: string): string | undefined {
+  for (let index = 0; index < source.length; index += 1) {
+    const character = source[index];
+
+    if (character === "\\") {
+      const escaped = source[index + 1];
+      if (escaped !== undefined && escaped >= "1" && escaped <= "9") {
+        return "a backreference";
+      }
+      if (escaped === "k" && source[index + 2] === "<") return "a named backreference";
+      index += 1;
+      continue;
+    }
+
+    if (character === "[") {
+      const classEnd = findCharacterClassEnd(source, index);
+      if (classEnd === -1) return undefined;
+      index = classEnd;
+      continue;
+    }
+
+    if (character === "(") {
+      if (
+        source[index + 1] === "?" &&
+        (source[index + 2] === "=" ||
+          source[index + 2] === "!" ||
+          (source[index + 2] === "<" &&
+            (source[index + 3] === "=" || source[index + 3] === "!")))
+      ) {
+        return "a lookaround";
+      }
+      const groupEnd = findGroupEnd(source, index);
+      if (groupEnd === -1) return undefined;
+      const after = source[groupEnd + 1];
+      if (after === "*" || after === "+" || after === "?" || isRepetitionAt(source, groupEnd + 1)) {
+        return "a quantified group";
+      }
+      // Descend: the group body is scanned by the same loop.
+    }
+  }
+
+  return undefined;
+}
+
+/** Whether `{n}`, `{n,}` or `{n,m}` starts at this offset. */
+function isRepetitionAt(source: string, index: number): boolean {
+  if (source[index] !== "{") return false;
+  let cursor = index + 1;
+  const start = cursor;
+  while (isDigitAt(source, cursor)) cursor += 1;
+  if (cursor === start) return false;
+  if (source[cursor] === ",") {
+    cursor += 1;
+    while (isDigitAt(source, cursor)) cursor += 1;
+  }
+  return source[cursor] === "}";
+}
+
+/**
  * First offset of a group's body. `(?:`, `(?=`, `(?!`, `(?<=`, `(?<!` and
  * `(?<name>` all open a group, and the `?` in them is a prefix, not a
  * quantifier. Reading it as one would refuse every grouped alternation anybody

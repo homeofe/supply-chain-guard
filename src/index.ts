@@ -96,6 +96,7 @@ export {
   catalogFindings,
   catalogSeverityFor,
   CATALOG_MISSING_RULE,
+  CATALOG_UNAVAILABLE_RULE,
   FEED_STALE_AFTER_DAYS,
   FEED_STALE_RULE,
   type FeedFreshness,

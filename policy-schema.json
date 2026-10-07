@@ -136,7 +136,7 @@
           "type": "boolean"
         },
         "patterns": {
-          "description": "Plaintext literals (3 characters or more) or /regex/flags entries kept in the committed config. Only for repositories that are private, or terms that are not sensitive. Because this file travels inside the scanned tree, a regex here is capped at 200 characters and refused when it quantifies a group that already contains a variable quantifier; a refusal is reported as INTERNAL_DENYLIST_REFUSED (medium), which marks the scan partial. That refusal includes the ordinary chained-label hostname shape '(?:[a-z0-9-]+\\.)+corp\\.example'; write '[a-z0-9.-]+\\.corp\\.example' instead. The check is not exhaustive, so an accepted pattern is not a guarantee about matching time.",
+          "description": "Plaintext literals (3 characters or more) or /regex/flags entries kept in the committed config. Only for repositories that are private, or terms that are not sensitive. Because this file travels inside the scanned tree, a regex here is capped at 200 characters and refused when it contains a quantified group, a backreference or a lookaround (quantified single characters and character classes are fine); a refusal is reported as INTERNAL_DENYLIST_REFUSED (medium), which marks the scan partial. That refusal includes the ordinary chained-label hostname shape '(?:[a-z0-9-]+\\.)+corp\\.example'; write '[a-z0-9.-]+\\.corp\\.example' instead. Patterns from the operator's own file or environment variable are not restricted.",
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
         },

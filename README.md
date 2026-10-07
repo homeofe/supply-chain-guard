@@ -532,7 +532,7 @@ The external file is one entry per line, `#` for comments, `sha256:<digest>` for
 **The two sources are not equally trusted, and the difference is deliberate.** `SCG_INTERNAL_DISCLOSURE_FILE` is set by whoever runs the scan, so it may name any path on the machine and carry any pattern. `internalDisclosure.externalFile` and `internalDisclosure.patterns` live in the committed policy file, which travels inside the repository being scanned, and scanning a repository you do not own is the ordinary case for this tool. Entries from there are therefore bounded:
 
 - `externalFile` must stay inside the scanned directory. An absolute path is refused, a relative path that climbs out with `..` is refused, and so is one that leaves through a symbolic link. The file is not opened, so nothing about a path outside the tree reaches the report. The bound is the scanned directory and nothing narrower: a path that stays inside it is still read, `.git/config` included, so a committed `externalFile` can still point at whatever your runner wrote into the workspace. Matches from it stay redacted.
-- A regular expression from `patterns`, **or from an `externalFile` that is inside the tree**, is capped at 200 characters and refused when it quantifies a group that already contains a variable quantifier (`(a+)+`, `(a?)*`, and the like). That shape can take exponential time to report no match, so one committed line would otherwise occupy a runner until the workflow times out.
+- A regular expression from `patterns`, **or from an `externalFile` that is inside the tree**, is capped at 200 characters and limited to a safe subset: no quantified group at all (`(a+)+`, `(a|a)+`, `(a|ab)*`, `(a+){2,30}`), no backreference and no lookaround. Literals, unquantified groups and quantified single characters or classes (`[a-z0-9.-]+`, `ab[0-9]{3}`) are accepted. A quantified group can take exponential time to report no match, so one committed line would otherwise occupy a runner until the workflow times out. A pattern from the operator's own file or environment variable is not restricted.
 - Whatever survives those checks runs under a wall-clock budget for the whole scan. On overrun the file reports `INTERNAL_DISCLOSURE_TRUNCATED` rather than running on.
 
 A refusal is an `INTERNAL_DENYLIST_REFUSED` finding at `medium` severity, and like every other coverage finding it marks the scan partial rather than passing quietly. In the published Action a partial scan exits 1 on its own, independently of `fail-on`. None of this applies to the environment-variable source.
@@ -612,13 +612,21 @@ baseline:
 
 Findings can also be suppressed inline with a comment on the line directly
 above them: `// scg-ignore-next-line RULE reason` (JS/TS) or
-`# scg-ignore-next-line RULE` (Python/YAML/shell).
+`# scg-ignore-next-line RULE` (Python/YAML/shell). Inline comments apply to
+local directory scans only, and never hide a `high` or `critical` finding in a
+cloned GitHub repository, an MCP `scan_directory` call, or an npm, PyPI or
+VS Code package scan.
 
 ### Where the policy is read from, and what that means on a pull request
 
-The policy file is read **from the directory being scanned**, and from nowhere
-else. There is no flag, environment variable or Action input that points the
-scanner at a policy outside the scan target.
+For a local directory scan the policy file is read **from the directory being
+scanned**, and from nowhere else. There is no flag, environment variable or
+Action input that points the scanner at a policy outside the scan target.
+
+A scan whose target is a cloned GitHub repository URL, and the MCP
+`scan_directory` tool, **never load a policy file from the scanned tree**
+(library callers can set `trustTargetPolicy: false` to get the same). The tree
+there belongs to someone else.
 
 On a `pull_request` event the checkout materialises the **head of the proposing
 branch**, so the policy that governs the scan is the one on the branch under
@@ -639,6 +647,13 @@ than left to be discovered. What it is **not** is silent:
   (`POLICY_DISABLE_NO_REASON`, `POLICY_IGNORE_NO_REASON`,
   `POLICY_SUPPRESSION_NO_REASON`), so an undocumented exclusion costs a line in
   the report rather than nothing.
+- When the policy, or an inline `scg-ignore-next-line` comment, removes,
+  ignores or downgrades a `high` or `critical` finding, the scan runs a second
+  pass without them and the report gains a medium `POLICY_SUPPRESSED_SEVERE`
+  finding that lists the rule ids and counts, plus `riskLevelBeforePolicy` and
+  `maxSeverityBeforePolicy` (JSON and the "RISK BEFORE POLICY" text line). The
+  exit code is not changed by default, because suppressing a false positive is
+  the intended use of the mechanism. A scan with neither stays single-pass.
 
 If your threat model includes an untrusted proposer, the controls that actually
 hold are outside this tool: require review on `.supply-chain-guard.yml` through
@@ -1112,6 +1127,20 @@ scans, in the per-user cache directory unless `--cache-dir` or `SCG_CACHE_DIR`
 names another (see [Catalog cache](#catalog-cache)). The cache belongs to one
 release, so an upgrade needs a new refresh.
 
+A catalog that was never downloaded is the ordinary state of a fresh install, so
+it stays an informational note and does not mark the scan partial. A catalog
+that IS on disk but cannot be used (unreadable or truncated, or not matching
+the digest this release pins) is reported as
+`THREAT_FEED_CATALOG_UNAVAILABLE` instead: the scan is marked partial and exits
+non-zero, because the historical indicators were silently not consulted. Run
+`supply-chain-guard feed refresh` to replace it. A catalog that `feed refresh`
+installed for this release and that has since been deleted counts the same way:
+the refresh leaves a small `catalog-installed.json` marker beside it, and a
+missing catalog with that marker present is `THREAT_FEED_CATALOG_UNAVAILABLE`
+(high, partial), not a fresh install. The marker only ever raises the finding; a
+missing, malformed or older-release marker reads as never installed.
+`catalog: required` raises both rules to critical.
+
 #### Catalog cache
 
 `feed refresh` and every scan resolve the same directory, in this order:
@@ -1326,6 +1355,24 @@ supply-chain-guard feed osv       # export malicious-package IOCs as OSV records
 ```
 
 A refreshed feed is merged into every scan for the next 24 hours automatically.
+
+**Feed integrity:** the default source is the `feed.json` attached to the latest
+GitHub Release, with `feed.json.sig` beside it, an Ed25519 signature over the
+exact bytes of the feed that the release job makes. `feed refresh` verifies it
+against the public key compiled into the installed package (fingerprint in
+[SECURITY.md](SECURITY.md#feed-integrity)) before parsing anything, and refuses
+a missing, malformed or wrong signature with a non-zero exit, leaving the
+previous cache in place. The signed bytes and signature are kept beside the
+cache and checked again on every scan, so a cache edited or planted afterwards
+is reported as `THREAT_FEED_CACHE_UNREADABLE` and the scan is partial.
+
+A self-hosted mirror passed with `--url` must serve `feed.json.sig` next to the
+feed, signed by the same key. A mirror that cannot be signed can be accepted
+explicitly with `feed refresh --url <url> --allow-unsigned-feed`; that prints a
+warning, records in the cache that the feed was not verified, and trusts the
+feed as downloaded. There is no environment variable for it. The feed is
+published with each release, so a refresh picks up the indicators of the latest
+release rather than of the latest commit.
 
 **Rule-set age:** `feed stats` reports two ages, the one bundled with the
 installed version and the effective one at scan time, and marks either `[STALE]`

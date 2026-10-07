@@ -289,11 +289,97 @@ describe("MCP Server", () => {
       // (no -32602) and the scan must still return a compact report.
       const response = await callTool("scan_directory", {
         path: tempDir,
-        since: "HEAD~1",
+        since: "main",
       });
       expect(response.error).toBeUndefined();
       const summary = parseToolText(response);
       expect(summary).toHaveProperty("topFindings");
+    });
+
+    // F40: the description advertised 'HEAD~1', which the diff scanner's ref
+    // guard used to refuse. Both now share one guard (SAFE_REF_RE), so what the
+    // tool advertises is what the scanner runs, and a refused ref gets a clear
+    // error instead of a silent partial scan.
+    it("advertises and accepts the relative refs the diff scanner runs", async () => {
+      const listed = await call({ jsonrpc: "2.0", id: 1, method: "tools/list" });
+      const tools = (listed.result as { tools: Array<{ name: string; inputSchema: { properties: Record<string, { description: string }> } }> }).tools;
+      const since = tools.find((t) => t.name === "scan_directory")!.inputSchema.properties.since!;
+      expect(since.description).toContain("HEAD~1");
+      fs.writeFileSync(path.join(tempDir, "clean.js"), "module.exports = 1;\n");
+      for (const ref of ["HEAD~1", "HEAD^", "main~3"]) {
+        const response = await callTool("scan_directory", { path: tempDir, since: ref });
+        const result = response.result as unknown as ToolCallResult;
+        expect(result.isError, ref).toBeFalsy();
+      }
+    });
+
+    it("should answer a refused ref with a clear isError result", async () => {
+      fs.writeFileSync(path.join(tempDir, "clean.js"), "module.exports = 1;\n");
+      for (const since of ["main@{1}", "--output=x", "a b", "-HEAD~1"]) {
+        const response = await callTool("scan_directory", { path: tempDir, since });
+        const result = response.result as unknown as ToolCallResult;
+        expect(result.isError, since).toBe(true);
+        expect(result.content[0]!.text, since).toContain("Invalid");
+      }
+    });
+
+    // F11: a UNC path made the host open an SMB connection and blocked the server.
+    it("should refuse network paths before touching them", async () => {
+      for (const target of [
+        "//192.0.2.1/share",
+        "\\\\192.0.2.1\\share",
+        "\\\\?\\UNC\\192.0.2.1\\share",
+        "\\\\.\\pipe\\x",
+        "/\\192.0.2.1/share",
+        "  //192.0.2.1/share",
+      ]) {
+        const started = Date.now();
+        const response = await callTool("scan_directory", { path: target });
+        const result = response.result as unknown as ToolCallResult;
+        expect(result.isError, target).toBe(true);
+        expect(result.content[0]!.text, target).toContain("Network paths");
+        expect(Date.now() - started, target).toBeLessThan(2000);
+      }
+    });
+
+    it("should refuse a path that is a file or empty", async () => {
+      const file = path.join(tempDir, "a.js");
+      fs.writeFileSync(file, "module.exports = 1;\n");
+      for (const target of [file, "", "   "]) {
+        const response = await callTool("scan_directory", { path: target });
+        expect((response.result as unknown as ToolCallResult).isError, target).toBe(true);
+      }
+    });
+
+    // F24: matched secrets were returned verbatim to the client.
+    it("should not return matched secret values to the client", async () => {
+      const aws = "AKIA" + "IOSFODNN7EXAMPLE";
+      const gh = "ghp_" + "abcdefghijklmnopqrstuvwxyz0123456789";
+      const keyHeader = "-----BEGIN RSA " + "PRIVATE KEY-----";
+      fs.writeFileSync(
+        path.join(tempDir, "a.js"),
+        `const a = "${aws}";\nconst b = "${gh}";\nconst c = "${keyHeader}";\n`,
+      );
+      const response = await callTool("scan_directory", { path: tempDir });
+      const text = (response.result as unknown as ToolCallResult).content[0]!.text;
+      const top = parseToolText(response).topFindings as Array<{ rule: string; match?: string }>;
+      const secrets = top.filter((f) => /^SECRETS_/.test(f.rule));
+      // Control: the scan did find them, so an empty list cannot pass this test.
+      expect(secrets.length).toBeGreaterThanOrEqual(2);
+      expect(text).not.toContain(aws);
+      expect(text).not.toContain(gh);
+      expect(text).not.toContain(keyHeader);
+      for (const f of secrets) expect(f.match).toMatch(/redacted/);
+    });
+
+    it("should keep returning the matched snippet for non-secret findings", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "malicious.js"),
+        'const lzcdrtfxyqiplpd = "marker";\neval(atob("dGVzdA=="));\n',
+      );
+      const response = await callTool("scan_directory", { path: tempDir });
+      const top = parseToolText(response).topFindings as Array<{ rule: string; match?: string }>;
+      expect(top.find((f) => f.rule === "GLASSWORM_MARKER")?.match).toBeDefined();
     });
 
     it("should return isError for a nonexistent path instead of a protocol error", async () => {
@@ -313,6 +399,31 @@ describe("MCP Server", () => {
         minSeverity: "catastrophic",
       });
       expect(response.error?.code).toBe(-32602);
+    });
+  });
+
+  describe("unknown-argument guard (F27)", () => {
+    it("should reject prototype property names as unknown arguments", async () => {
+      for (const key of ["constructor", "toString", "hasOwnProperty", "valueOf"]) {
+        const response = await callTool("ioc_lookup", { indicator: "a", [key]: "x" });
+        expect(response.error?.code, key).toBe(-32602);
+        expect(response.error?.message, key).toContain("Unknown argument");
+      }
+    });
+
+    it("should reject a raw __proto__ key as an unknown argument", async () => {
+      const response = await handleMcpLine(
+        '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"ioc_lookup","arguments":{"indicator":"a","__proto__":"x"}}}',
+      );
+      const rpc = response as RpcResponse;
+      // JSON.parse makes "__proto__" an own property, so it is a real unknown key.
+      expect(rpc.error?.code).toBe(-32602);
+      expect(rpc.error?.message).toContain("Unknown argument");
+    });
+
+    it("should still accept every declared argument", async () => {
+      const response = await callTool("ioc_lookup", { ecosystem: "npm", name: "left-pad", version: "1.3.0" });
+      expect(response.error).toBeUndefined();
     });
   });
 

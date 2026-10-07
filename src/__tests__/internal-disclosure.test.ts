@@ -1479,18 +1479,23 @@ describe("internal-disclosure: deny-list entries supplied by the scanned tree", 
     ).toContain("INTERNAL_DENYLIST_MATCH");
   });
 
-  it("does not bound a catastrophic shape the classifier fails to recognise", () => {
-    // The limit of the shape check, stated as a test so it cannot be forgotten
-    // by a reader of the passing suite. Overlapping alternation is ambiguity a
-    // scan of the source cannot see, so /(a|a)+$/ compiles, and the wall-clock
-    // budget is checked BETWEEN matcher invocations and cannot interrupt the
-    // exec that follows. Deliberately asserted WITHOUT running the match: the
-    // proof of cost belongs in the issue, not in a suite that has to stay fast.
+  it("refuses a catastrophic shape the nested-quantifier classifier cannot recognise", () => {
+    // Overlapping alternation is ambiguity a scan of the source cannot see, and
+    // the wall-clock budget is checked BETWEEN matcher invocations, so it cannot
+    // interrupt the exec that follows. A pattern from the scanned tree must
+    // therefore sit inside a safe subset (no quantified group, no backreference,
+    // no lookaround) rather than be classified. Asserted WITHOUT running the
+    // match. The operator's own pattern keeps compiling unchanged.
     writePolicy("internalDisclosure:", "  patterns:", '    - "/(a|a)+$/"');
     const runtime = loadFromCommittedConfig();
-    expect(rules(runtime.loadFindings)).not.toContain("INTERNAL_DENYLIST_REFUSED");
-    expect(runtime.matchers).toHaveLength(1);
-    expect(runtime.matchers[0].origin).toBe("scanned-tree");
+    expect(rules(runtime.loadFindings)).toContain("INTERNAL_DENYLIST_REFUSED");
+    expect(runtime.matchers).toHaveLength(0);
+
+    const operatorFile = path.join(outsideDir, "overlap-pattern.txt");
+    fs.writeFileSync(operatorFile, "/(a|a)+$/\n", "utf-8");
+    const fromOperator = loadFromOperatorFile(operatorFile);
+    expect(rules(fromOperator.loadFindings)).not.toContain("INTERNAL_DENYLIST_REFUSED");
+    expect(fromOperator.matchers).toHaveLength(1);
   });
 
   it("caps the length of a committed regex but not of the operator's", () => {

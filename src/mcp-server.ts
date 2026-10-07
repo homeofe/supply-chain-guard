@@ -17,8 +17,9 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import * as readline from "node:readline";
+import type { Readable, Writable } from "node:stream";
 import { scan } from "./scanner.js";
+import { SAFE_REF_RE } from "./diff-scanner.js";
 import { scanNpmPackage } from "./npm-scanner.js";
 import {
   loadThreatIntel,
@@ -200,7 +201,9 @@ const TOOL_DEFINITIONS: ToolDefinition[] = [
         since: {
           type: "string",
           description:
-            "Only scan files changed since this git commit/ref (optional diff scan, e.g. 'HEAD~1' or a SHA).",
+            "Only scan files changed since this git commit/ref (optional diff scan): a branch, tag or SHA " +
+            "such as 'main', 'v1.2.3' or 'a1b2c3d', optionally followed by ~N or ^N (for example 'HEAD~1'). " +
+            "Reflog ('@{1}') and range syntax are not accepted.",
         },
       },
       required: ["path"],
@@ -491,6 +494,18 @@ const SEVERITY_RANK: Record<Severity, number> = {
   info: 0,
 };
 
+/**
+ * Rules whose `match` is a credential read out of the scanned files. The MCP
+ * client may have narrower file access than this server process, so returning
+ * the value would let `scan_directory` act as a read of every secret under it.
+ */
+const SECRET_RULE_REGEX =
+  /^SECRETS?_|PRIVATE_KEY|API_KEY|SECRET|PASSWORD|CREDENTIAL|ACCESS_KEY|AUTH_TOKEN|HARDCODED_(?:TOKEN|KEY)/;
+
+function isSecretFinding(f: { rule: string }): boolean {
+  return f.rule !== "PROMPT_INJECTION_ROLE_TOKEN" && SECRET_RULE_REGEX.test(f.rule);
+}
+
 function compactReport(report: ScanReport, maxFindings = 20): object {
   const topFindings = [...report.findings]
     .sort((a, b) => SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity])
@@ -506,7 +521,9 @@ function compactReport(report: ScanReport, maxFindings = 20): object {
       };
       // Include the matched snippet, but omit it when large so a big obfuscated
       // blob cannot bloat the agent-facing response.
-      if (f.match !== undefined && f.match.length <= 200) {
+      if (isSecretFinding(f)) {
+        compact.match = "[redacted: secret value withheld from the MCP response]";
+      } else if (f.match !== undefined && f.match.length <= 200) {
         compact.match = f.match;
       }
       return compact;
@@ -541,6 +558,47 @@ function compactReport(report: ScanReport, maxFindings = 20): object {
 // Tool dispatch
 // ---------------------------------------------------------------------------
 
+/**
+ * The diff scanner's ref guard (src/diff-scanner.ts). Checked here too so a ref
+ * it would refuse comes back as a clear tool error instead of a partial scan.
+ */
+// The diff scanner's own ref guard, so the tool accepts exactly what it can run.
+const SAFE_GIT_REF_REGEX = { test: (ref: string): boolean => !ref.startsWith("-") && SAFE_REF_RE.test(ref) };
+
+/** A path that names a network location: UNC, `\\?\UNC\...`, `\\.\...`, or a double-slash root. */
+const NETWORK_PATH_REGEX = /^[\\/]{2}/;
+
+/**
+ * The local directory a `scan_directory` call may read. A UNC path makes the
+ * host open an SMB connection to a caller-chosen address (and, on Windows,
+ * usually authenticate to it) and blocks the server for the length of the
+ * connection attempt, so network paths are refused before and after
+ * resolution, and the target must be an existing directory.
+ */
+export function resolveLocalDirectory(raw: string): string {
+  const input = raw.trim();
+  if (input === "" || input.includes("\0")) {
+    throw new Error("Invalid path: expected a local directory path");
+  }
+  if (NETWORK_PATH_REGEX.test(input)) {
+    throw new Error("Network paths (UNC, //host/share) are not scanned: pass a local directory path");
+  }
+  const resolved = path.resolve(input);
+  if (NETWORK_PATH_REGEX.test(resolved)) {
+    throw new Error("Network paths (UNC, //host/share) are not scanned: pass a local directory path");
+  }
+  let isDirectory = false;
+  try {
+    isDirectory = fs.statSync(resolved).isDirectory();
+  } catch {
+    isDirectory = false;
+  }
+  if (!isDirectory) {
+    throw new Error("Path is not an existing local directory");
+  }
+  return resolved;
+}
+
 async function runTool(
   toolName: string,
   args: Record<string, unknown>,
@@ -558,11 +616,18 @@ async function runTool(
           );
 
     case "scan_directory": {
+      const since = args.since as string | undefined;
+      if (since !== undefined && !SAFE_GIT_REF_REGEX.test(since)) {
+        throw new Error(
+          `Invalid "since" ref: a branch, tag or SHA, optionally followed by ~N or ^N; got ${JSON.stringify(since.slice(0, 80))}`,
+        );
+      }
       const report = await scan({
-        target: args.path as string,
+        target: resolveLocalDirectory(args.path as string),
         format: "json",
         minSeverity: args.minSeverity as Severity | undefined,
-        sinceCommit: args.since as string | undefined,
+        sinceCommit: since,
+        trustTargetPolicy: false,
       });
       return compactReport(report);
     }
@@ -617,7 +682,9 @@ function validateToolArguments(
     }
   }
   for (const [key, value] of Object.entries(args)) {
-    const prop = schema.properties[key];
+    // Own properties only: "constructor", "toString" and "__proto__" resolve on
+    // a plain object's prototype and would pass as declared arguments.
+    const prop = Object.hasOwn(schema.properties, key) ? schema.properties[key] : undefined;
     if (!prop) {
       return `Unknown argument "${key}"`;
     }
@@ -680,6 +747,25 @@ function buildInitializeResult(params: unknown): object {
   };
 }
 
+/**
+ * Bound a scan tool call. The scan itself cannot be cancelled, but the
+ * protocol must not wait on it forever: after the limit the caller gets an
+ * error result and the next call proceeds.
+ */
+function withToolTimeout<T>(toolName: string, work: Promise<T>): Promise<T> {
+  if (!HEAVY_TOOLS.has(toolName)) return work;
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`Tool ${toolName} did not finish within ${Math.round(MCP_LIMITS.toolTimeoutMs / 1000)} seconds`));
+    }, MCP_LIMITS.toolTimeoutMs);
+    timer.unref();
+    work.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (err: unknown) => { clearTimeout(timer); reject(err); },
+    );
+  });
+}
+
 async function handleToolsCall(id: JsonRpcId, params: unknown): Promise<JsonRpcResponse> {
   if (typeof params !== "object" || params === null) {
     return errorResponse(id, INVALID_PARAMS, "Invalid params: expected an object with a tool name");
@@ -705,7 +791,7 @@ async function handleToolsCall(id: JsonRpcId, params: unknown): Promise<JsonRpcR
   }
 
   try {
-    const result = await runTool(name, args as Record<string, unknown>);
+    const result = await withToolTimeout(name, runTool(name, args as Record<string, unknown>));
     return successResponse(id, {
       content: [{ type: "text", text: JSON.stringify(result) }],
     });
@@ -788,34 +874,169 @@ export async function handleMcpLine(line: string): Promise<object | null> {
 // ---------------------------------------------------------------------------
 
 /**
+ * Transport limits. Mutable so tests can drive the oversize and timeout paths
+ * with small values; production code never writes them.
+ */
+export const MCP_LIMITS = {
+  /** A stdin line longer than this is discarded and answered with -32700. */
+  maxLineBytes: 64 * 1024 * 1024,
+  /** A scan tool call that runs longer than this is answered with an error. */
+  toolTimeoutMs: 10 * 60 * 1000,
+};
+
+/**
+ * Split a byte stream into newline-delimited lines without ever holding more
+ * than `maxLineBytes` of one line. readline buffers a whole line as one string,
+ * so a single huge line threw a RangeError outside every handler and killed
+ * the server; here an over-long line is dropped as it grows, reported once via
+ * `onOversize`, and the reader resumes at the next newline.
+ */
+export function createLineReader(
+  maxLineBytes: number,
+  onLine: (line: string) => void,
+  onOversize: () => void,
+): { push(chunk: Buffer): void; end(): void } {
+  let pending: Buffer[] = [];
+  let pendingBytes = 0;
+  let discarding = false;
+
+  const finishLine = (): void => {
+    if (discarding) {
+      discarding = false;
+      return;
+    }
+    const line = Buffer.concat(pending, pendingBytes).toString("utf-8");
+    pending = [];
+    pendingBytes = 0;
+    onLine(line);
+  };
+
+  const append = (segment: Buffer): void => {
+    if (discarding || segment.length === 0) return;
+    if (pendingBytes + segment.length > maxLineBytes) {
+      pending = [];
+      pendingBytes = 0;
+      discarding = true;
+      onOversize();
+      return;
+    }
+    pending.push(segment);
+    pendingBytes += segment.length;
+  };
+
+  return {
+    push(chunk: Buffer): void {
+      let start = 0;
+      for (;;) {
+        const nl = chunk.indexOf(0x0a, start);
+        if (nl === -1) {
+          append(chunk.subarray(start));
+          return;
+        }
+        append(chunk.subarray(start, nl));
+        finishLine();
+        start = nl + 1;
+      }
+    },
+    end(): void {
+      if (!discarding && pendingBytes > 0) finishLine();
+      discarding = false;
+    },
+  };
+}
+
+/** Tools that can run for a long time. Everything else answers at once. */
+const HEAVY_TOOLS = new Set(["scan_directory", "scan_npm_package"]);
+
+function isHeavyMessage(msg: unknown): boolean {
+  if (typeof msg !== "object" || msg === null) return false;
+  const req = msg as { method?: unknown; params?: unknown };
+  if (req.method !== "tools/call") return false;
+  const name = (req.params as { name?: unknown } | null | undefined)?.name;
+  return typeof name === "string" && HEAVY_TOOLS.has(name);
+}
+
+export interface McpServerOptions {
+  input?: Readable;
+  output?: Writable;
+  /** Called once stdin ends and queued work finished. Defaults to process.exit(0). */
+  onClose?: () => void;
+}
+
+/**
  * Start the MCP server on stdio: newline-delimited JSON-RPC on stdin/stdout.
  * All diagnostics go to stderr; stdout carries only protocol messages.
  */
-export function startMcpServer(): void {
-  const rl = readline.createInterface({ input: process.stdin, terminal: false });
+export function startMcpServer(options: McpServerOptions = {}): void {
+  const input = options.input ?? process.stdin;
+  const output = options.output ?? process.stdout;
+  const onClose = options.onClose ?? ((): void => process.exit(0));
 
   console.error(
     `${SERVER_NAME} MCP server v${SERVER_VERSION} listening on stdio (tools: ${TOOL_DEFINITIONS.map((t) => t.name).join(", ")})`,
   );
 
-  // Serialize handling so responses keep arrival order even when a scan
-  // is still running while the next message comes in.
-  let queue: Promise<void> = Promise.resolve();
+  const write = (response: object): void => {
+    output.write(`${JSON.stringify(response)}\n`);
+  };
 
-  rl.on("line", (line) => {
-    queue = queue
-      .then(async () => {
-        const response = await handleMcpLine(line);
-        if (response !== null) {
-          process.stdout.write(`${JSON.stringify(response)}\n`);
-        }
-      })
-      .catch((err) => {
+  // Scans run one at a time, in arrival order. Cheap messages (ping, initialize,
+  // tools/list, ioc_lookup) never wait behind a scan: JSON-RPC matches
+  // responses by id, so only the heavy calls need to be serialised.
+  let heavyQueue: Promise<void> = Promise.resolve();
+  const inFlight = new Set<Promise<void>>();
+
+  const track = (work: Promise<void>): void => {
+    inFlight.add(work);
+    void work.finally(() => inFlight.delete(work));
+  };
+
+  const handleLine = (line: string): void => {
+    const trimmed = line.trim();
+    if (trimmed === "") return;
+    let msg: unknown;
+    try {
+      msg = JSON.parse(trimmed);
+    } catch {
+      write(errorResponse(null, PARSE_ERROR, "Parse error: invalid JSON"));
+      return;
+    }
+    const run = async (): Promise<void> => {
+      try {
+        const response = await handleMcpMessage(msg);
+        if (response !== null) write(response);
+      } catch (err) {
         console.error(`mcp-server: unexpected error: ${err instanceof Error ? err.message : String(err)}`);
-      });
+      }
+    };
+    if (isHeavyMessage(msg)) {
+      heavyQueue = heavyQueue.then(run);
+      track(heavyQueue);
+    } else {
+      track(run());
+    }
+  };
+
+  const reader = createLineReader(MCP_LIMITS.maxLineBytes, handleLine, () => {
+    write(
+      errorResponse(
+        null,
+        PARSE_ERROR,
+        `Parse error: message exceeds the ${MCP_LIMITS.maxLineBytes} byte line limit and was discarded`,
+      ),
+    );
   });
 
-  rl.on("close", () => {
-    void queue.then(() => process.exit(0));
+  input.on("data", (chunk: Buffer | string) => {
+    reader.push(typeof chunk === "string" ? Buffer.from(chunk, "utf-8") : chunk);
+  });
+
+  input.on("end", () => {
+    reader.end();
+    void (async (): Promise<void> => {
+      // Work started while draining may add more; loop until none is left.
+      while (inFlight.size > 0) await Promise.allSettled([...inFlight]);
+      onClose();
+    })();
   });
 }

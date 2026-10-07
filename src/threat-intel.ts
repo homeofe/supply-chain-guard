@@ -11,6 +11,8 @@ import { createHash } from "node:crypto";
 
 import { CATALOG_DIGEST } from "./catalog-digest.js";
 import { displayCachePath, resolveCacheDir } from "./cache-dir.js";
+import { assertFeedSignature, FEED_SIGNATURE_FILE, FEED_SIGNED_COPY_FILE } from "./feed-signing-key.js";
+import { isVerifiedSelfScanFile } from "./self-scan-trust.js";
 import type { Finding, ThreatIntelSource, DetectionSetProvenance } from "./types.js";
 
 // ---------------------------------------------------------------------------
@@ -8180,6 +8182,50 @@ export const FEED_CACHE_FILE = "threat-feed.json";
 export const CATALOG_CACHE_FILE = "threat-catalog.json";
 
 /**
+ * Written by `feed refresh` after it installs a catalog, beside that catalog.
+ *
+ * It exists for one question the catalog file cannot answer about itself: was
+ * one installed here and is it gone now, or was none ever installed? Without it
+ * deleting the file makes the next scan look like a first run (info, not
+ * partial, exit 0) while the whole historical corpus is silently not consulted.
+ *
+ * It is a hint, never a trust input. It can only RAISE a finding, from the
+ * ordinary `absent` to `removed`; every state in which it is missing, oversized,
+ * linked, malformed, future-dated or for another release reads as no marker, so
+ * a damaged marker falls back to exactly the behaviour before it existed.
+ */
+export const CATALOG_MARKER_FILE = "catalog-installed.json";
+
+const CATALOG_MARKER_MAX_BYTES = 4096;
+
+/**
+ * The marker's content when it is usable and describes THIS release's catalog,
+ * else null. Only an exact match on the pinned version AND digest counts: a
+ * marker for an older release is the post-upgrade state (the user has simply
+ * not refreshed since upgrading) and must read as no marker.
+ */
+export function readCatalogMarker(cacheBase: string, now: number = Date.now()): { version: string; sha256: string } | null {
+  const markerPath = path.join(cacheBase, CATALOG_MARKER_FILE);
+  try {
+    const st = fs.lstatSync(markerPath);
+    if (!st.isFile() || st.nlink > 1 || st.size > CATALOG_MARKER_MAX_BYTES) return null;
+    const doc = JSON.parse(fs.readFileSync(markerPath, "utf-8")) as {
+      version?: unknown;
+      sha256?: unknown;
+      installedAt?: unknown;
+    };
+    if (doc === null || typeof doc !== "object") return null;
+    if (doc.version !== CATALOG_DIGEST.version || doc.sha256 !== CATALOG_DIGEST.sha256) return null;
+    if (typeof doc.installedAt !== "string") return null;
+    const at = Date.parse(doc.installedAt);
+    if (!Number.isFinite(at) || at > now + CACHE_TIMESTAMP_SKEW_MS) return null;
+    return { version: doc.version, sha256: doc.sha256 };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Why the catalog was not merged.
  *
  * - `absent`       no cache file. The ordinary state before a first refresh.
@@ -8187,13 +8233,16 @@ export const CATALOG_CACHE_FILE = "threat-catalog.json";
  * - `version-mismatch` built for a different release of this package.
  * - `digest-mismatch`  built from a different catalog than this release pins.
  * - `corrupt`      the entries do not match the checksum recorded beside them.
+ * - `removed`      no cache file, but `feed refresh` recorded installing this
+ *                  release's catalog here (CATALOG_MARKER_FILE): it was deleted.
  */
 export type CatalogUnavailableReason =
   | "absent"
   | "unreadable"
   | "version-mismatch"
   | "digest-mismatch"
-  | "corrupt";
+  | "corrupt"
+  | "removed";
 
 /** What the last loadThreatIntel() call found in the on-disk catalog cache. */
 export interface CatalogState {
@@ -8219,6 +8268,9 @@ export interface CatalogState {
  * is reported through getFeedCacheState() for the CLI to surface.
  */
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+/** How far into the future a cache timestamp may be before it is not trusted. */
+const CACHE_TIMESTAMP_SKEW_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Bounds every remote feed acquisition in this package: the `feed refresh`
@@ -8246,6 +8298,12 @@ export interface FeedLimitOverrides {
   maxBytes?: number;
   timeoutMs?: number;
   maxRedirects?: number;
+  /**
+   * Smallest feed `feed refresh` may install. Defaults to half the bundled
+   * feed's entry count; `0` disables the floor. Not a network bound, and not
+   * reachable from the command line.
+   */
+  minEntries?: number;
 }
 
 /**
@@ -8331,6 +8389,11 @@ export interface FeedCacheState {
   unreadable: boolean;
   /** Timestamp recorded by a parseable cache document. */
   refreshedAt?: string;
+  /**
+   * The feed document's own generation time, when the cached document recorded
+   * one. Unlike `refreshedAt` it does not come from this machine's clock.
+   */
+  generatedAt?: string;
 }
 
 let lastCacheState: FeedCacheState = { present: false, entryCount: 0, stale: false, unreadable: false };
@@ -8394,6 +8457,31 @@ export function resetThreatIntelCache(): void {
  * The returned array is SHARED, not a copy - that is what lets the package
  * index stay valid across calls. Treat it as read-only; no caller mutates it.
  */
+/**
+ * Re-verify a cached feed against the bundled signing key. Throws unless the
+ * signed copy beside the cache verifies AND the cache's entries are exactly the
+ * valid entries of that signed copy, so editing, truncating or replacing either
+ * file makes the cache unreadable. A cache installed with --allow-unsigned-feed
+ * says so (`unsigned: true`) and is accepted as such.
+ */
+function assertCachedFeedAuthentic(
+  cacheBase: string,
+  cached: { unsigned?: unknown; entries: unknown },
+): void {
+  if (cached.unsigned === true) return;
+  const raw = fs.readFileSync(path.join(cacheBase, FEED_SIGNED_COPY_FILE));
+  assertFeedSignature(raw, fs.readFileSync(path.join(cacheBase, FEED_SIGNATURE_FILE), "utf-8"));
+  const parsed = JSON.parse(raw.toString("utf-8")) as unknown;
+  const signedEntries: unknown = Array.isArray(parsed)
+    ? parsed
+    : (parsed as { entries?: unknown } | null)?.entries;
+  if (!Array.isArray(signedEntries)) throw new Error("the signed feed holds no entries");
+  const expected = JSON.stringify(signedEntries.filter(isValidFeedIOC).map(normalizeFeedIOC));
+  if (JSON.stringify(cached.entries) !== expected) {
+    throw new Error("the cached feed does not match the signed copy beside it");
+  }
+}
+
 export function loadThreatIntel(
   cacheDir?: string,
   remoteFeedUrl?: string,
@@ -8426,11 +8514,17 @@ export function loadThreatIntel(
     const catalogStat = fs.statSync(path.join(cacheBase, CATALOG_CACHE_FILE));
     catalogStamp = `${catalogStat.mtimeMs}:${catalogStat.size}`;
   } catch { /* no catalog cache file: stamp stays "none" */ }
+  // The install marker decides absent versus removed, so it is part of the identity.
+  let markerStamp = "none";
+  try {
+    const markerStat = fs.lstatSync(path.join(cacheBase, CATALOG_MARKER_FILE));
+    markerStamp = `${markerStat.mtimeMs}:${markerStat.size}`;
+  } catch { /* no marker: stamp stays "none" */ }
 
   const ttlBucket = Math.floor(Date.now() / CACHE_TTL_MS);
   // NUL-separated: no filesystem path can contain the separator, so two
   // different cache identities cannot collide into one key.
-  const key = `${cachePath}\u0000${remoteFeedUrl ?? ""}\u0000${stamp}\u0000${catalogStamp}\u0000${ttlBucket}`;
+  const key = `${cachePath}\u0000${remoteFeedUrl ?? ""}\u0000${stamp}\u0000${catalogStamp}\u0000${markerStamp}\u0000${ttlBucket}`;
 
   if (memoizedFeed && memoizedFeed.key === key) return memoizedFeed.feed;
 
@@ -8444,11 +8538,27 @@ export function loadThreatIntel(
     try {
       const cached = JSON.parse(fs.readFileSync(cachePath, "utf-8")) as {
         timestamp: string;
+        generatedAt?: unknown;
+        unsigned?: unknown;
         entries: FeedIOC[];
       };
       const parsedAt = new Date(cached.timestamp).getTime();
-      const age = Number.isFinite(parsedAt) ? Date.now() - parsedAt : undefined;
+      // A timestamp in the future is not "very fresh": it yields a negative age
+      // that never reaches the refresh-due threshold, so a cache stamped 2999
+      // would never be reported stale. `feed refresh` writes the client clock,
+      // so a value past a day of skew was not written by it; treat it as
+      // unusable, which the scan reports through THREAT_FEED_CACHE_UNREADABLE.
+      const rawAge = Number.isFinite(parsedAt) ? Date.now() - parsedAt : undefined;
+      const age = rawAge !== undefined && rawAge >= -CACHE_TIMESTAMP_SKEW_MS ? Math.max(rawAge, 0) : undefined;
+      const generatedAt =
+        typeof cached.generatedAt === "string" && Number.isFinite(Date.parse(cached.generatedAt))
+          ? cached.generatedAt
+          : undefined;
       if (Array.isArray(cached.entries)) {
+        // Not trusted until it verifies. A failure lands in the catch below:
+        // present stays false and unreadable stays true, so the scan reports
+        // THREAT_FEED_CACHE_UNREADABLE and runs on the bundled feed.
+        assertCachedFeedAuthentic(cacheBase, cached);
         // Quarantine invalid entries instead of trusting the cast: cached
         // remote data reaches the per-file scan loop, so a malformed entry
         // must never leave this function (issue #54).
@@ -8463,6 +8573,7 @@ export function loadThreatIntel(
           stale: age === undefined || age >= CACHE_TTL_MS,
           unreadable: age === undefined || remoteEntries.length !== cached.entries.length,
           ...(age === undefined ? {} : { refreshedAt: cached.timestamp }),
+          ...(generatedAt === undefined ? {} : { generatedAt }),
         };
       }
     } catch { /* unreadable remains true; scanner reports partial coverage */ }
@@ -8475,6 +8586,10 @@ export function loadThreatIntel(
   // feed authoritative for any indicator all three carry.
   let catalog: CatalogState = { available: false, reason: "absent", entryCount: 0 };
   const catalogPath = path.join(cacheBase, CATALOG_CACHE_FILE);
+  if (catalogStamp === "none" && readCatalogMarker(cacheBase) !== null) {
+    // Installed here for this release and gone now: not a first run.
+    catalog = { available: false, reason: "removed", entryCount: 0, cachedVersion: CATALOG_DIGEST.version };
+  }
   if (catalogStamp !== "none") {
     try {
       const cached = JSON.parse(fs.readFileSync(catalogPath, "utf-8")) as {
@@ -8655,7 +8770,9 @@ export async function updateThreatFeed(
     fs.mkdirSync(cacheBase, { recursive: true });
     fs.writeFileSync(
       path.join(cacheBase, FEED_CACHE_FILE),
-      JSON.stringify({ timestamp: new Date().toISOString(), entries }, null, 2),
+      // This legacy API takes a caller-chosen URL and checks no signature, so
+      // the cache says so, exactly as `feed refresh --allow-unsigned-feed` does.
+      JSON.stringify({ timestamp: new Date().toISOString(), unsigned: true, entries }, null, 2),
     );
 
     return { added: entries.length, total: BUNDLED_FEED.length + entries.length };
@@ -8676,7 +8793,7 @@ export async function updateThreatFeed(
 // Anything outside these sets means the file is NOT our inert data format and
 // must be scanned normally - an attacker cannot smuggle code past the check by
 // naming a file feed.json, because any extra key or non-scalar value fails it.
-const FEED_DOC_KEYS = new Set(["schema", "kind", "package", "version", "entryCount", "entries", "timestamp", "generatedAt"]);
+const FEED_DOC_KEYS = new Set(["schema", "kind", "package", "version", "entryCount", "entries", "timestamp", "generatedAt", "unsigned"]);
 // Mirrors the FeedIOC interface exactly. It MUST list every field the feed can
 // carry: "source" and "lastSeen" are part of FeedIOC, and entries imported from
 // upstream advisory databases populate "source" with their provenance (see
@@ -8719,8 +8836,21 @@ const FEED_ENTRY_KEYS = new Set([
  * deviation -> file is scanned like everything else.
  */
 export function isInertThreatFeedFile(filename: string, content: string): boolean {
-  const base = filename.replace(/\\/g, "/").split("/").pop() ?? "";
-  if (base !== "feed.json" && base !== FEED_CACHE_FILE) return false;
+  // Exact relative path, never a basename: the scanned tree names its own
+  // files, and a basename match let any package carry a file called feed.json
+  // at any depth that every scanner then skipped.
+  const relative = filename.replace(/\\/g, "/");
+  // The published feed at the scan root is exempt only when it is THIS
+  // project's own file: exact path plus the content digest in the manifest
+  // that ships with the running scanner. Any other root feed.json, however
+  // feed-shaped, is scanned like an ordinary file.
+  if (relative === "feed.json") {
+    return isVerifiedSelfScanFile(relative, Buffer.from(content, "utf8"));
+  }
+  // The refresh cache. Reachable only if a walker enters `.scg-cache`, which
+  // the directory walk excludes today (collectFiles); kept for the documented
+  // cache location, with the structural validation below.
+  if (relative !== `.scg-cache/${FEED_CACHE_FILE}`) return false;
   let doc: unknown;
   try {
     doc = JSON.parse(content);
@@ -8745,8 +8875,53 @@ export function isInertThreatFeedFile(filename: string, content: string): boolea
     // exemption could be claimed by a document that is merely feed-SHAPED
     // rather than an actual feed.
     if (!isValidFeedIOC(entry)) return false;
+    // Network indicators are exempt only when the scanner already knows them.
+    // A value the bundled feed does not carry is NOT our data: it is a new
+    // C2 address a payload parks in a feed-shaped file, and exempting it hides
+    // exactly the indicator the IOC matcher exists to report.
+    const ioc = entry as Record<string, unknown>;
+    if (
+      (ioc.type === "domain" || ioc.type === "url" || ioc.type === "ip") &&
+      !isBundledNetworkIndicator(ioc.type, String(ioc.value))
+    ) {
+      return false;
+    }
+    // Free-text provenance fields may not carry a command line or an encoded
+    // blob: they are read by people, so a short plain-text label is all a real
+    // feed needs.
+    for (const field of FEED_FREE_TEXT_FIELDS) {
+      const text = ioc[field];
+      if (text !== undefined && !isPlainProvenanceText(String(text))) return false;
+    }
   }
   return true;
+}
+
+const FEED_FREE_TEXT_FIELDS = ["source", "family", "campaign"] as const;
+
+/**
+ * A label such as `Aikido, o3.security MAL-2026-334` or `The Hacker News; loader
+ * verified in the Go proxy module zip`. No shell, quoting, redirect or
+ * substitution characters, bounded length, and no long unbroken base64-like run
+ * (a `-enc` blob or a packed payload).
+ */
+function isPlainProvenanceText(text: string): boolean {
+  if (text.length > 200) return false;
+  if (!/^[A-Za-z0-9 ._:;,/@+#()-]*$/.test(text)) return false;
+  if (/\b(?:powershell|pwsh|curl|wget|bash|cmd(?:\.exe)?|mshta|certutil)\b|\s-(?:enc|e|nop|w)\b/i.test(text)) return false;
+  return !/[A-Za-z0-9+/]{60,}/.test(text);
+}
+
+let bundledNetworkIndicators: ReadonlySet<string> | undefined;
+function isBundledNetworkIndicator(type: unknown, value: string): boolean {
+  if (!bundledNetworkIndicators) {
+    bundledNetworkIndicators = new Set(
+      BUNDLED_FEED_REF
+        .filter((e) => e.type === "domain" || e.type === "url" || e.type === "ip")
+        .map((e) => `${e.type}:${e.value.toLowerCase()}`),
+    );
+  }
+  return bundledNetworkIndicators.has(`${String(type)}:${value.toLowerCase()}`);
 }
 
 /** Directory of the committed catalog store (scripts/catalog-store.mjs). */

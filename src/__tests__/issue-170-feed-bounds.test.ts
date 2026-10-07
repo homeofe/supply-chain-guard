@@ -52,6 +52,11 @@ vi.mock("node:https", async () => {
 import { refreshFeed } from "../feed.js";
 import { FEED_CACHE_FILE, FEED_REMOTE_LIMITS, updateThreatFeed } from "../threat-intel.js";
 
+const NO_FLOOR = { minEntries: 0 }; // fixtures hold a few entries, far below half the bundled feed
+// These suites exercise transport, cache safety and catalog behaviour with unsigned local
+// routes; feed-signature.test.ts covers the signature check itself.
+const ALLOW_UNSIGNED = { allowUnsigned: true };
+
 /** Short enough to keep the suite fast, long enough to survive a loaded CI box. */
 const DEADLINE_MS = 400;
 /** Small enough that a few kilobytes cross it. */
@@ -201,7 +206,7 @@ describe("feed acquisition bounds (issue 170)", () => {
     const peer = await startPeer(headersThenStall);
     const started = Date.now();
 
-    const outcome = await settle(refreshFeed(peer.httpsUrl, tmpDir, { timeoutMs: DEADLINE_MS }));
+    const outcome = await settle(refreshFeed(peer.httpsUrl, tmpDir, { ...NO_FLOOR, timeoutMs: DEADLINE_MS }, ALLOW_UNSIGNED));
 
     // The number in the message is the deadline's REMAINING budget at the moment
     // the body read started, so it is 400ms minus the connect time, not a literal
@@ -215,7 +220,7 @@ describe("feed acquisition bounds (issue 170)", () => {
     const peer = await startPeer(trickleForever);
     const started = Date.now();
 
-    const outcome = await settle(refreshFeed(peer.httpsUrl, tmpDir, { timeoutMs: DEADLINE_MS }));
+    const outcome = await settle(refreshFeed(peer.httpsUrl, tmpDir, { ...NO_FLOOR, timeoutMs: DEADLINE_MS }, ALLOW_UNSIGNED));
 
     // Not merely "it rejected": this peer defeats an inactivity timeout by
     // construction, so only an absolute deadline can produce this message.
@@ -231,7 +236,7 @@ describe("feed acquisition bounds (issue 170)", () => {
     // default of 30s. The peer sends no body at all. Rejecting in a fraction of
     // a second can therefore only be the declared-length refusal: a streamed
     // byte count would never trip, and the deadline is 30s away.
-    const outcome = await settle(refreshFeed(peer.httpsUrl, tmpDir, { maxBytes: CAP_BYTES }));
+    const outcome = await settle(refreshFeed(peer.httpsUrl, tmpDir, { ...NO_FLOOR, maxBytes: CAP_BYTES }, ALLOW_UNSIGNED));
 
     expect(outcome).toMatch(/exceeded the 4096-byte limit/);
     expect(Date.now() - started).toBeLessThan(FEED_REMOTE_LIMITS.timeoutMs);
@@ -241,7 +246,7 @@ describe("feed acquisition bounds (issue 170)", () => {
   it("refreshFeed refuses a chunked body that streams past the cap", async () => {
     const peer = await startPeer(chunkedPastCap);
 
-    const outcome = await settle(refreshFeed(peer.httpsUrl, tmpDir, { maxBytes: CAP_BYTES }));
+    const outcome = await settle(refreshFeed(peer.httpsUrl, tmpDir, { ...NO_FLOOR, maxBytes: CAP_BYTES }, ALLOW_UNSIGNED));
 
     expect(outcome).toMatch(/exceeded the 4096-byte limit/);
     expect(fs.existsSync(path.join(tmpDir, FEED_CACHE_FILE))).toBe(false);
@@ -250,7 +255,7 @@ describe("feed acquisition bounds (issue 170)", () => {
   it("refreshFeed applies the package default cap when no override is passed", async () => {
     const peer = await startPeer(declaresBytes(FEED_REMOTE_LIMITS.maxBytes + 1));
 
-    const outcome = await settle(refreshFeed(peer.httpsUrl, tmpDir));
+    const outcome = await settle(refreshFeed(peer.httpsUrl, tmpDir, NO_FLOOR, ALLOW_UNSIGNED));
 
     expect(outcome).toMatch(/exceeded the 33554432-byte limit/);
   }, 20_000);
@@ -274,7 +279,7 @@ describe("feed acquisition bounds (issue 170)", () => {
     const before = fs.readFileSync(cachePath);
 
     const peer = await startPeer(headersThenStall);
-    const outcome = await settle(refreshFeed(peer.httpsUrl, tmpDir, { timeoutMs: DEADLINE_MS }));
+    const outcome = await settle(refreshFeed(peer.httpsUrl, tmpDir, { ...NO_FLOOR, timeoutMs: DEADLINE_MS }, ALLOW_UNSIGNED));
 
     expect(outcome).toMatch(/(?:timed out after \d+ms|aborted)/);
     // Failing closed means the protection already in place survives the failure.
@@ -361,7 +366,7 @@ describe("feed acquisition bounds (issue 170)", () => {
       res.end(JSON.stringify(entries));
     });
 
-    const refreshed = await refreshFeed(peer.httpsUrl, tmpDir, { timeoutMs: DEADLINE_MS });
+    const refreshed = await refreshFeed(peer.httpsUrl, tmpDir, { ...NO_FLOOR, timeoutMs: DEADLINE_MS }, ALLOW_UNSIGNED);
     expect(refreshed.entryCount).toBe(1);
 
     const updated = await updateThreatFeed(legacyPeer.httpUrl, tmpDir, {

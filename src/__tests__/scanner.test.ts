@@ -117,9 +117,12 @@ describe("Core Scanner", () => {
         noHistory: true,
         cacheDir,
       });
-      const finding = report.findings.find((f) => f.rule === "THREAT_FEED_CATALOG_MISSING");
+      // An installed catalog that fails its digest is not "missing": it carries
+      // the rule that marks the scan partial.
+      const finding = report.findings.find((f) => f.rule === "THREAT_FEED_CATALOG_UNAVAILABLE");
       expect(finding).toBeDefined();
       expect(finding?.severity).toBe("critical");
+      expect(report.partialScan).toBe(true);
       expect(lastCatalogState()).toMatchObject({
         available: false,
         reason: "digest-mismatch",

@@ -28,6 +28,89 @@ write-up (the project's own maintainer, a victim) and the other `@subql`
 packages listed as dependency paths (legitimate versions that only depend
 on `@subql/common`). New describe block in `campaigns.test.ts`, with a
 clean-version negative test for 5.8.2.
+## Security review fixes, 40 findings (2026-10-07) (claude-opus-5-5)
+
+All findings of the 2026-10-07 security review are fixed on the private
+advisory fork of GHSA-cq59-vmg7-pmqv, on top of the F1/F29 tool-lookup fix
+below. The findings file itself stays local and is not part of the
+repository. Nine implementation passes, each with a test through the real
+entry point that goes red when its fix is cut; integrated and adjusted here.
+
+Decisions taken during integration, worth knowing:
+
+- A tree policy (`.scg.yml`) and inline `scg-ignore-next-line` comments are
+  NOT read for GitHub-URL scans and MCP `scan_directory`; local scans keep
+  them but surface suppressed high/critical findings
+  (`POLICY_SUPPRESSED_SEVERE`, medium, does not change the default exit). A
+  scan whose policy or comments suppress something runs a second time
+  without them to compute `riskLevelBeforePolicy`, so it takes about twice
+  as long.
+- A cached catalog built for an older release stays low and NOT partial in
+  optional mode (the normal state right after an upgrade). Broken, truncated
+  or digest-mismatched catalogs are high and partial.
+- Non-code files over 64 MiB get the informational `LARGE_FILE_NOT_HASHED`,
+  not a partial scan (ordinary media assets).
+- Tar links resolving to a file are written as copies; links to directories
+  are reported as partial.
+- SLSA level 3 is still derived from build configuration (the generator's
+  attestation is a release asset, not a tree file); every assessment now says
+  explicitly that no signature was verified.
+- `.sh` files piping `curl` into `sh` stay unflagged (legitimate installers),
+  and multi-line obfuscation of the env-exfil rules needs a parser: both are
+  deliberate limits.
+- New CI job "Windows tool lookup" (windows-latest) runs the exec, install
+  guard and archive tests and gates the "Build and Test" aggregator.
+
+Closed in the same branch after the first integration: the feed is signed
+(Ed25519, release assets, `feed refresh` reads the latest release; the private
+key exists only as the `FEED_SIGNING_KEY` Actions secret, public key in
+`src/feed-signing-key.ts`, fingerprint in SECURITY.md); `extractZip` writes
+members in-process with a CRC-32 check; a deleted catalog that `feed refresh`
+had installed is detected through a `catalog-installed.json` marker. Separate
+advisories: GHSA-wrr5-263w-wvmh (F2), GHSA-frvv-hf2w-gwf7 (F3),
+GHSA-hpmp-48p8-f32h (F11). Public record: `docs/security-audit-2026-10-07.md`.
+
+Known limits, recorded rather than fixed: a feed entry of a type an older
+client does not know makes that client reject the whole feed, so a new type
+needs a client release first; `--allow-unsigned-feed` writes `unsigned: true`
+into the cache, which anyone able to write the cache directory could also
+write (that access already allows worse); feed refresh now carries
+release-time intel, not same-day intel from `main`. Measured before merging:
+26 releases in the 31 days to 2026-10-06, longest gap 3 days, so intel
+reaches `feed refresh` the same or next day in practice. 5.x is still
+supported, and a 5.x patch could become GitHub's `latest`: the release job
+now marks only the highest tag `latest`, and the client falls back to the
+newest release carrying `feed.json` + `feed.json.sig` (releases API, still
+signature-verified). Live check against github.com: the `latest` redirect
+chain works with the bounded downloader, the releases API answers without a
+token, and the 6.5.1 parser accepts the feed.json this branch leaves on
+`main` (older clients keep reading it there).
+
+## Security fix: tools planted in the scanned directory (2026-10-07) (claude-opus-5-5)
+
+Fix for GHSA-cq59-vmg7-pmqv, prepared in the advisory's temporary private
+fork; it reaches `main` when the advisory's pull request is merged. On Windows every external tool was started
+by bare name, and Windows looks in the current directory before `PATH`: a
+`git.bat` in the scanned project ran during `scan` (git provenance), and
+`install-guard` ran an `npm.cmd` from its working directory. Reproduced on
+6.5.1 with a marker file, and not reproduced with
+`NoDefaultCurrentDirectoryInExePath=1` as the control.
+
+New `src/safe-exec.ts`: `resolveExecutable` searches only absolute `PATH`
+entries (PATHEXT order on Windows, `.cmd`/`.bat` only for the install guard,
+which quotes for cmd.exe itself) and `execToolSync` runs the result without a
+shell. All bare-name calls in `scanner.ts`, `diff-scanner.ts`,
+`github-trust-scanner.ts`, `org-scanner.ts` and `archive-extractor.ts` use it;
+the install guard's default spawn resolves the manager the same way.
+
+`src/__tests__/safe-exec.test.ts` plants a `git` and an `npm` that write a
+marker. On Windows it uses the default lookup; on Linux CI the same attack is
+an empty `PATH` entry, so the regression test runs on every compat leg.
+
+Not part of this fix, still open from the same review: the install guard's
+`cmd.exe` escaper does not reject CR/LF in an argument (truncation only, no
+injection observed), and there is no Windows CI leg, so the Windows variant of
+the regression test runs only on a Windows machine.
 
 ## Release v6.5.1 (2026-10-06) (claude-opus-5-5)
 

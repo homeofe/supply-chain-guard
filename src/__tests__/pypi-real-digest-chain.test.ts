@@ -106,6 +106,7 @@ describe("PyPI real digest and alias retry chain", () => {
         path.join(packageDir, "payload.py"),
         'import os\nos.system("id")\n',
       );
+      return { skippedLinks: [] };
     });
 
     const findings: Finding[] = [];

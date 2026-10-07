@@ -197,7 +197,7 @@ describe("issue #54: threat-intel indicator hardening", () => {
     ];
     fs.writeFileSync(
       path.join(tempDir, "threat-feed.json"),
-      JSON.stringify({ timestamp: new Date().toISOString(), entries }, null, 2),
+      JSON.stringify({ timestamp: new Date().toISOString(), unsigned: true, entries }, null, 2),
     );
 
     const feed = loadThreatIntel(tempDir);

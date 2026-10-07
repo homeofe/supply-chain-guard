@@ -895,7 +895,8 @@ function isDomainAllowlisted(value: string, allowed: string[]): boolean {
 export function applyInlineSuppressions(
   findings: Finding[],
   rootDir: string,
-): { findings: Finding[]; suppressedCount: number } {
+  options: { protectSevere?: boolean } = {},
+): { findings: Finding[]; suppressedCount: number; suppressedSevereCount: number } {
   const INLINE_RE = /(?:\/\/|#)\s*scg-ignore-next-line\s+([A-Za-z][A-Za-z0-9_]*)/;
   const fileCache = new Map<string, string[] | null>();
 
@@ -912,6 +913,7 @@ export function applyInlineSuppressions(
   };
 
   let suppressedCount = 0;
+  let suppressedSevereCount = 0;
   const result: Finding[] = [];
 
   for (const finding of findings) {
@@ -922,14 +924,21 @@ export function applyInlineSuppressions(
       const above = lines?.[finding.line - 2] ?? "";
       const m = INLINE_RE.exec(above);
       if (m && m[1] === finding.rule) {
-        suppressedCount++;
-        continue;
+        const severe = finding.severity === "high" || finding.severity === "critical";
+        // The comment is written by the scanned content itself. When the
+        // content is not the user's own (cloned repository, MCP scan), a
+        // directive can never hide a high or critical finding.
+        if (!(severe && options.protectSevere)) {
+          suppressedCount++;
+          if (severe) suppressedSevereCount++;
+          continue;
+        }
       }
     }
     result.push(finding);
   }
 
-  return { findings: result, suppressedCount };
+  return { findings: result, suppressedCount, suppressedSevereCount };
 }
 
 // ---------------------------------------------------------------------------

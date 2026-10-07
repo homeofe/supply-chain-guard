@@ -665,6 +665,88 @@ describe("external threat intelligence", () => {
       expect(stored["cisa-kev:CVE-2024-0001"].ttlMs).toBeGreaterThan(LOOKUP_FAILURE_TTL_MS);
     });
 
+    it("F38: npm names that differ only by case do not share a cache key or an OSV answer", async () => {
+      expect(formatPackageCacheKey("npm:", "Foo")).not.toBe(formatPackageCacheKey("npm:", "foo"));
+      expect(formatPackageCacheKey("cargo:", "serde_json")).toBe(formatPackageCacheKey("cargo:", "Serde-Json"));
+
+      const cache = new ThreatIntelCache();
+      const seen: string[] = [];
+      const fetchFn = (async (_url: unknown, init?: { body?: string }) => {
+        const name = (JSON.parse(String(init?.body)) as { package: { name: string } }).package.name;
+        seen.push(name);
+        return {
+          ok: true,
+          json: async () => (name === "Foo" ? { vulns: [] } : { vulns: [{ id: "MAL-2026-1", summary: "Malicious code in foo" }] }),
+        } as unknown as Response;
+      }) as unknown as typeof fetch;
+      const clean = await queryOsv("npm:Foo", "1.0.0", { cache, fetchFn });
+      const other = await queryOsv("npm:foo", "1.0.0", { cache, fetchFn });
+      expect(seen).toEqual(["Foo", "foo"]);
+      expect(clean.hasMalwareSignature).toBe(false);
+      expect(other.hasMalwareSignature).toBe(true);
+    });
+
+    describe("F37: a cache file read from disk is validated, not trusted", () => {
+      const cacheFile = () => path.join(tmpDir, "external-threat-cache.json");
+      const writeCache = (entries: Record<string, unknown>) =>
+        fs.writeFileSync(cacheFile(), JSON.stringify({ version: 1, entries }), { mode: 0o600 });
+      const osvKey = `osv:${formatPackageCacheKey("npm:", "evil-pkg", "1.0.0")}`;
+      const clean = { vulns: [], hasMalwareSignature: false, status: "not-found" };
+
+      it("caps how long a planted negative verdict is honoured", () => {
+        const now = Date.now();
+        writeCache({
+          [osvKey]: { data: clean, cachedAt: now - 60 * 60 * 1000, ttlMs: 24 * 60 * 60 * 1000 },
+        });
+        expect(new ThreatIntelCache(tmpDir).get(osvKey)).toBeUndefined();
+
+        writeCache({ [osvKey]: { data: clean, cachedAt: now - 60 * 1000, ttlMs: 24 * 60 * 60 * 1000 } });
+        expect(new ThreatIntelCache(tmpDir).get(osvKey)).toEqual(clean);
+      });
+
+      it("keeps a positive verdict for its full TTL", () => {
+        const positive = { vulns: [{ id: "MAL-2026-1" }], hasMalwareSignature: true, status: "ok" };
+        writeCache({
+          [osvKey]: { data: positive, cachedAt: Date.now() - 2 * 60 * 60 * 1000, ttlMs: 24 * 60 * 60 * 1000 },
+        });
+        expect(new ThreatIntelCache(tmpDir).get(osvKey)).toEqual(positive);
+      });
+
+      it("drops entries with a wrong shape, a future timestamp or an extended TTL", () => {
+        const now = Date.now();
+        writeCache({
+          [osvKey]: { data: { hasMalwareSignature: "no" }, cachedAt: now, ttlMs: 1000 },
+          "epss:future": { data: { status: "ok" }, cachedAt: now + 3_600_000, ttlMs: 1000 },
+          "epss:long": { data: { status: "ok" }, cachedAt: now, ttlMs: 365 * 24 * 60 * 60 * 1000 },
+          "epss:ok": { data: { status: "ok" }, cachedAt: now, ttlMs: 1000 },
+        });
+        const cache = new ThreatIntelCache(tmpDir);
+        expect(cache.get(osvKey)).toBeUndefined();
+        expect(cache.get("epss:future")).toBeUndefined();
+        expect(cache.get("epss:long")).toBeUndefined();
+        expect(cache.get("epss:ok")).toEqual({ status: "ok" });
+      });
+
+      it("refuses a cache file that is a symlink or is writable by others (POSIX)", () => {
+        const entry = { data: { status: "ok" }, cachedAt: Date.now(), ttlMs: 60_000 };
+        writeCache({ "epss:x": entry });
+        if (typeof process.getuid === "function") {
+          fs.chmodSync(cacheFile(), 0o666);
+          expect(new ThreatIntelCache(tmpDir).get("epss:x")).toBeUndefined();
+          fs.chmodSync(cacheFile(), 0o600);
+          expect(new ThreatIntelCache(tmpDir).get("epss:x")).toEqual({ status: "ok" });
+        }
+        const target = path.join(tmpDir, "real.json");
+        fs.renameSync(cacheFile(), target);
+        try {
+          fs.symlinkSync(target, cacheFile());
+        } catch {
+          return; // symlink creation not permitted on this host
+        }
+        expect(new ThreatIntelCache(tmpDir).get("epss:x")).toBeUndefined();
+      });
+    });
+
     it("does not read an ordinary CVE write-up as an OSV Malicious Database hit", async () => {
       const mockFetch = (async () =>
         ({

@@ -53,8 +53,9 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { createHash } from "node:crypto";
 import type { Finding } from "./types.js";
-import { MAX_FILE_SIZE } from "./patterns.js";
+import { MAX_FILE_SIZE, makeOversizedSkipFinding } from "./patterns.js";
 import { parseWorkflow, stripYamlComments, type WfJob, type WorkflowAst } from "./workflow-ast.js";
 
 /** Workflow patterns that indicate SLSA Level 2 (signed/generated provenance) */
@@ -190,6 +191,10 @@ export interface AttestationResult {
   predicateType?: string;
   /** Number of attested subjects carrying a usable digest set, when extractable. */
   subjectCount?: number;
+  /** The digested subjects (name + digest set), as declared by the file. */
+  subjects?: Array<{ name?: string; digest: Record<string, string> }>;
+  /** A statement file over the size cap that was NOT read (coverage gap). */
+  oversized?: { file: string; size: number };
   /** Builder identity from the SLSA predicate, when extractable. UNVERIFIED: self-declared by the file. */
   builderId?: string;
   /** Why an existing file was judged not-valid-SLSA (for the finding message). */
@@ -303,8 +308,29 @@ function isUsableDigestSet(digest: unknown): boolean {
   if (entries.length === 0) return false;
   return entries.every(
     ([algorithm, value]) =>
-      algorithm.trim() !== "" && typeof value === "string" && value.trim() !== "",
+      algorithm.trim() !== "" && typeof value === "string" && isPlausibleDigest(algorithm, value),
   );
+}
+
+/** Hex length of each digest algorithm an in-toto subject commonly names. */
+const DIGEST_HEX_LENGTH: Record<string, number> = {
+  sha1: 40,
+  sha224: 56,
+  sha256: 64,
+  sha384: 96,
+  sha512: 128,
+  md5: 32,
+};
+
+/**
+ * A digest value must be hex of the length its algorithm produces. `{sha256:
+ * "a"}` identifies no artefact and used to pass as a "usable digest". An
+ * unknown algorithm name (gitCommit, dirHash, ...) only has to be non-empty hex.
+ */
+function isPlausibleDigest(algorithm: string, value: string): boolean {
+  if (!/^[0-9a-f]+$/i.test(value)) return false;
+  const expected = DIGEST_HEX_LENGTH[algorithm.toLowerCase()];
+  return expected === undefined || value.length === expected;
 }
 
 /**
@@ -381,6 +407,10 @@ function classifyStatement(stmt: Record<string, unknown>, unwrapped: Unwrapped):
     kind: "slsa",
     predicateType,
     subjectCount: digestedSubjects.length,
+    subjects: digestedSubjects.map((s) => ({
+      name: typeof (s as { name?: unknown }).name === "string" ? (s as { name: string }).name : undefined,
+      digest: (s as { digest: Record<string, string> }).digest,
+    })),
     builderId,
   };
 }
@@ -395,17 +425,42 @@ function classifyStatement(stmt: Record<string, unknown>, unwrapped: Unwrapped):
  */
 export function parseAttestation(dir: string): AttestationResult {
   const searchDirs = [dir, path.join(dir, "dist"), path.join(dir, ".github")];
+  let oversized: { file: string; size: number } | undefined;
+  // The fixed names, then any other `<name>.intoto.jsonl` (the generic
+  // slsa-github-generator emits `multiple.intoto.jsonl`, `<artifact>.intoto.jsonl`).
+  const names: Array<[string, string]> = [];
   for (const filename of ATTESTATION_STATEMENT_FILES) {
-    for (const base of searchDirs) {
+    for (const base of searchDirs) names.push([base, filename]);
+  }
+  for (const base of searchDirs) {
+    let entries: string[] = [];
+    try {
+      entries = fs.readdirSync(base);
+    } catch {
+      continue;
+    }
+    for (const entry of entries.sort()) {
+      if (/\.intoto\.jsonl$/i.test(entry) && !ATTESTATION_STATEMENT_FILES.includes(entry)) {
+        names.push([base, entry]);
+      }
+    }
+  }
+  {
+    for (const [base, filename] of names) {
       const filePath = path.join(base, filename);
       if (!fs.existsSync(filePath)) continue;
 
       // Bound the read like every other scanner: a real provenance file is a few
-      // KB, so an oversized one is skipped rather than read into memory (a
-      // committed multi-hundred-MB file must not become a memory DoS).
+      // KB, so an oversized one is not read into memory (a committed
+      // multi-hundred-MB file must not become a memory DoS). It is reported as a
+      // coverage gap rather than skipped silently.
       let content: string;
       try {
-        if (fs.statSync(filePath).size > MAX_FILE_SIZE) continue;
+        const size = fs.statSync(filePath).size;
+        if (size > MAX_FILE_SIZE) {
+          oversized ??= { file: filePath, size };
+          continue;
+        }
         content = fs.readFileSync(filePath, "utf-8");
       } catch {
         return {
@@ -452,7 +507,7 @@ export function parseAttestation(dir: string): AttestationResult {
       );
     }
   }
-  return { present: false, valid: false, structurallyValid: false };
+  return { present: false, valid: false, structurallyValid: false, ...(oversized ? { oversized } : {}) };
 }
 
 /**
@@ -735,6 +790,53 @@ export function getSLSALevel(dir: string): number {
 }
 
 /**
+ * When a subject names a file that exists inside the scanned tree (direct
+ * child of the root, dist/ or .github/; never a path outside it), hash the file
+ * and compare against the attested digest. Returns the mismatching algorithm,
+ * or null when it matches, cannot be checked, or the file is not there.
+ */
+function subjectDigestMismatch(
+  dir: string,
+  subject: { name?: string; digest: Record<string, string> },
+): { algorithm: string } | null {
+  if (!subject.name) return null;
+  const base = path.basename(subject.name.replace(/\\/g, "/"));
+  if (!base || base === "." || base === "..") return null;
+  for (const searchDir of [dir, path.join(dir, "dist"), path.join(dir, ".github")]) {
+    const filePath = path.join(searchDir, base);
+    try {
+      const stat = fs.lstatSync(filePath);
+      if (!stat.isFile() || stat.size > SUBJECT_HASH_MAX_BYTES) continue;
+      for (const algorithm of ["sha256", "sha512", "sha1"]) {
+        const attested = subject.digest[algorithm];
+        if (attested === undefined) continue;
+        const actual = hashFileSync(filePath, algorithm);
+        if (actual !== attested.toLowerCase()) return { algorithm };
+      }
+      return null;
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+const SUBJECT_HASH_MAX_BYTES = 256 * 1024 * 1024;
+
+function hashFileSync(filePath: string, algorithm: string): string {
+  const hash = createHash(algorithm);
+  const fd = fs.openSync(filePath, "r");
+  try {
+    const buf = Buffer.allocUnsafe(1024 * 1024);
+    let n: number;
+    while ((n = fs.readSync(fd, buf, 0, buf.length, null)) > 0) hash.update(buf.subarray(0, n));
+  } finally {
+    fs.closeSync(fd);
+  }
+  return hash.digest("hex");
+}
+
+/**
  * Verify SLSA posture of a project directory and return findings for gaps.
  */
 export function verifySLSA(dir: string): Finding[] {
@@ -790,11 +892,22 @@ export function verifySLSA(dir: string): Finding[] {
   // over-read the result, so the limit travels with it into every format that
   // renders findings - which is the only place the caveat reaches SARIF, GitLab
   // and JUnit at all (unreleased, issue 188).
-  if (att.present && att.structurallyValid) {
+  if (att.oversized) {
+    findings.push(
+      makeOversizedSkipFinding(path.relative(dir, att.oversized.file) || path.basename(att.oversized.file), att.oversized.size),
+    );
+  }
+
+  // Emitted for EVERY present attestation, not only structurally valid ones: no
+  // signature is verified on any path, so a malformed or non-SLSA file must not
+  // read as "checked and clean" either.
+  if (att.present) {
     const signatureNote =
       att.signatureStatus === "present-unverified"
         ? `${att.signatureCount ?? 0} signature(s) are present and were NOT verified`
-        : "the statement is bare in-toto with no envelope, so it carries no signature at all";
+        : att.signatureStatus === "absent"
+          ? "the envelope carries no usable signature, and no signature was verified"
+          : "the statement is bare in-toto with no envelope, so it carries no signature at all";
     findings.push({
       rule: "SLSA_SIGNATURE_NOT_VERIFIED",
       description:
@@ -808,6 +921,40 @@ export function verifySLSA(dir: string): Finding[] {
         "the signature against a trust root and the transparency log (for example `slsa-verifier` " +
         "or `gh attestation verify`), and compare the subject digest against the artifact you " +
         "actually consume.",
+    });
+  }
+
+  // Subject digest vs the artefact, when the subject names a file in the tree.
+  for (const subject of att.subjects ?? []) {
+    const mismatch = subjectDigestMismatch(dir, subject);
+    if (mismatch) {
+      findings.push({
+        rule: "SLSA_SUBJECT_DIGEST_MISMATCH",
+        description:
+          `The attested subject "${subject.name}" in ${attName} names an artefact present in the scanned tree, ` +
+          `but its ${mismatch.algorithm} digest does not match the file. The provenance describes different bytes than the ones shipped.`,
+        severity: "high",
+        confidence: 0.9,
+        category: "supply-chain",
+        file: att.file ? path.relative(dir, att.file) || attName : attName,
+        recommendation:
+          "Regenerate the provenance for the exact artefact you ship, and verify it with `slsa-verifier` or `gh attestation verify`.",
+      });
+    }
+  }
+
+  // Level 3 from workflow text alone: nothing was read that could back it.
+  if (level === 3 && !att.present) {
+    findings.push({
+      rule: "SLSA_SIGNATURE_NOT_VERIFIED",
+      description:
+        "Level 3 was derived from workflow text only: no attestation file exists in the tree, so no provenance statement, signature or subject digest was read. " +
+        `Not assessed: ${SLSA_NOT_ASSESSED.join("; ")}.`,
+      severity: "info",
+      confidence: 1,
+      category: "supply-chain",
+      recommendation:
+        "Treat this level as a claim about the workflow configuration, not as verified provenance. Verify a published release with `slsa-verifier` or `gh attestation verify`.",
     });
   }
 

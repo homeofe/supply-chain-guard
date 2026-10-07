@@ -22,6 +22,7 @@ import {
 export type FilePattern = Pick<
   PatternEntry,
   | "pattern"
+  | "severity"
   | "rule"
   | "spansLines"
   | "correlatedMatcher"
@@ -65,6 +66,10 @@ export const PARTIAL_SCAN_RULES: ReadonlySet<string> = new Set([
   "INTERNAL_DENYLIST_REFUSED",
   "POLICY_INVALID_INTERNAL_TERM",
   "THREAT_FEED_CACHE_UNREADABLE",
+  // An installed catalog that could not be used (unreadable, truncated, wrong
+  // release, digest mismatch). Not THREAT_FEED_CATALOG_MISSING: that one is the
+  // ordinary "never downloaded" note and must not mark every fresh install.
+  "THREAT_FEED_CATALOG_UNAVAILABLE",
   "DIFF_BASE_UNAVAILABLE",
   // A state store that exists but does not parse is a configured source that
   // could not be evaluated, which is the exact test above. Trend, forecast and
@@ -464,7 +469,111 @@ export function matchPatternInFile(
 ): PatternMatchResult | null {
   if (!isPatternApplicableToFile(pattern, content, relativePath, fileExtension)) return null;
 
-  const result = matchPatternInContent(pattern, content, flags, options);
+  let result = matchPatternInContent(pattern, content, flags, options);
+  // Obfuscation-sensitive JS rules get a second look at a de-obfuscated view
+  // of the same file when the literal text matched nothing. Additive only: a
+  // literal hit is never replaced, so normalising cannot lose a finding.
+  if (
+    result.length === 0 &&
+    JS_NORMALISED_RULES.has(pattern.rule) &&
+    JS_NORMALISED_EXTENSIONS.has(
+      (fileExtension ?? path.extname(relativePath)).toLowerCase(),
+    )
+  ) {
+    const normalized = normalizeJsObfuscation(content);
+    if (normalized !== content) {
+      const second = matchPatternInContent(pattern, normalized, flags, options);
+      if (second.length > 0) result = second;
+    }
+  }
   recordIncompleteCoverage(findings, relativePath, pattern.rule, result);
   return result;
+}
+
+/** Rules whose JS shape is cheap to hide with one-token source obfuscation. */
+const JS_NORMALISED_RULES: ReadonlySet<string> = new Set([
+  "ENV_EXFILTRATION",
+  "DNS_EXFILTRATION",
+  "BUILD_ENV_EXFIL",
+  "JS_EXEC_REMOTE_SHELL_PIPE",
+]);
+
+const JS_NORMALISED_EXTENSIONS: ReadonlySet<string> = new Set([
+  ".js", ".mjs", ".cjs", ".jsx", ".ts", ".tsx", ".mts", ".cts",
+]);
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Light, line-preserving de-obfuscation of JavaScript for the rules above. It
+ * is NOT a parser: it undoes the one-token tricks that otherwise turn a
+ * flagged payload clean - `\u0065` and `\x65` escapes, zero-width characters,
+ * an empty block comment between tokens, `"e"+"nv"` concatenation, `process["env"]`
+ * bracket access, and a whole-environment alias (`const e = process.env`,
+ * `const { env } = process`) later used as a whole object. Newlines are never
+ * added or removed, so a hit keeps its line number.
+ *
+ * The alias step only rewrites a bare use of the alias (not `e.KEY`, not a
+ * property key) and is skipped for any name the file also declares as a
+ * parameter or catch binding, so `catch (e)` next to `const e = process.env`
+ * cannot invent a hit.
+ */
+export function normalizeJsObfuscation(content: string): string {
+  let text = content;
+
+  text = text.replace(/\\u([0-9a-fA-F]{4})|\\u\{([0-9a-fA-F]{1,6})\}|\\x([0-9a-fA-F]{2})/g, (whole, u4, ub, x2) => {
+    const code = Number.parseInt(u4 ?? ub ?? x2, 16);
+    if (code > 0x7e) return whole;
+    const ch = String.fromCharCode(code);
+    return /[\w$]/.test(ch) ? ch : whole;
+  });
+  text = text.replace(/[\u200B-\u200D\u2060\uFEFF]/g, "");
+  text = text.replace(/\/\*(?:[^*\n]|\*(?!\/))*\*\//g, "");
+
+  for (let pass = 0; pass < 8; pass++) {
+    const folded = text.replace(
+      /(["'`])([^"'`\\\n]{0,200})\1[ \t]*\+[ \t]*(["'`])([^"'`\\\n]{0,200})\3/g,
+      "$1$2$4$1",
+    );
+    if (folded === text) break;
+    text = folded;
+  }
+  text = text.replace(
+    /(?<=[\w$\])])[ \t]*\[[ \t]*(["'`])([A-Za-z_$][\w$]*)\1[ \t]*\]/g,
+    ".$2",
+  );
+
+  const aliases = new Set<string>();
+  const declAlias =
+    /\b(?:const|let|var)\s+([A-Za-z_$][\w$]{0,39})\s*=\s*(?:(?:globalThis|global|window)\s*\.\s*)?process\s*\.\s*env\b(?!\s*(?:\.|\[|\?\.))/g;
+  for (const m of text.matchAll(declAlias)) aliases.add(m[1]!);
+  const declDestructure =
+    /\b(?:const|let|var)\s*\{([^}\n]{0,200})\}\s*=\s*(?:(?:globalThis|global|window)\s*\.\s*)?process\b(?!\s*\.)/g;
+  for (const m of text.matchAll(declDestructure)) {
+    for (const member of m[1]!.split(",")) {
+      const parts = member.split(":").map((part) => part.trim());
+      if (parts[0] !== "env") continue;
+      const name = (parts[1] ?? "env").split("=")[0]!.trim();
+      if (/^[A-Za-z_$][\w$]{0,39}$/.test(name)) aliases.add(name);
+    }
+  }
+  let used = 0;
+  for (const name of aliases) {
+    if (used++ >= 8) break;
+    const id = escapeRegExp(name);
+    const redeclared = new RegExp(
+      `catch\\s*\\(\\s*${id}\\b|(?<![\\w$.])${id}\\s*=>|\\(\\s*(?:[^()\\n]*,\\s*)?${id}\\s*(?:,[^()\\n]*)?\\)\\s*=>|function\\b[^(\\n]*\\([^)\\n]*(?<![\\w$.])${id}\\b`,
+    );
+    if (redeclared.test(text)) continue;
+    text = text.replace(
+      new RegExp(
+        `(?<![\\w$.])${id}(?![\\w$])(?!\\s*(?:\\.|\\?\\.|\\[|:|=(?!=)))`,
+        "g",
+      ),
+      "process.env",
+    );
+  }
+  return text;
 }

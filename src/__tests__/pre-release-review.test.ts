@@ -54,7 +54,7 @@ describe("compromised Action commits", () => {
     write(dir, "tools/composite/action.yml", `runs:\n  using: composite\n  steps:\n    - uses: acme/tool@${SHA}\n`);
     const cacheDir = tmp();
     fs.writeFileSync(path.join(cacheDir, FEED_CACHE_FILE),
-      JSON.stringify({ timestamp: new Date().toISOString(), entries: [feedEntry(`actions:acme/tool@${SHA}`)] }));
+      JSON.stringify({ timestamp: new Date().toISOString(), unsigned: true, entries: [feedEntry(`actions:acme/tool@${SHA}`)] }));
 
     const withCache = (await rulesOf(dir, cacheDir)).filter((r) => r === "GHA_KNOWN_MALICIOUS_SHA");
     expect(withCache).toHaveLength(2); // the workflow and the composite action

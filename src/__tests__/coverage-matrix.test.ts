@@ -253,7 +253,7 @@ describe.each(rows)("$key ($where)", ({ key, where, fx, src }) => {
     if (src.kind === "synthetic") {
       cacheDir = path.join(root, `cache-${key.replace(/[^a-z0-9]+/gi, "_")}-${where}`);
       fs.mkdirSync(cacheDir, { recursive: true });
-      fs.writeFileSync(path.join(cacheDir, "threat-feed.json"), JSON.stringify({ timestamp: new Date().toISOString(), entries: [src.entry] }));
+      fs.writeFileSync(path.join(cacheDir, "threat-feed.json"), JSON.stringify({ timestamp: new Date().toISOString(), unsigned: true, entries: [src.entry] }));
     }
     const report = await scan({ target: dir, format: "json", noHistory: true, cacheDir });
     const hits = report.findings.filter((f) => f.rule === fx.rule);

@@ -99,7 +99,7 @@ describe("catalogFindings severity", () => {
   it.each([
     ["absent", "info"],
     ["version-mismatch", "low"],
-    ["unreadable", "medium"],
+    ["unreadable", "high"],
   ] as const)("reports %s as %s in optional mode", (reason, severity) => {
     expect(catalogSeverityFor(reason, "optional")).toBe(severity);
   });

@@ -26,6 +26,7 @@ import {
 import { parseGitHubUrl } from "./github-trust-scanner.js";
 import { hasPartialScanFinding, matchPatternInFile, recordUnreadablePath } from "./pattern-scanner.js";
 import { collectExtractedFiles } from "./extracted-file-walker.js";
+import { decodeTextBytes } from "./text-decoding.js";
 import { scriptLanguageExtension } from "./script-language.js";
 import { getBundledFeedRef, loadThreatIntel } from "./threat-intel.js";
 import type { FeedIOC } from "./threat-intel.js";
@@ -626,7 +627,11 @@ async function downloadAndScanTarball(
     // Extract tarball
     const extractDir = path.join(tempDir, "extracted");
     fs.mkdirSync(extractDir, { recursive: true });
-    extractTarGz(tarballPath, extractDir);
+    // Links are not written (see TarExtractionResult); each becomes a coverage
+    // finding so the scan reports partial instead of silently clean.
+    for (const skipped of extractTarGz(tarballPath, extractDir).skippedLinks) {
+      recordUnreadablePath(findings, skipped);
+    }
 
     // Scan extracted files
     return scanExtractedNpmFiles(extractDir, findings);
@@ -649,17 +654,24 @@ interface SriDigest {
   digest: Buffer;
 }
 
-function parseStrongestSriDigests(integrity: string): SriDigest[] {
+/**
+ * Returns null when ANY token that names a known algorithm (sha256/sha384/
+ * sha512) is malformed (bad base64 or wrong decoded length): a malformed strong
+ * token must fail verification, never be dropped so that a weaker token decides
+ * alone. Tokens with an unknown algorithm prefix are ignored.
+ */
+function parseStrongestSriDigests(integrity: string): SriDigest[] | null {
   const parsed: SriDigest[] = [];
   for (const token of integrity.trim().split(/\s+/)) {
+    if (!/^(sha256|sha384|sha512)-/i.test(token)) continue;
     const match = token.match(/^(sha256|sha384|sha512)-([^?]+)(?:\?.*)?$/i);
-    if (!match) continue;
+    if (!match) return null;
     const algorithm = match[1]!.toLowerCase() as SriAlgorithm;
     const encoded = match[2]!.replace(/-/g, "+").replace(/_/g, "/");
-    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) continue;
+    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) return null;
     const digest = Buffer.from(encoded, "base64");
     const expectedLength = algorithm === "sha256" ? 32 : algorithm === "sha384" ? 48 : 64;
-    if (digest.length !== expectedLength) continue;
+    if (digest.length !== expectedLength) return null;
     parsed.push({ algorithm, digest });
   }
   const strongest = parsed.reduce(
@@ -695,11 +707,22 @@ export async function verifyNpmDistIntegrity(
   tarballPath: string,
   dist: Pick<NpmDistInfo, "integrity" | "shasum">,
 ): Promise<boolean> {
+  // A field that is present but not a string (array, number, object) is
+  // invalid, not absent: it must not let the other field decide alone.
+  const rawIntegrity: unknown = dist.integrity;
+  const rawShasum: unknown = dist.shasum;
+  if (rawIntegrity !== undefined && rawIntegrity !== null && typeof rawIntegrity !== "string") {
+    return false;
+  }
+  if (rawShasum !== undefined && rawShasum !== null && typeof rawShasum !== "string") {
+    return false;
+  }
   const integrityPresent = typeof dist.integrity === "string";
   const shasumPresent = typeof dist.shasum === "string";
   if (!integrityPresent && !shasumPresent) return true;
 
   const sri = integrityPresent ? parseStrongestSriDigests(dist.integrity!) : [];
+  if (sri === null) return false;
   if (integrityPresent && sri.length === 0) return false;
   if (shasumPresent && !/^[a-f0-9]{40}$/i.test(dist.shasum!)) return false;
 
@@ -757,7 +780,7 @@ export function scanExtractedNpmFiles(
 
     let content: string;
     try {
-      content = fs.readFileSync(filePath, "utf-8");
+      content = decodeTextBytes(fs.readFileSync(filePath));
     } catch {
       recordUnreadablePath(findings, path.relative(extractDir, filePath));
       continue;

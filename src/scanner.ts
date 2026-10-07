@@ -7,8 +7,8 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import { execSync, execFileSync } from "node:child_process";
-import type { Finding, ScanOptions, ScanReport, ScanSummary, Severity } from "./types.js";
+import { execToolSync } from "./safe-exec.js";
+import type { Finding, PolicyConfig, ScanOptions, ScanReport, ScanSummary, Severity } from "./types.js";
 import { SCORE_EXCLUDED_RULES, SEVERITY_SCORES } from "./types.js";
 import {
   FILE_PATTERNS,
@@ -43,7 +43,14 @@ import {
   type LockfileDependency,
 } from "./lockfile-feed.js";
 import { TEST_FILE_PATTERN } from "./pattern-applicability.js";
-import { scriptLanguageExtension } from "./script-language.js";
+import { scriptLanguageExtension, isMarkupOrScriptHostExtension } from "./script-language.js";
+import { decodeTextBytes } from "./text-decoding.js";
+import {
+  createDirectoryWalkPolicy,
+  EXCLUDED_DIRECTORY_NAMES,
+  readRootManifest,
+  referencedManifestTargets,
+} from "./scan-exclusions.js";
 import {
   hasPartialScanFinding,
   matchPatternInFile,
@@ -221,7 +228,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     try {
       // execFileSync runs git directly without a shell, so the URL can never
       // be interpreted as a command.
-      execFileSync("git", ["clone", "--depth", "1", target, cloneDir], {
+      execToolSync("git", ["clone", "--depth", "1", target, cloneDir], {
         stdio: "pipe",
       });
     } catch {
@@ -262,7 +269,13 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
 
   // Load policy up front: its `ignore:` globs prune the scanner walk, and the
   // same object is reused for the suppression passes further down.
-  const policy = loadPolicyConfig(scanDir);
+  //
+  // A policy file inside the scanned tree is the scanned author's own input. It
+  // is honoured for a local directory scan (the user's own repository) and never
+  // for a cloned GitHub repository or when the caller opts out (MCP
+  // scan_directory), where the tree belongs to somebody else.
+  const trustTargetPolicy = options.trustTargetPolicy ?? scanType !== "github";
+  const policy = trustTargetPolicy ? loadPolicyConfig(scanDir) : null;
   const ignoreGlobs = policy?.ignore ?? [];
   // v5.29 (issue 168): record WHAT the config turns off, not just how many
   // findings it removed. `ignore:` never reached suppressedCount at all, since
@@ -366,18 +379,43 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // are never walked and test-fixture manifests are never checked.
   const manifestReports = new Set<string>();
 
+  // Manifests the ROOT package.json pulls into the install (workspaces, file:
+  // and link: dependencies): their lifecycle scripts run like the root's, so
+  // the test-directory skip below must not apply to them.
+  const rootManifest = readRootManifest(scanDir);
+  const referencedManifests = referencedManifestTargets(rootManifest, scanDir);
+  const isReferencedManifestDir = (manifestRelativePath: string): boolean => {
+    const dir = path.posix.dirname(manifestRelativePath);
+    return referencedManifests.directories.has(dir) ||
+      referencedManifests.workspaceGlobs.some((glob) => matchGlob(glob, dir));
+  };
+
+  // Files a scanned script loads through a relative require/import although
+  // their extension is not one the scanner reads: node runs `require("./a.txt")`
+  // as JavaScript. They are read as JavaScript and appended to the walk.
+  const walkedFiles = new Set(allFiles);
+  const processedFiles = new Set<string>();
+  const readAsExtension = new Map<string, string>();
+  let referencedExtraFiles = 0;
+  let revisitAppends = 0;
+
   // Scan each file
   let filesScanned = 0;
   for (const filePath of allFiles) {
     const ext = path.extname(filePath).toLowerCase();
     const basename = path.basename(filePath);
     const relativePath = path.relative(scanDir, filePath).replace(/\\/g, "/");
+    // A file visited a second time (appended after a relative load named it)
+    // is read as the language that load implies; the checks that are about
+    // the file itself already ran on the first visit.
+    const revisit = processedFiles.has(filePath);
+    processedFiles.add(filePath);
 
     // Check suspicious file names
-    checkSuspiciousFileName(basename, relativePath, findings);
+    if (!revisit) checkSuspiciousFileName(basename, relativePath, findings);
 
     // Check for unexpected binary/native addon files (T-007)
-    if (BINARY_EXTENSIONS.has(ext)) {
+    if (!revisit && BINARY_EXTENSIONS.has(ext)) {
       checkBinaryFile(relativePath, findings);
     }
 
@@ -399,10 +437,12 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     try {
       if (fs.statSync(filePath).size <= MAX_FILE_SIZE) {
         fileBytes = fs.readFileSync(filePath);
-        for (const pushed of checkFileDigest(fileBytes, relativePath)) findings.push(pushed);
-        // Script code named as a font (Fake Font payload). Reuses the bytes
-        // just read, so fonts cost no extra I/O.
-        for (const pushed of checkDisguisedAsset(fileBytes, relativePath)) findings.push(pushed);
+        if (!revisit) {
+          for (const pushed of checkFileDigest(fileBytes, relativePath)) findings.push(pushed);
+          // Script code named as a font (Fake Font payload). Reuses the bytes
+          // just read, so fonts cost no extra I/O.
+          for (const pushed of checkDisguisedAsset(fileBytes, relativePath)) findings.push(pushed);
+        }
       }
     } catch {
       // Leave fileBytes undefined and stay silent here: the oversized and
@@ -456,7 +496,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     const inlineContentTarget =
       isDockerFile(basename) || isConfigFile(basename) || nestedPythonLockfile || mavenBuildFile ||
       pubspecFile || pythonManifest || nestedManifest || registryFile || nestedJsLockfile || codeWorkspace;
-    if (inlineContentTarget) {
+    if (inlineContentTarget && !revisit) {
       let inlineStat: fs.Stats;
       try {
         inlineStat = fs.statSync(filePath);
@@ -469,10 +509,9 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
         continue;
       }
       try {
-        prefetchedContent =
-          fileBytes !== undefined
-            ? fileBytes.toString("utf-8")
-            : fs.readFileSync(filePath, "utf-8");
+        prefetchedContent = decodeTextBytes(
+          fileBytes !== undefined ? fileBytes : fs.readFileSync(filePath),
+        );
       } catch {
         recordUnreadablePath(findings, relativePath);
         continue;
@@ -558,11 +597,18 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     // up to MAX_FILE_SIZE; a larger one has only its first line read.
     const scanExt = SCANNABLE_EXTENSIONS.has(ext)
       ? ext
-      : scriptLanguageExtension(filePath, basename, ext, fileBytes);
+      : readAsExtension.get(filePath) ??
+        scriptLanguageExtension(filePath, basename, ext, fileBytes);
 
     // Successfully analyzed extensionless Docker/config targets count once.
     if (scanExt === null) {
       if (prefetchedContent !== undefined) filesScanned++;
+      // No content rule reads this file, so the digest check is the only
+      // verdict it gets. The first pass above gave up on it when it was over
+      // MAX_FILE_SIZE or unreadable, and nothing below accounts for it.
+      if (fileBytes === undefined && prefetchedContent === undefined) {
+        checkUnreadContentDigest(filePath, relativePath, findings);
+      }
       continue;
     }
 
@@ -586,16 +632,48 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       content = prefetchedContent;
     } else {
       try {
-        content =
-          fileBytes !== undefined
-            ? fileBytes.toString("utf-8")
-            : fs.readFileSync(filePath, "utf-8");
+        // UTF-16 (BOM or NUL-interleaved) is decoded as such: PowerShell and
+        // the Windows script hosts read it natively, and as UTF-8 it matches
+        // no rule.
+        content = decodeTextBytes(
+          fileBytes !== undefined ? fileBytes : fs.readFileSync(filePath),
+        );
       } catch {
         recordUnreadablePath(findings, relativePath);
         continue;
       }
     }
     filesScanned++;
+
+    // Follow a relative require/import to a file whose extension the scanner
+    // does not read (`require("./a.txt")`): node executes it as JavaScript.
+    if (MODULE_LOADER_EXTENSIONS.has(scanExt) && referencedExtraFiles < MAX_REFERENCED_EXTRA_FILES) {
+      for (const target of relativeModuleReferences(content, filePath, scanDir)) {
+        if (readAsExtension.has(target)) continue;
+        const targetExt = path.extname(target).toLowerCase();
+        if (SCANNABLE_EXTENSIONS.has(targetExt) || BINARY_EXTENSIONS.has(targetExt)) continue;
+        // Already read as some language (shebang script, .bats, .html, ...).
+        if (scriptLanguageExtension(target, path.basename(target), targetExt) !== null) continue;
+        const targetRel = path.relative(scanDir, target).replace(/\\/g, "/");
+        if (targetRel.split("/").some((segment) => EXCLUDED_DIRECTORY_NAMES.has(segment))) continue;
+        if (ignoreGlobs.some((glob) => matchGlob(glob, targetRel))) continue;
+        try {
+          if (!fs.statSync(target).isFile()) continue;
+        } catch {
+          continue;
+        }
+        readAsExtension.set(target, ".js");
+        // A walked file that comes later in the order is picked up as it
+        // arrives; one already passed over has to be visited again.
+        if (!walkedFiles.has(target)) {
+          allFiles.push(target);
+        } else if (processedFiles.has(target)) {
+          allFiles.push(target);
+          revisitAppends++;
+        }
+        if (++referencedExtraFiles >= MAX_REFERENCED_EXTRA_FILES) break;
+      }
+    }
 
     // Skip supply-chain-guard's own published threat-feed data (feed.json /
     // threat-feed.json): it intentionally carries raw IOC values as inert,
@@ -626,7 +704,8 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     // hostnames, non-public forge URLs, developer paths, plus the
     // configured deny-list. Reported at medium/low, so the family cannot
     // change the exit code of an existing --fail-on high pipeline.
-    if (!internalDisclosureScanned) {
+    const markupOrScriptHost = isMarkupOrScriptHostExtension(scanExt);
+    if (!internalDisclosureScanned && !markupOrScriptHost) {
       findings.push(
         ...scanInternalDisclosure(
           content,
@@ -651,8 +730,10 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     checkBeaconMinerPatterns(content, relativePath, findings, trustedOwnFile, scanExt);
 
     // Entropy analysis for obfuscated payloads (v4.0)
-    const entropyFindings = analyzeEntropy(content, relativePath);
-    for (const pushed of entropyFindings) findings.push(pushed);
+    if (!markupOrScriptHost) {
+      const entropyFindings = analyzeEntropy(content, relativePath);
+      for (const pushed of entropyFindings) findings.push(pushed);
+    }
 
     // IOC blocklist + threat-intel checks skip only reviewed scanner
     // definition/fixture paths and exact TypeScript-compiled counterparts.
@@ -678,7 +759,26 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
 
     // Check package.json specifically (skip test fixture directories)
     const normPkgPath = relativePath.replace(/\\/g, "/");
-    if (basename === "package.json" && !TEST_FILE_REGEX.test(normPkgPath)) {
+    // A manifest the root pulls into the install (workspace member, file:/link:
+    // dependency) keeps its checks wherever it sits, test directory included.
+    if (
+      basename === "package.json" &&
+      (!TEST_FILE_REGEX.test(normPkgPath) || isReferencedManifestDir(normPkgPath))
+    ) {
+      // The root manifest that cannot be parsed is a gap, not a clean result:
+      // every install-hook check below reads it and silently returns.
+      if (normPkgPath === "package.json" && parseJsonObject(content) === undefined) {
+        findings.push({
+          rule: "PATH_SCAN_INCOMPLETE",
+          description: "The root package.json could not be parsed as a JSON object, so its install hooks and dependencies were not checked.",
+          severity: "info",
+          confidence: 1,
+          category: "info",
+          file: "package.json",
+          match: "unparseable package.json",
+          recommendation: "Treat this result as partial, not clean. Fix or inspect the manifest by hand: a file that is not valid JSON cannot be installed by npm either.",
+        });
+      }
       checkPackageJson(content, relativePath, findings);
       // Check for binary download patterns in install scripts (T-007)
       checkBinaryDownloadScripts(content, relativePath, findings);
@@ -862,7 +962,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // refreshes the feed is reported current even on an old pin, and a consumer
   // on a frozen pin is told so instead of receiving another green check.
   // Carries no `file`, so the path-ignore filter below leaves it in place.
-  for (const pushed of feedStalenessFindings(feedFreshness(threatFeed))) findings.push(pushed);
+  for (const pushed of feedStalenessFindings(feedFreshness(threatFeed, undefined, feedCacheState.generatedAt))) findings.push(pushed);
 
   // The companion to the staleness finding: that one says the rule set is old,
   // this one says part of it was not consulted at all. catalogState is the
@@ -956,7 +1056,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     findings.push({
       rule: "SCAN_NO_SCANNABLE_FILES",
       description:
-        `No file was examined: 0 of ${allFiles.length} in-scope files carry an extension ` +
+        `No file was examined: 0 of ${allFiles.length - revisitAppends} in-scope files carry an extension ` +
         "this scanner reads. The tree is not empty; its contents are outside the scanned set. " +
         "This result says nothing about the source, and it is not a clean verdict.",
       severity: "info",
@@ -993,7 +1093,11 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
 
   // Inline // scg-ignore-next-line RULE / # scg-ignore-next-line RULE comments:
   // drop a finding when the source line directly above it carries the directive.
-  const inlineResult = applyInlineSuppressions(findings, scanDir);
+  // The same trust decision as the policy file: for a cloned repository or an
+  // MCP scan the comment cannot hide a high or critical finding.
+  const inlineResult = applyInlineSuppressions(findings, scanDir, {
+    protectSevere: !trustTargetPolicy,
+  });
   findings = inlineResult.findings;
   suppressedCount += inlineResult.suppressedCount;
 
@@ -1097,6 +1201,73 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     suppressedCount += baselineResult.suppressedCount;
   }
 
+  // A policy file from the scanned tree may remove, ignore or downgrade severe
+  // findings (rules.disable, ignore, suppress, severityOverrides, allowlist,
+  // baseline). That stays allowed, but never silently: re-scan once with the
+  // policy off and report what the policy made disappear. Only runs when a
+  // policy actually narrows something; the nested scan cannot recurse
+  // because it runs with trustTargetPolicy false.
+  let riskLevelBeforePolicy: ScanReport["riskLevelBeforePolicy"];
+  let maxSeverityBeforePolicy: ScanReport["maxSeverityBeforePolicy"];
+  if ((policy && policyNarrowsScan(policy)) || inlineResult.suppressedSevereCount > 0) {
+    const shadow = await scan({
+      ...options,
+      trustTargetPolicy: false,
+      noHistory: true,
+      externalIntel: false,
+      checkRegistry: false,
+      twoTier: false,
+    });
+    const rank: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1, info: 0 };
+    const findingKey = (f: Finding): string =>
+      `${f.rule}\0${f.file ?? ""}\0${f.line ?? ""}\0${f.match ?? ""}`;
+    const remaining = new Map<string, number[]>();
+    for (const f of filterFindings(findings, options)) {
+      const list = remaining.get(findingKey(f)) ?? [];
+      list.push(rank[f.severity] ?? 0);
+      remaining.set(findingKey(f), list);
+    }
+    const lost = new Map<string, number>();
+    let maxRank = -1;
+    for (const f of shadow.findings) {
+      const r = rank[f.severity] ?? 0;
+      if (r > maxRank) maxRank = r;
+      if (r < 3) continue;
+      const list = remaining.get(findingKey(f));
+      const idx = list ? list.findIndex((x) => x >= r) : -1;
+      if (list && idx >= 0) {
+        list.splice(idx, 1);
+      } else {
+        lost.set(f.rule, (lost.get(f.rule) ?? 0) + 1);
+      }
+    }
+    riskLevelBeforePolicy = shadow.riskLevel;
+    maxSeverityBeforePolicy =
+      maxRank < 0
+        ? "none"
+        : (["info", "low", "medium", "high", "critical"][maxRank] as Severity);
+    if (lost.size > 0) {
+      const total = [...lost.values()].reduce((a, b) => a + b, 0);
+      const list = [...lost.entries()].map(([rule, n]) => `${rule} (${n})`).join(", ");
+      findings.push({
+        rule: "POLICY_SUPPRESSED_SEVERE",
+        description:
+          `${policy ? `The policy file ${policy.sourceFile ?? "in the scanned tree"}` : "Inline scg-ignore-next-line comments"}` +
+          `${policy && inlineResult.suppressedSevereCount > 0 ? " and inline scg-ignore-next-line comments" : ""}` +
+          ` removed, ignored or downgraded ${total} ` +
+          `high or critical finding(s): ${list}. Without them the risk level is ` +
+          `${shadow.riskLevel}. A policy file or suppression comment that ships inside the scanned tree is ` +
+          `written by the author of the code under review.`,
+        severity: "medium",
+        file: policy?.sourceFile,
+        confidence: 1.0,
+        category: "config",
+        recommendation:
+          "Review each suppressed rule above. Keep the policy or comment only if it is a reviewed false positive; for a third-party repository scan it with a policy you control.",
+      });
+    }
+  }
+
   // Filter by severity and excluded rules
   const filteredFindings = filterFindings(findings, options);
 
@@ -1106,7 +1277,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   const correlation = correlateFindings(filteredFindings);
 
   // Calculate summary and score (with correlation risk boost)
-  const summary = calculateSummary(allFiles.length, filesScanned, filteredFindings);
+  const summary = calculateSummary(allFiles.length - revisitAppends, filesScanned, filteredFindings);
   const baseScore = calculateScore(filteredFindings);
   const score = Math.min(100, baseScore + correlation.riskBoost);
   const riskLevel = getRiskLevel(score);
@@ -1188,6 +1359,8 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     trustBreakdown,
     suppressedCount: suppressedCount > 0 ? suppressedCount : undefined,
     policyEffect,
+    riskLevelBeforePolicy,
+    maxSeverityBeforePolicy,
     partialScan: partialScan || undefined,
     riskDimensions: calculateRiskDimensions(filteredFindings),
     remediations: generateRemediations(filteredFindings),
@@ -1229,14 +1402,14 @@ function resolveGitProvenance(scanDir: string): {
 } {
   try {
     const isGit =
-      execSync("git rev-parse --is-inside-work-tree", {
+      execToolSync("git", ["rev-parse", "--is-inside-work-tree"], {
         cwd: scanDir,
         encoding: "utf-8",
         stdio: ["ignore", "pipe", "ignore"],
       }).trim() === "true";
     if (!isGit) return {};
 
-    const commit = execSync("git rev-parse HEAD", {
+    const commit = execToolSync("git", ["rev-parse", "HEAD"], {
       cwd: scanDir,
       encoding: "utf-8",
       stdio: ["ignore", "pipe", "ignore"],
@@ -1244,7 +1417,7 @@ function resolveGitProvenance(scanDir: string): {
 
     let branch: string | undefined;
     try {
-      const b = execSync("git rev-parse --abbrev-ref HEAD", {
+      const b = execToolSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
         cwd: scanDir,
         encoding: "utf-8",
         stdio: ["ignore", "pipe", "ignore"],
@@ -1254,7 +1427,7 @@ function resolveGitProvenance(scanDir: string): {
 
     let repositoryUri: string | undefined;
     try {
-      const u = execSync("git config --get remote.origin.url", {
+      const u = execToolSync("git", ["config", "--get", "remote.origin.url"], {
         cwd: scanDir,
         encoding: "utf-8",
         stdio: ["ignore", "pipe", "ignore"],
@@ -1269,6 +1442,85 @@ function resolveGitProvenance(scanDir: string): {
 }
 
 /**
+ * Largest file whose digest is still computed. A payload larger than
+ * MAX_FILE_SIZE is not content-scanned, but a listed malware digest covers it
+ * byte for byte, so it is hashed up to this cap; beyond it the skip is
+ * reported instead of passing silently.
+ */
+const DIGEST_MAX_BYTES = 64 * 1024 * 1024;
+
+/**
+ * Digest check for a file that no content rule reads and the first pass could
+ * not hash (over MAX_FILE_SIZE, or unreadable then). Records every outcome
+ * that is not a completed check.
+ */
+function checkUnreadContentDigest(
+  filePath: string,
+  relativePath: string,
+  findings: Finding[],
+): void {
+  let size: number;
+  try {
+    size = fs.statSync(filePath).size;
+  } catch {
+    recordUnreadablePath(findings, relativePath);
+    return;
+  }
+  if (size > DIGEST_MAX_BYTES) {
+    // Informational and NOT partial: past the hashing cap this is almost
+    // always a media or data asset, and marking every repository that ships a
+    // large video partial would be noise. Files that can run are read by the
+    // content scan, which has its own oversized accounting.
+    findings.push({
+      rule: "LARGE_FILE_NOT_HASHED",
+      description: `File exceeds the ${Math.round(DIGEST_MAX_BYTES / (1024 * 1024))} MB hashing cap (${(size / (1024 * 1024)).toFixed(1)} MB); it was not checked against the known-malware digests`,
+      severity: "info",
+      confidence: 1.0,
+      category: "info",
+      file: relativePath,
+      recommendation:
+        "Verify that this large file is a legitimate asset, or hash it and compare it against a malware database.",
+    });
+    return;
+  }
+  let bytes: Buffer;
+  try {
+    bytes = fs.readFileSync(filePath);
+  } catch {
+    recordUnreadablePath(findings, relativePath);
+    return;
+  }
+  for (const pushed of checkFileDigest(bytes, relativePath)) findings.push(pushed);
+}
+
+/**
+ * Relative paths a script loads with `require("./x")`, `import "./x"`,
+ * `import("./x")` or `export ... from "./x"`.
+ */
+const RELATIVE_MODULE_REFERENCE =
+  /(?:\brequire\s*\(\s*|\bimport\s*\(\s*|\bfrom\s*|\bimport\s+)(["'`])(\.{1,2}\/[^"'`\r\n]+)\1/g;
+
+/** Extensions a JavaScript/TypeScript source is read as, so its relative loads are followed. */
+const MODULE_LOADER_EXTENSIONS: ReadonlySet<string> = new Set([
+  ".js", ".mjs", ".cjs", ".jsx", ".ts", ".mts", ".cts", ".tsx",
+]);
+
+/** Bound on the files one scan adds through relative loads. */
+const MAX_REFERENCED_EXTRA_FILES = 500;
+
+function relativeModuleReferences(content: string, filePath: string, scanDir: string): string[] {
+  const resolved: string[] = [];
+  const root = path.resolve(scanDir);
+  for (const match of content.matchAll(RELATIVE_MODULE_REFERENCE)) {
+    const target = path.resolve(path.dirname(filePath), match[2]!);
+    const inside = path.relative(root, target);
+    if (inside === "" || inside.startsWith("..") || path.isAbsolute(inside)) continue;
+    resolved.push(target);
+  }
+  return resolved;
+}
+
+/**
  * Recursively collect all files in a directory.
  */
 function collectFiles(
@@ -1279,22 +1531,17 @@ function collectFiles(
   _rootDir = dir,
   maxEntries?: number,
 ): string[] {
-  const excludedDirectories = new Set([
-    "node_modules",
-    ".git",
-    "__pycache__",
-    ".venv",
-    "venv",
-    ".claude",
-    ".scg-history",
-    ".scg-cache",
-  ]);
+  // One exclusion policy (scan-exclusions.ts): excluded directories are
+  // accounted for in the report, and node_modules is walked where the root
+  // manifest bundles a package or an install hook points into it.
+  const policy = createDirectoryWalkPolicy(dir, findings);
   return collectExtractedFiles(dir, findings, {
     maxDepth,
     maxEntries: maxEntries === undefined
       ? DEFAULT_EXTRACTED_WALK_MAX_ENTRIES
       : Math.min(maxEntries, DEFAULT_EXTRACTED_WALK_MAX_ENTRIES),
-    shouldEnterDirectory: (name) => !excludedDirectories.has(name),
+    shouldEnterDirectory: policy.shouldEnterDirectory,
+    onSkippedDirectory: policy.onSkippedDirectory,
   });
 }
 /**
@@ -1454,7 +1701,7 @@ function checkPackageJson(
  */
 function checkGitDateAnomalies(dir: string, findings: Finding[]): void {
   try {
-    const log = execFileSync(
+    const log = execToolSync(
       "git",
       ["-C", dir, "log", "--format=%H|%aI|%cI", "-20"],
       { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] },
@@ -2163,6 +2410,20 @@ function checkMonorepoPatterns(
       });
     }
   }
+}
+
+/** True when a loaded policy can remove, ignore or downgrade findings. */
+function policyNarrowsScan(policy: PolicyConfig): boolean {
+  return (
+    (policy.rules?.disable?.length ?? 0) > 0 ||
+    Object.keys(policy.rules?.severityOverrides ?? {}).length > 0 ||
+    (policy.suppress?.length ?? 0) > 0 ||
+    (policy.ignore?.length ?? 0) > 0 ||
+    (policy.allowlist?.packages?.length ?? 0) > 0 ||
+    (policy.allowlist?.domains?.length ?? 0) > 0 ||
+    (policy.allowlist?.githubOrgs?.length ?? 0) > 0 ||
+    Boolean(policy.baseline?.file)
+  );
 }
 
 /**

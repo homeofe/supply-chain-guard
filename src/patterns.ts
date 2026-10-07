@@ -24,18 +24,20 @@ import {
 import { hasBroadUnboundedConsumingGap } from "./regex-complexity.js";
 export { isPatternApplicableToFile } from "./pattern-applicability.js";
 
-/** Matches the scanner's own source files - used to prevent self-scan false positives. */
-const SCANNER_SRC = /(?:patterns|scanner|playbooks|correlation-engine|ioc-blocklist|threat-intel|remediation-engine|secret-simulator|workflow-modeler|config-scanner|install-hook-scanner|github-trust-scanner|dependency-confusion|attack-graph|reporter|active-validation|solana-monitor|solana-watchlist|slsa-verifier|sbom-generator)\.(ts|js)$/;
-
 // v5.2.21: documentation files (.md/.markdown/.txt/.rst) legitimately discuss
 // malware markers as part of threat-intel write-ups, changelog entries, blog
 // posts, and academic research. Patterns that match source-code-embedded
 // markers (campaign signatures, IOC strings, infostealer paths, C2 references)
 // must skip these to avoid flagging discussion as malware.
 //
-// Used together with SCANNER_SRC via SCANNER_SRC_OR_DOCS. Patterns whose
-// design is to fire on documentation (LURE_PATTERNS, PROMPT_INJECTION_PATTERNS)
-// keep plain SCANNER_SRC and stay on their onlyFilePattern scope.
+// Patterns whose design is to fire on documentation (LURE_PATTERNS,
+// PROMPT_INJECTION_PATTERNS) do not use it and stay on their onlyFilePattern
+// scope.
+//
+// There is deliberately NO exemption by scanner-module basename (the old
+// SCANNER_SRC suffix match): the scanned package names its own files, so
+// `my-scanner.js` or `reporter.js` switched 71 rules off. The scanner's own
+// sources are recognised by content hash (isVerifiedSelfScanFile), never by name.
 const BENIGN_DOC_FILES = /\.(md|markdown|txt|rst)$/i;
 /**
  * Artefact names of the ChainDrop / Shai-Hulud gh-token-monitor persistence
@@ -49,10 +51,6 @@ const BENIGN_DOC_FILES = /\.(md|markdown|txt|rst)$/i;
 export const CHAINDROP_PERSISTENCE_ARTEFACT_REGEX =
   /(?:gh-token-monitor\.(?:sh|service)|com\.user\.gh-token-monitor)/;
 
-const SCANNER_SRC_OR_DOCS = new RegExp(
-  `(?:${SCANNER_SRC.source})|(?:${BENIGN_DOC_FILES.source})`,
-  "i",
-);
 
 // ---------------------------------------------------------------------------
 // Value inspection (v5.18)
@@ -1832,7 +1830,7 @@ export const FILE_PATTERNS: PatternEntry[] = [
     description: "GlassWorm campaign marker variable detected",
     severity: "critical",
     rule: "GLASSWORM_MARKER",
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
     notTestFile: true,
   },
 
@@ -1904,7 +1902,7 @@ export const FILE_PATTERNS: PatternEntry[] = [
     description: "Solana mainnet RPC reference detected (potential C2 channel)",
     severity: "medium",
     rule: "SOLANA_MAINNET",
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
     notTestFile: true,
   },
   {
@@ -1958,6 +1956,20 @@ export const FILE_PATTERNS: PatternEntry[] = [
     severity: "high",
     rule: "DNS_EXFILTRATION",
     correlatedMatcher: CORE_BROAD_GAP_MATCHERS.DNS_EXFILTRATION,
+    notTestFile: true,
+  },
+  // A JS file that hands a shell a "download and run" pipeline. The same
+  // pipeline in package.json scripts is SCRIPT_CURL_EXEC; this is the form
+  // that lives in a loader file a lifecycle hook runs instead.
+  {
+    name: "js-exec-remote-shell-pipe",
+    pattern:
+      "\\b(?:exec|execSync|execFile|execFileSync|spawn|spawnSync)\\s*\\(\\s*[\"'`][^\\n]{0,300}?\\b(?:curl|wget)\\b[^\\n]{0,300}?\\|\\s*(?:sudo\\s+)?(?:ba|z|da|k)?sh\\b",
+    description:
+      "JavaScript runs a shell command that pipes a remote download into a shell (download-and-execute dropper)",
+    severity: "high",
+    rule: "JS_EXEC_REMOTE_SHELL_PIPE",
+    onlyExtensions: [".js", ".mjs", ".cjs", ".jsx", ".ts", ".tsx", ".mts", ".cts"],
     notTestFile: true,
   },
 ];
@@ -2497,7 +2509,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "XZ_GET_CPUID",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   {
     name: "xz-lzma-crc64",
@@ -2507,7 +2519,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "high",
     rule: "XZ_LZMA_CRC64",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   {
     name: "xz-build-inject",
@@ -2519,7 +2531,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     rule: "XZ_BUILD_INJECT",
     correlatedMatcher: CORE_BROAD_GAP_MATCHERS.XZ_BUILD_INJECT,
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   {
     name: "xz-obfuscated-test",
@@ -2531,7 +2543,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     rule: "XZ_OBFUSCATED_TEST",
     correlatedMatcher: xzObfuscatedTestMatcher,
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
 
   // --- Codecov Bash Uploader ---
@@ -2545,7 +2557,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     rule: "CODECOV_CURL_BASH",
     correlatedMatcher: codecovCurlBashMatcher,
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   {
     name: "codecov-exfil",
@@ -2557,7 +2569,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     rule: "CODECOV_EXFIL",
     correlatedMatcher: CORE_BROAD_GAP_MATCHERS.CODECOV_EXFIL,
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
 
   // --- SolarWinds SUNBURST ---
@@ -2569,7 +2581,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "SUNBURST_DGA",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   {
     name: "sunburst-orion-class",
@@ -2579,7 +2591,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "SUNBURST_ORION_CLASS",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   {
     name: "sunburst-delayed-exec",
@@ -2591,7 +2603,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     rule: "SUNBURST_DELAYED_EXEC",
     correlatedMatcher: CORE_BROAD_GAP_MATCHERS.SUNBURST_DELAYED_EXEC,
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
 
   // --- ua-parser-js hijack ---
@@ -2605,7 +2617,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     rule: "UAPARSER_MINER",
     correlatedMatcher: uaParserMinerMatcher,
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   {
     name: "uaparser-preinstall-download",
@@ -2617,7 +2629,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     rule: "UAPARSER_PREINSTALL_DL",
     correlatedMatcher: CORE_BROAD_GAP_MATCHERS.UAPARSER_PREINSTALL_DL,
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
 
   // --- Checkmarx KICS / Bitwarden CLI supply-chain breach (April 2026) ---
@@ -2629,7 +2641,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "CHECKMARX_SHAI_HULUD_V3",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   {
     name: "checkmarx-mcp-addon",
@@ -2639,7 +2651,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "CHECKMARX_MCP_ADDON",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   {
     name: "bitwarden-cli-loader",
@@ -2649,7 +2661,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "BITWARDEN_CLI_LOADER",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
 
   // --- LofyGang / LofyStealer (April 2026) ---
@@ -2661,7 +2673,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "LOFYSTEALER_MARKER",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   {
     name: "lofygang-minecraft-lure",
@@ -2671,7 +2683,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "high",
     rule: "LOFYGANG_MINECRAFT_LURE",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
 
   // --- DPRK AI-inserted npm malware (April 2026) ---
@@ -2683,7 +2695,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "DPRK_VALIDATE_SDK",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
 
   // --- ZiChatBot PyPI campaign (May 2026) ---
@@ -2695,7 +2707,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "ZICHATBOT_PACKAGE",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
 
   // --- Mini Shai-Hulud / TeamPCP supply chain worm (April 2026) ---
@@ -2707,7 +2719,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "MINI_SHAI_HULUD_MARKER",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   {
     name: "mini-shai-hulud-bun-loader",
@@ -2717,7 +2729,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "high",
     rule: "MINI_SHAI_HULUD_LOADER",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   {
     name: "mini-shai-hulud-preinstall-bun",
@@ -2728,7 +2740,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     rule: "MINI_SHAI_HULUD_PREINSTALL",
     correlatedMatcher: CORE_BROAD_GAP_MATCHERS.MINI_SHAI_HULUD_PREINSTALL,
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
 
   // --- Mini Shai-Hulud @antv / Nx Console / actions-cool wave (May 2026) ---
@@ -2745,7 +2757,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "ANTV_WAVE_KITTY_PERSISTENCE",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   // ChainDrop / Shai-Hulud keyv wave (Socket, August 2026). The credential
   // stealer installs a scheduled re-harvester rather than exfiltrating once:
@@ -2760,7 +2772,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "CHAINDROP_GH_TOKEN_MONITOR_PERSISTENCE",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   {
     name: "antv-wave-firedalazer-deaddrop",
@@ -2770,7 +2782,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "ANTV_WAVE_FIREDALAZER",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   {
     name: "antv-wave-otel-c2-masquerade",
@@ -2781,7 +2793,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     rule: "ANTV_WAVE_OTEL_C2",
     correlatedMatcher: CORE_BROAD_GAP_MATCHERS.ANTV_WAVE_OTEL_C2,
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
 
   // --- DPRK OtterCookie Node.js stealer (May 22, 2026) ---
@@ -2796,7 +2808,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "OTTERCOOKIE_HMAC_KEY",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   {
     name: "ottercookie-notify-endpoint",
@@ -2806,7 +2818,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "OTTERCOOKIE_C2_ENDPOINT",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
 
   // --- SleeperGem malicious RubyGems releases (July 20, 2026) ---
@@ -2824,7 +2836,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "SLEEPERGEM_PAYLOAD_HOST",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   {
     name: "sleepergem-setuid-ping6",
@@ -2834,7 +2846,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "high",
     rule: "SLEEPERGEM_SETUID_SHELL",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
 
   // --- Megalodon GitHub Actions workflow injection (May 22, 2026) ---
@@ -2850,7 +2862,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "MEGALODON_C2_ENDPOINT",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
 
   // --- coa/rc npm hijack ---
@@ -2862,7 +2874,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "COA_RC_SDD_DLL",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   {
     name: "coa-rc-postinstall-encoded",
@@ -2874,7 +2886,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     rule: "COA_RC_POSTINSTALL",
     correlatedMatcher: CORE_BROAD_GAP_MATCHERS.COA_RC_POSTINSTALL,
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
 
   // --- Miasma / @redhat-cloud-services Mini Shai-Hulud variant (June 2026) ---
@@ -2894,7 +2906,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "MIASMA_SPREADING_BLIGHT_MARKER",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
 
   // --- Miasma "Hades" PyPI wave, developer-tooling cluster (August 2026) ---
@@ -2917,7 +2929,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "HADES_WAVE_DEADDROP_MARKER",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
 
   // --- Miasma LeoPlatform / GitHub Actions wave (The Hacker News, June 26, 2026) ---
@@ -2935,7 +2947,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "MIASMA_LEO_REVOKE_KABOOM",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
 ];
 
@@ -3400,7 +3412,7 @@ export const BEACON_MINER_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "MINER_STRATUM_PROTOCOL",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   {
     name: "mining-pool-domain",
@@ -3411,7 +3423,7 @@ export const BEACON_MINER_PATTERNS: PatternEntry[] = [
     rule: "MINER_POOL_DOMAIN",
     correlatedMatcher: minerPoolDomainMatcher,
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   {
     name: "mining-config-keys",
@@ -3434,7 +3446,7 @@ export const BEACON_MINER_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "MINER_LIBRARY_REF",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
 
   // Suspicious WebSocket connections
@@ -3459,7 +3471,7 @@ export const BEACON_MINER_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "PROTESTWARE_LOCALE_DESTRUCT",
     correlatedMatcher: CORE_BROAD_GAP_MATCHERS.PROTESTWARE_LOCALE_DESTRUCT,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
     notTestFile: true,
   },
   {
@@ -3471,7 +3483,7 @@ export const BEACON_MINER_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "PROTESTWARE_GEOIP_DESTRUCT",
     correlatedMatcher: CORE_BROAD_GAP_MATCHERS.PROTESTWARE_GEOIP_DESTRUCT,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
     notTestFile: true,
   },
 ];
@@ -3732,7 +3744,7 @@ export const CAMPAIGN_PATTERNS_V2: PatternEntry[] = [
     // so an install of a real Shai-Hulud release blocks on the pin, not on this.
     requiresInFileMatcher: hasShaiHuludCorroboration,
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   {
     name: "shai-hulud-npmrc-steal",
@@ -3750,7 +3762,7 @@ export const CAMPAIGN_PATTERNS_V2: PatternEntry[] = [
     // branches and source-to-sink decision. A second metadata regex or duplicate
     // rule entry could silently diverge from that contract.
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   // Expanded protestware
   {
@@ -3773,7 +3785,7 @@ export const CAMPAIGN_PATTERNS_V2: PatternEntry[] = [
     // Geo lookup then destructive call is often two statements in a branch.
     spansLines: 8,
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
 ];
 
@@ -3951,7 +3963,7 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "DEAD_DROP_STEAM",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   {
     name: "dead-drop-telegram",
@@ -3962,7 +3974,7 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "DEAD_DROP_TELEGRAM",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   {
     name: "dead-drop-pastebin",
@@ -3973,7 +3985,7 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
     severity: "high",
     rule: "DEAD_DROP_PASTEBIN",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   {
     name: "dead-drop-dns-txt",
@@ -3985,7 +3997,7 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
     rule: "DEAD_DROP_DNS_TXT",
     correlatedMatcher: CORE_BROAD_GAP_MATCHERS.DEAD_DROP_DNS_TXT,
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
 
   // Browser credential theft patterns
@@ -4013,7 +4025,7 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
     rule: "VIDAR_WALLET_THEFT",
     correlatedMatcher: CORE_BROAD_GAP_MATCHERS.VIDAR_WALLET_THEFT,
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
 
   // SOCKS5 proxy / backconnect patterns
@@ -4026,7 +4038,7 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "GHOSTSOCKS_SOCKS5",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   {
     name: "proxy-backconnect",
@@ -4084,7 +4096,7 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
     rule: "DROPPER_ANTIVM",
     correlatedMatcher: CORE_BROAD_GAP_MATCHERS.DROPPER_ANTIVM,
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   {
     name: "dropper-sleep-evasion",
@@ -4095,7 +4107,7 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
     severity: "high",
     rule: "DROPPER_SLEEP_EVASION",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
 ];
 
@@ -4182,7 +4194,6 @@ export const LURE_PATTERNS: PatternEntry[] = [
     correlatedMatcher: CORE_BROAD_GAP_MATCHERS.CAMPAIGN_CLAUDE_LURE,
     notTestFile: true,
     // Stay on .md - lure patterns target malicious READMEs by design.
-    notFilePattern: SCANNER_SRC,
   },
   {
     name: "campaign-ai-tool-lure",
@@ -4194,7 +4205,6 @@ export const LURE_PATTERNS: PatternEntry[] = [
     rule: "CAMPAIGN_AI_TOOL_LURE",
     correlatedMatcher: CORE_BROAD_GAP_MATCHERS.CAMPAIGN_AI_TOOL_LURE,
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
   },
   {
     name: "fake-exe-in-release",
@@ -4204,7 +4214,6 @@ export const LURE_PATTERNS: PatternEntry[] = [
       "Suspicious executable/archive filename pattern matching malware campaign naming conventions.",
     severity: "high",
     rule: "FAKE_AI_TOOL_LURE",
-    notFilePattern: SCANNER_SRC,
     notTestFile: true,
   },
 ];
@@ -4241,7 +4250,6 @@ export const PROMPT_INJECTION_PATTERNS: PatternEntry[] = [
     rule: "PROMPT_INJECTION_SYSTEM_REMINDER",
     onlyFilePattern: DOC_FILE_PATTERN,
     // Prompt-injection patterns target docs - stay on .md, only exclude scanner source.
-    notFilePattern: SCANNER_SRC,
     notTestFile: true,
   },
   {
@@ -4254,7 +4262,6 @@ export const PROMPT_INJECTION_PATTERNS: PatternEntry[] = [
     rule: "PROMPT_INJECTION_CHATML",
     onlyFilePattern: DOC_FILE_PATTERN,
     // Prompt-injection patterns target docs - stay on .md, only exclude scanner source.
-    notFilePattern: SCANNER_SRC,
     notTestFile: true,
   },
   {
@@ -4268,7 +4275,6 @@ export const PROMPT_INJECTION_PATTERNS: PatternEntry[] = [
     rule: "PROMPT_INJECTION_INST_TAG",
     onlyFilePattern: DOC_FILE_PATTERN,
     // Prompt-injection patterns target docs - stay on .md, only exclude scanner source.
-    notFilePattern: SCANNER_SRC,
     notTestFile: true,
   },
   {
@@ -4281,7 +4287,6 @@ export const PROMPT_INJECTION_PATTERNS: PatternEntry[] = [
     rule: "PROMPT_INJECTION_ROLE_TOKEN",
     onlyFilePattern: DOC_FILE_PATTERN,
     // Prompt-injection patterns target docs - stay on .md, only exclude scanner source.
-    notFilePattern: SCANNER_SRC,
     notTestFile: true,
   },
   {
@@ -4297,7 +4302,6 @@ export const PROMPT_INJECTION_PATTERNS: PatternEntry[] = [
     rule: "PROMPT_INJECTION_OVERRIDE_PROSE",
     onlyFilePattern: DOC_FILE_PATTERN,
     // Prompt-injection patterns target docs - stay on .md, only exclude scanner source.
-    notFilePattern: SCANNER_SRC,
     notTestFile: true,
   },
 ];
@@ -4315,7 +4319,7 @@ export const C2_EXTENDED_PATTERNS: PatternEntry[] = [
       "DNS-over-HTTPS (DoH) resolver in code. Malware uses DoH to resolve C2 domains while bypassing network monitoring.",
     severity: "medium",
     rule: "C2_DOH_RESOLVER",
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
     notTestFile: true,
   },
   {
@@ -4331,7 +4335,7 @@ export const C2_EXTENDED_PATTERNS: PatternEntry[] = [
     // all-digit legacy gist ids that made ordinary links match.
     requiresInFile:
       /\b(?:fetch\s*\(|axios|https?\.(?:get|request)|XMLHttpRequest|node-fetch|curl\s|wget\s|requests\.|urllib|execSync|child_process)|\/raw\//,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
     notTestFile: true,
   },
   {
@@ -4343,7 +4347,7 @@ export const C2_EXTENDED_PATTERNS: PatternEntry[] = [
     severity: "high",
     rule: "C2_DYNAMIC_CONFIG",
     correlatedMatcher: CORE_BROAD_GAP_MATCHERS.C2_DYNAMIC_CONFIG,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
     notTestFile: true,
   },
   {
@@ -4354,7 +4358,7 @@ export const C2_EXTENDED_PATTERNS: PatternEntry[] = [
       "WebSocket URL built by decoding or concatenation. Hides the C2 server address. Plain template interpolation is NOT matched: that is ordinary frontend code, already covered at medium by BEACON_WEBSOCKET_EXTERNAL.",
     severity: "high",
     rule: "C2_WEBSOCKET_DYNAMIC",
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
     notTestFile: true,
   },
 ];
@@ -4373,7 +4377,7 @@ export const SECRETS_PATTERNS: PatternEntry[] = [
     // WASM blob. Same distinct-character defence KNOWN_C2_WALLETS uses.
     valueFilter: (v) => new Set(v).size >= 8,
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   {
     name: "secrets-github-token",
@@ -4384,7 +4388,7 @@ export const SECRETS_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "SECRETS_GITHUB_TOKEN",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   {
     name: "secrets-private-key",
@@ -4395,7 +4399,7 @@ export const SECRETS_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "SECRETS_PRIVATE_KEY",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   {
     name: "secrets-ssh-key-read",
@@ -4407,7 +4411,7 @@ export const SECRETS_PATTERNS: PatternEntry[] = [
     rule: "SECRETS_SSH_KEY_READ",
     correlatedMatcher: CORE_BROAD_GAP_MATCHERS.SECRETS_SSH_KEY_READ,
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   {
     name: "secrets-npm-token",
@@ -4418,7 +4422,7 @@ export const SECRETS_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "SECRETS_NPM_TOKEN",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
   {
     name: "secrets-generic-api-key",
@@ -4429,7 +4433,7 @@ export const SECRETS_PATTERNS: PatternEntry[] = [
     severity: "high",
     rule: "SECRETS_GENERIC_API_KEY",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC_OR_DOCS,
+    notFilePattern: BENIGN_DOC_FILES,
   },
 ];
 

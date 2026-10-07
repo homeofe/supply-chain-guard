@@ -111,6 +111,14 @@ export interface ScanReport {
    * Present only when the config actually narrowed the scan.
    */
   policyEffect?: PolicyEffect;
+  /**
+   * Risk level and highest finding severity the scan would have reported with
+   * the policy / baseline switched off. Present only when a policy narrowed the
+   * scan, so a verdict made clean by a policy file is never indistinguishable
+   * from one that was clean to begin with.
+   */
+  riskLevelBeforePolicy?: "clean" | "low" | "medium" | "high" | "critical";
+  maxSeverityBeforePolicy?: Severity | "none";
   /** Whether scan completed fully (v4.4) */
   partialScan?: boolean;
   /** Threat timeline for forensics (v4.5) */
@@ -192,7 +200,7 @@ export interface DetectionSetCatalog {
   /** Indicators the installed release's catalog pins. */
   entryCount: number;
   /** Why it was not consulted. Absent when it was. */
-  reason?: "absent" | "unreadable" | "version-mismatch" | "digest-mismatch" | "corrupt";
+  reason?: "absent" | "unreadable" | "version-mismatch" | "digest-mismatch" | "corrupt" | "removed";
 }
 
 // ---------------------------------------------------------------------------
@@ -804,6 +812,14 @@ export interface ScanOptions {
   confirmedMalware?: ConfirmedMalwareInput[];
   /** Explicitly opt into network-backed external intelligence. Off by default. */
   externalIntel?: boolean;
+  /**
+   * Whether a policy file found INSIDE the scanned tree may govern the scan.
+   * Default: true for a local directory scan (the user's own repo policy keeps
+   * working), false for a cloned GitHub repository, where the tree is somebody
+   * else's input. The MCP `scan_directory` tool sets it to false. When false
+   * no policy, ignore glob, baseline or deny-list from the tree is loaded.
+   */
+  trustTargetPolicy?: boolean;
 }
 
 export interface NpmPackageInfo {

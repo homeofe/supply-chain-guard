@@ -27,6 +27,24 @@ Include:
 
 We will acknowledge your report within 48 hours and aim to release a fix within 7 days for critical issues.
 
+## Feed integrity
+
+`feed.json`, the threat feed that `supply-chain-guard feed refresh` downloads, is
+signed with Ed25519 by the release job, and the signature (`feed.json.sig`) is a
+release asset next to it. The public key is compiled into the package
+(`src/feed-signing-key.ts`); the private key exists only as a repository secret.
+`feed refresh` refuses any feed whose signature does not verify against that key,
+and every scan re-verifies the cached copy.
+
+Key fingerprint: the SHA-256 of the DER SPKI encoding of the public key starts
+with `91b2c7d7d50612a3`. Compare it with
+`openssl pkey -pubin -in key.pem -outform DER | sha256sum` on the PEM in
+`src/feed-signing-key.ts`. A different fingerprint in a release means the key was
+rotated or the package was altered; report it as a vulnerability.
+
+`--allow-unsigned-feed` turns the check off for a mirror that cannot be signed.
+Use it only for a source you control.
+
 ## Scope
 
 This tool is designed to detect malicious patterns in code. If you find a way to bypass detection, that is considered a valid security report. We want to know about:

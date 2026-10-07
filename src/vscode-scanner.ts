@@ -484,11 +484,13 @@ export async function scanVscodeExtension(
     // Extract and scan the vsix (it's a zip)
     extractDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-vscode-"));
 
-    // VSIX is a zip file. The helper uses an argv array so metacharacters in a
-    // user-supplied path are never interpreted by a command shell.
+    // VSIX is a zip file. The helper writes the validated members itself, so no
+    // extractor process or shell ever sees the user-supplied path.
     let archiveExtracted = false;
     try {
-      extractZip(vsixPath, extractDir, true);
+      for (const skipped of extractZip(vsixPath, extractDir, true).skippedLinks) {
+        recordUnreadablePath(findings, skipped);
+      }
       archiveExtracted = true;
     } catch (error) {
       // Hostile archives are an expected scanner input, not an operational

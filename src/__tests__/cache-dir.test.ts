@@ -109,7 +109,7 @@ describe("the scan report's provenance", () => {
     fs.mkdirSync(cache);
     fs.writeFileSync(
       path.join(cache, FEED_CACHE_FILE),
-      JSON.stringify({ timestamp: new Date().toISOString(), entries: [] }),
+      JSON.stringify({ timestamp: new Date().toISOString(), unsigned: true, entries: [] }),
     );
     process.env.SCG_CACHE_DIR = cache;
     resetThreatIntelCache();

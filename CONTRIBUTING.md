@@ -267,6 +267,7 @@ src/
   two-tier-scoring.ts     # Correlated threat gate and composite risk scoring
   diff-scanner.ts         # Git diff-based incremental scanning
   git-remote-url.ts       # Strips credentials and parameters from Git remote URLs before reporting
+  safe-exec.ts            # Resolves external tools to absolute PATH entries; never the current or scanned directory
   org-scanner.ts          # Organization-level scanning
   remediation-engine.ts   # Automated fix suggestions
   playbooks.ts            # Incident response playbooks

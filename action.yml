@@ -18,8 +18,14 @@ branding:
 # suppressed by the loaded config is named in the scan report in every output
 # format, including the markdown body of the pull request comment this Action
 # posts by default, and a narrowing with no written reason is reported as a
-# finding. See the "Where the policy is read from" section of the README for
-# the controls that apply when the proposer is untrusted.
+# finding. When the config (or an inline scg-ignore-next-line comment) hides a
+# high or critical finding, the report adds POLICY_SUPPRESSED_SEVERE and
+# riskLevelBeforePolicy, the risk level the scan would have had without it.
+# A policy file and inline suppression comments are NOT honoured for a
+# high or critical finding when the scan target is a cloned GitHub repository
+# URL or an MCP scan_directory call. See the "Where the policy is read from"
+# section of the README for the controls that apply when the proposer is
+# untrusted.
 inputs:
   path:
     description: "Path to scan (defaults to repository root)"
@@ -253,6 +259,7 @@ runs:
             or . == "INTERNAL_DENYLIST_REFUSED"
             or . == "POLICY_INVALID_INTERNAL_TERM"
             or . == "THREAT_FEED_CACHE_UNREADABLE"
+            or . == "THREAT_FEED_CATALOG_UNAVAILABLE"
             or . == "DIFF_BASE_UNAVAILABLE"
             or . == "RISK_HISTORY_UNREADABLE"
             or . == "TRIAGE_STORE_UNREADABLE"

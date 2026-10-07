@@ -26,6 +26,7 @@ function fixture(): { project: string; cache: string; cacheFile: string } {
 function cacheDocument(timestamp: string): string {
   return JSON.stringify({
     timestamp,
+    unsigned: true,
     entries: [{
       type: "domain",
       value: "audit-control.example",
