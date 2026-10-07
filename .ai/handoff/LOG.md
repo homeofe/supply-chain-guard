@@ -11,6 +11,14 @@
 
 ---
 
+## [2026-10-07] v6.5.2
+
+Threat intel for 2026-10-07: 6 package entries from the GitHub Advisory Database, OpenSSF and the DataDog dataset (all 6 to the bundle): tailwind-forms-kit 0.5.3, css-jptvix-polyfill 1.0.0, PyPI...
+
+Full notes: CHANGELOG.md, section [6.5.2].
+
+---
+
 ## [2026-10-06] v6.5.1
 
 Threat intel for 2026-10-06: 113 package entries from the GitHub Advisory Database and OpenSSF (111 to the bundle, 2 to the catalog). Among them a RubyGems crypto-wallet typosquat wave (80...
@@ -80,11 +88,3 @@ Full notes: CHANGELOG.md, section [6.3.2].
 Threat intel (2026-09-26): five package IOCs, all in the offline bundle. Four come from the GitHub Advisory Database, corroborated by OpenSSF: pypi:sherpy 0.1.0 and 0.1.1, @digift/cli 99.99.100...
 
 Full notes: CHANGELOG.md, section [6.3.1].
-
----
-
-## [2026-09-25] v6.3.0
-
-Terraform / OpenTofu provider matching (src/terraform-scanner.ts, rule TERRAFORM_MALICIOUS_PROVIDER). A directory scan now resolves the providers a configuration pulls in, from required_providers...
-
-Full notes: CHANGELOG.md, section [6.3.0].

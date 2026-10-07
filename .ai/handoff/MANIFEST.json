@@ -3,30 +3,30 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1791399426",
-    "timestamp": "2026-10-07T18:57:06Z",
-    "commit": "9104d28",
+    "session_id": "cli-1791412867",
+    "timestamp": "2026-10-07T22:41:07Z",
+    "commit": "27218dc",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:9eaf15f842243b7afb45b30753e69652034f537aba98b522eb8fb199de5cf303",
-      "updated": "2026-10-07T18:49:45Z",
-      "lines": 13973,
-      "summary": "Scheduled run. Windowed import (GitHub Advisory Database, OpenSSF, DataDog): 6 new package entries, all 6 to the bundle and 0 to the catalog."
+      "checksum": "sha256:2d6d827b26943f437c164224e299e90afda13a0eb85826c68a348b881bef8723",
+      "updated": "2026-10-07T22:38:01Z",
+      "lines": 14001,
+      "summary": "Security release: the 2026-10-07 security review (all 40 findings), merged from the private fork of GHSA-cq59-vmg7-pmqv after a full private CI..."
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:9292eff33390cc3fa6d1e6caee49bc65663582563f23cf8f7140d146dfe7cfb6",
-      "updated": "2026-10-06T07:01:35Z",
+      "checksum": "sha256:a6f65b056bc82fd9cae61cd38bac8f92ab649444fb4ce7046a973d46e5cd827e",
+      "updated": "2026-10-07T22:40:45Z",
       "lines": 231,
       "summary": "Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete."
     },
     "LOG.md": {
-      "checksum": "sha256:9e4e624dc316d06cd4d4a12663fd351c6e2207495f460e6e752e8e3277ff89ea",
-      "updated": "2026-10-06T07:00:27Z",
+      "checksum": "sha256:3d2de27f42b30ee2c4109449a24dbe9f095dee5aa3d18d7843862aa21732a823",
+      "updated": "2026-10-07T22:38:08Z",
       "lines": 90,
-      "summary": "Latest entry: [2026-10-06] v6.5.1"
+      "summary": "Latest entry: [2026-10-07] v6.5.2"
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
@@ -41,14 +41,14 @@
       "summary": "LOG archive index: 5 entries."
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:e1b799fdb8890ff3c80ff36cbd50fdfb7faa0bd2cdf5be0052f3ff704bc64a77",
-      "updated": "2026-10-07T17:54:27Z",
+      "checksum": "sha256:c0818e3bcea1e9676ee7a977f8dda126dca0e4c17471c69ac486cd1c528378f1",
+      "updated": "2026-10-07T22:32:08Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:84d45c8e83df2a1d2c0ec6bc4da88d4896840909aad763b40fd4dc91cb4e3f21",
-      "updated": "2026-10-07T17:54:27Z",
+      "checksum": "sha256:6494c443090460fb6e0a5354115f79a201c75333655e4721778600fcb60f7c13",
+      "updated": "2026-10-07T22:32:08Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "Scheduled run. Windowed import (GitHub Advisory Database, OpenSSF, DataDog): 6 new package entries, all 6 to the bundle and 0 to the catalog. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Security release: the 2026-10-07 security review (all 40 findings), merged from the private fork of GHSA-cq59-vmg7-pmqv after a full private CI... Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 929,
-    "manifest_plus_core": 208244,
-    "full_read": 221978
+    "manifest_only": 932,
+    "manifest_plus_core": 208659,
+    "full_read": 222393
   }
 }

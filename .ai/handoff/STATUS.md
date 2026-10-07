@@ -1,3 +1,31 @@
+## Release v6.5.2 (2026-10-07) (claude-opus-5-5)
+
+Security release: the 2026-10-07 security review (all 40 findings), merged
+from the private fork of GHSA-cq59-vmg7-pmqv after a full private CI run on
+the exact commit (5,454 tests on Node 22 and 24, Windows job 150 of 150) and
+green CI on `main` (`27218dc`, tree identical to the tested commit). The
+advisory merge needed the "Do not allow bypassing" protection switched off
+for the merge; the owner switched it back on and `enforce_admins=true` was
+verified afterwards. Also carries the 2026-10-07 threat intel (PR 395).
+
+Advisories to publish with `Patched versions: 6.5.2`: GHSA-cq59-vmg7-pmqv,
+GHSA-wrr5-263w-wvmh, GHSA-frvv-hf2w-gwf7, GHSA-hpmp-48p8-f32h. Separately,
+GHSA-pvhm-wc2r-q627 (fixed in 6.3.0) still needs `< 6.3.0` / `6.3.0`.
+
+First release that signs the threat feed: the release job signs `feed.json`
+with the `FEED_SIGNING_KEY` secret, self-verifies against the bundled public
+key and uploads `feed.json` + `feed.json.sig` in the single `gh release
+create` call, marking the release `latest` only if it is the highest tag.
+
+Version bumped from 6.5.1 at all 17 configured version sites plus
+`package.json` (37 replacements); lockfile via `npm install
+--package-lock-only`. `npm run release:prepare` moved `bundleCutoffDate`
+2026-09-06 -> 2026-09-07; the migration plan moved 0 entries. Active LTS
+review due at 6.5.2: `schedule.json` re-read on 2026-10-07 (UTC), unchanged;
+`activeLtsMajor` stays 24, `activeLtsReviewedIn` moves to 6.5.3. The first
+release cut after 2026-10-28 moves `activeLtsMajor` to 26 and adds a Node 26
+compat leg. SECURITY.md unchanged (patch release).
+
 ## Daily threat intel (2026-10-07) (claude-opus-5-5)
 
 Scheduled run. Windowed import (GitHub Advisory Database, OpenSSF, DataDog):
