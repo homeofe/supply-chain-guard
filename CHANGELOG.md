@@ -7,6 +7,20 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat intel for 2026-10-07: 6 package entries from the GitHub Advisory
+  Database, OpenSSF and the DataDog dataset (all 6 to the bundle):
+  `tailwind-forms-kit` 0.5.3, `css-jptvix-polyfill` 1.0.0, PyPI `lore-cs`
+  1.0.0 and the name blocks `captchetat-angularv8`, `cleandisk-linux-arm64`
+  and `sushiro-cli-win32-x64`. All three name blocks are registry security
+  holding packages.
+- The SubQuery `@subql/common` 5.8.3 compromise (October 2026): the C2 host
+  `ci-artifacts[.]dev`, its IP `185[.]146[.]234[.]137`, the tarball, loader and
+  decoded-payload SHA-256 hashes, and a version pin on `@subql/common` 5.8.3
+  in the known-bad npm versions (5.8.2 stays clean). Curated bundle entries
+  with a campaign, from the StepSecurity and Flatt Security write-ups.
+
 ## [6.5.1] - 2026-10-06
 
 ### Added

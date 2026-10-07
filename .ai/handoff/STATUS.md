@@ -1,3 +1,34 @@
+## Daily threat intel (2026-10-07) (claude-opus-5-5)
+
+Scheduled run. Windowed import (GitHub Advisory Database, OpenSSF, DataDog):
+6 new package entries, all 6 to the bundle and 0 to the catalog. No page cap,
+no `--limit`, nothing declined, deferred or unmapped. No new `catalogWindows`
+entry. Contents: pins `tailwind-forms-kit` 0.5.3 (the package is still live
+on npm, so pin only), `css-jptvix-polyfill` 1.0.0 (unpublished), PyPI
+`lore-cs` 1.0.0, and name blocks `captchetat-angularv8`,
+`cleandisk-linux-arm64` and `sushiro-cli-win32-x64`. All three name blocks
+were probed: npm security holding packages.
+
+Snapshot reconcile: 0 new entries; `--check` exit 0, 0 missing, 0 unmapped,
+21 acknowledged, 0 stale. DataDog: 7,893 pins settled, 0 bare names, the six
+known still-published extension versions and no new one.
+
+Hand-added: the SubQuery `@subql/common` 5.8.3 compromise of 2026-10-05
+(poisoned trusted-publishing workflow; the package pin itself came from the
+importer via GHSA-9333-3c4x-x3h5). C2 host `ci-artifacts[.]dev` and IP
+`185[.]146[.]234[.]137` in `KNOWN_C2_DOMAINS` / `KNOWN_C2_IPS`, three SHA-256
+hashes (tarball, loader, decoded payload) in `KNOWN_MALICIOUS_HASHES`, and
+`@subql/common` 5.8.3 in `KNOWN_BAD_NPM_VERSIONS`, plus five curated bundle
+entries with a campaign. Domain, IP and tarball hash are in two independent
+write-ups (StepSecurity, Flatt Security); the loader and payload hashes are
+StepSecurity only (0.85). All three hashes were checked as exact strings
+against the raw StepSecurity page and the upstream issue, not WebFetch.
+Deliberately NOT added: the publishing GitHub account named in the
+write-up (the project's own maintainer, a victim) and the other `@subql`
+packages listed as dependency paths (legitimate versions that only depend
+on `@subql/common`). New describe block in `campaigns.test.ts`, with a
+clean-version negative test for 5.8.2.
+
 ## Release v6.5.1 (2026-10-06) (claude-opus-5-5)
 
 Patch release: the 2026-10-06 threat intel (PR 393) and the Dependabot

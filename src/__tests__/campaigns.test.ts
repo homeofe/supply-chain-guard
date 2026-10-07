@@ -7428,6 +7428,83 @@ describe("Campaign Signatures", () => {
   });
 
   // =================================================================
+  // SubQuery @subql/common compromise (October 2026)
+  // =================================================================
+
+  describe("SubQuery @subql/common compromise (October 2026)", () => {
+    it("should flag @subql/common@5.8.3 as a known-bad version", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { "@subql/common": "5.8.3" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_BAD_VERSION"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    // The package is legitimate and was published from a poisoned release
+    // workflow; 5.8.2 is clean, so the name must never be blocked.
+    it("must NOT flag the clean 5.8.2 release", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { "@subql/common": "5.8.2" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_BAD_VERSION"),
+        "only 5.8.3 is malicious",
+      ).toBeUndefined();
+    });
+
+    it("should detect the C2 IP", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "c2.js"),
+        'const c2 = "185.146.234.137";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_IP"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the malicious tarball SHA256 as text", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hash.js"),
+        'const sha = "031267ee37c5a84c25cb0542cbfeb49f30d5604305b0bdccdeafbedcbbe6849b";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALWARE_HASH"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("keeps every SubQuery indicator in the bundle", () => {
+      const feed = getBundledFeed();
+      const set = feed.filter((i) => i.campaign === "SubQuery @subql/common compromise");
+      expect(set.length, "all 5 SubQuery atomic indicators must be bundled").toBe(5);
+    });
+  });
+
+  // =================================================================
   // Install-time infostealers and recon collectors (September 2026)
   // =================================================================
 
