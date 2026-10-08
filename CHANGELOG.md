@@ -1145,7 +1145,8 @@ reproduction notes in `docs/security-audit-2026-10-03.md`.
   lookup tool, an image push to a registry that is not a public one, `scp`/
   `rsync`/`ssh` to a remote host, `git push` to a remote that is not GitHub,
   or a loopback call when the workflow sets a proxy. A workflow file that
-  cannot be classified no longer ends the scan of the files after it.
+  cannot be classified no longer ends the scan of the files after it
+  (GHSA-pvhm-wc2r-q627).
 - **Rule precision (false positives that blocked `fail-on: medium` in real
   repositories, where suppressing them was not an option).** Each fix keeps
   every must-fire example of its draft firing at its severity.

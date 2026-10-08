@@ -1,3 +1,21 @@
+## Security advisories published (2026-10-08) (claude-opus-5-5)
+
+The owner published the five advisories on 2026-10-08 between 06:25 and 06:26
+UTC; this closes the "Advisories to publish" item in the v6.5.2 note below.
+Checked over REST: GHSA-cq59-vmg7-pmqv, GHSA-wrr5-263w-wvmh,
+GHSA-frvv-hf2w-gwf7 and GHSA-hpmp-48p8-f32h are `published` with affected
+`<= 6.5.1` and patched `6.5.2`; GHSA-pvhm-wc2r-q627 is `published` with
+affected `< 6.3.0` and patched `6.3.0`. All five return 200 without
+authentication, and no advisory still links a temporary private fork.
+
+Still pending at the time of this note: none carries a CVE id yet, and none
+is in the global GitHub Advisory Database or on OSV (404 on both), which
+follows GitHub's own review. Dependabot alerts start from the global entry.
+The owner re-checks later.
+
+The 6.3.0 CHANGELOG entry for the `WORKFLOW_SECRET_TO_UPLOAD_PATH` fix now
+names GHSA-pvhm-wc2r-q627, matching how the 6.5.2 entry names its four.
+
 ## Daily threat intel (2026-10-08) (claude-opus-5-5)
 
 Scheduled run. Windowed import (GitHub Advisory Database, OpenSSF, DataDog):
