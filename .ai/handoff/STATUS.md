@@ -1,3 +1,56 @@
+## Daily threat intel (2026-10-08) (claude-opus-5-5)
+
+Scheduled run. Windowed import (GitHub Advisory Database, OpenSSF, DataDog):
+57 proposed, 56 kept: 45 to the bundle and 11 to the catalog. No page cap, no
+`--limit`, nothing declined, deferred or unmapped. No new `catalogWindows`
+entry. Three records (MAL-2026-17665 to 17667, the `animatecss`/Tailwind
+impersonation cluster) arrived between the dry run and the apply and were
+reviewed after it. The 11 catalog entries are old records by `firstSeen`
+(2022-06-20 to 2026-08-25), including the bare `spf-analytics`, whose holding
+package npm created on 2026-10-07 but whose record dates from 2026-08-25.
+
+Every bare name was probed against `registry.npmjs.org`. Seven are security
+holding packages (`internallib_v788`, `tailwindcss-animatecss-keyframes`,
+`spf-analytics`, `vectorizers`, `random-certs`, `waie-crash-baileys`,
+`t3-hermes-win32-arm64`; the last is a placeholder published by its own
+account rather than by npm, with no other version). One probe changed the call:
+`tensorlake` is a LIVE SDK with 100 published versions and four maintainers.
+GHSA-rqxj-g25x-4v9v carries `= 0.5.144` AND `>= 0`, and MAL-2026-17650 carries
+`introduced: 0` beside the single listed version, so the importer proposed a
+bare name block. It was removed by hand; only the 0.5.144 pin is kept.
+
+Snapshot reconcile: its only proposal was that same bare `tensorlake`, so the
+write was not run. `--check` exit 0, 0 unmapped, 21 acknowledged, 0 stale; the
+record is inside the 2-day grace. DataDog: 1 bare name, 7,893 pins, 512 live
+without a sample, the six known still-published extension versions and no new
+one.
+
+Open for an interactive session (code or policy, not for this routine): every
+windowed run and the snapshot run will re-propose bare `tensorlake`, and
+`--check` turns red once MAL-2026-17650 is more than 2 days upstream
+(from 2026-10-10). npm deliberately keeps the whole-package reading of an
+`introduced: 0` range with listed versions (see the comment above
+`pinListedVersions` in `scripts/import-threat-feed.mjs`), which is right for a
+typosquat and wrong for a hijacked live package. The decline list cannot
+express "this name, bare only" (a `ghsa` decline would also drop the pin), and
+`threat-feed-unresolvable.json` is not this routine's to edit. Same class as
+the DataDog live-package rule, which already probes the registry.
+
+Hand-added: the tensorlake npm SDK compromise of 2026-10-08 (Shai-Hulud;
+0.5.144 published from a compromised GitHub repository, preinstall loader,
+wipe-on-revoke monitor). C2 host `iseekaigogo[.]com` in `KNOWN_C2_DOMAINS`, the
+`lib/setup.mjs` and `lib/Math_Symbol.js` SHA-256 hashes in
+`KNOWN_MALICIOUS_HASHES`, the Ethereum dead-drop contract and its operator
+wallet in `KNOWN_C2_WALLETS`, and `tensorlake` 0.5.144 in
+`KNOWN_BAD_NPM_VERSIONS`. Bundle: the importer's pin got a campaign, plus three
+curated entries (domain, two hashes). Both hashes are in two independent
+write-ups (Socket, Aikido) and were checked as exact strings against the raw
+pages, not WebFetch; the domain and the Ethereum addresses are Aikido only
+(0.85). Deliberately NOT added: the public Ethereum RPC endpoints the payload
+reads through (shared infrastructure). New describe block in
+`campaigns.test.ts`, with a clean-version negative test for 0.5.143 and an
+assertion that no bare `tensorlake` sits in the bundle.
+
 ## Release v6.5.2 (2026-10-07) (claude-opus-5-5)
 
 Security release: the 2026-10-07 security review (all 40 findings), merged
