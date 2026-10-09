@@ -3,30 +3,30 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1791536815",
-    "timestamp": "2026-10-09T09:06:55Z",
-    "commit": "4969e28",
+    "session_id": "cli-1791539387",
+    "timestamp": "2026-10-09T09:49:47Z",
+    "commit": "cb428bc",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:2a7bbef662cbbe34e42edd61bc1c043464294f2b0b3068aaaec148a0771012ea",
-      "updated": "2026-10-09T09:04:48Z",
-      "lines": 14139,
-      "summary": "Scheduled run, rebased onto `main` after PR 397 merged."
+      "checksum": "sha256:2dd2c0b78b8b354792aeec0d26b8cfe760482573972cf8d028a347938077ae75",
+      "updated": "2026-10-09T09:49:01Z",
+      "lines": 14168,
+      "summary": "Patch release on top of PR 397 (2026-10-08 threat intel, tensorlake) and PR 398 (2026-10-09 threat intel, the pin-only list for..."
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:a6f65b056bc82fd9cae61cd38bac8f92ab649444fb4ce7046a973d46e5cd827e",
-      "updated": "2026-10-07T22:40:45Z",
+      "checksum": "sha256:a6e4f132b94b4108d54794f335f3fca7efda7e7fcd3edd83f423550189a0ac5a",
+      "updated": "2026-10-09T09:47:59Z",
       "lines": 231,
       "summary": "Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete."
     },
     "LOG.md": {
-      "checksum": "sha256:3d2de27f42b30ee2c4109449a24dbe9f095dee5aa3d18d7843862aa21732a823",
-      "updated": "2026-10-07T22:38:08Z",
+      "checksum": "sha256:1c2f59e41e7d5415922038703a31f5ded96908277000fe29b470b67918d7c653",
+      "updated": "2026-10-09T09:49:38Z",
       "lines": 90,
-      "summary": "Latest entry: [2026-10-07] v6.5.2"
+      "summary": "Latest entry: [2026-10-09] v6.5.3"
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
@@ -41,14 +41,14 @@
       "summary": "LOG archive index: 5 entries."
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:e0ec42e18464f9e69735d501e5ee7a8aab97600a97e462e12ec1bfc4edaa861b",
-      "updated": "2026-10-09T09:06:23Z",
+      "checksum": "sha256:42b7fee69120eefc23ba33fc0e60a8ee514271d649b6019b3290f224fd62f62e",
+      "updated": "2026-10-09T09:49:38Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:7c035002189e17227692f5a0d1b582260c4321bfa1d8acb0c12ca25c2fe042fb",
-      "updated": "2026-10-09T09:06:23Z",
+      "checksum": "sha256:42260a0e12d79f46a6e7c109bd3f7b971f93af6e457b8bc755ae57f869577cdb",
+      "updated": "2026-10-09T09:49:38Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "Scheduled run, rebased onto `main` after PR 397 merged. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Patch release on top of PR 397 (2026-10-08 threat intel, tensorlake) and PR 398 (2026-10-09 threat intel, the pin-only list for... Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 886,
-    "manifest_plus_core": 210676,
-    "full_read": 224410
+    "manifest_only": 924,
+    "manifest_plus_core": 211148,
+    "full_read": 224879
   }
 }

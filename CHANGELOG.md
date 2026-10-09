@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [6.5.3] - 2026-10-09
+
 ### Added
 
 - Threat intel for 2026-10-08: 56 package entries from the GitHub Advisory
@@ -51,6 +53,10 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   is recorded in `threat-feed-unresolvable.json`. `tensorlake` is listed by
   exact name, so the reconcile gate no longer counts its removed bare name as
   missing.
+- The four Shai-Hulud 111-day republish carriers (`feishu-docx-mcp`,
+  `blueai-cli`, `bmc-i18n-extract-cli`, `bmc-translate-utils`) now carry the
+  campaign of their payload hash, so they stay in the offline bundle when the
+  release cutoff moves past their first-seen date.
 
 ## [6.5.2] - 2026-10-07
 
@@ -7323,7 +7329,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.5.2...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.5.3...HEAD
+[6.5.3]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.3
 [6.5.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.2
 [6.5.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.1
 [6.5.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.0
