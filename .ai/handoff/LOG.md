@@ -11,6 +11,14 @@
 
 ---
 
+## [2026-10-09] v6.5.3
+
+Threat intel for 2026-10-08: 56 package entries from the GitHub Advisory Database, OpenSSF and the DataDog dataset (45 to the bundle, 11 to the catalog). Includes the hardhat-* and...
+
+Full notes: CHANGELOG.md, section [6.5.3].
+
+---
+
 ## [2026-10-07] v6.5.2
 
 Threat intel for 2026-10-07: 6 package entries from the GitHub Advisory Database, OpenSSF and the DataDog dataset (all 6 to the bundle): tailwind-forms-kit 0.5.3, css-jptvix-polyfill 1.0.0, PyPI...
@@ -80,11 +88,3 @@ Full notes: CHANGELOG.md, section [6.3.3].
 Threat intel (2026-09-27): seven package IOCs from the GitHub Advisory Database, corroborated by OpenSSF, all in the offline bundle: pypi:donutautosellsrc 0.3.7 to 0.3.9, pypi:requests-cache-utils...
 
 Full notes: CHANGELOG.md, section [6.3.2].
-
----
-
-## [2026-09-26] v6.3.1
-
-Threat intel (2026-09-26): five package IOCs, all in the offline bundle. Four come from the GitHub Advisory Database, corroborated by OpenSSF: pypi:sherpy 0.1.0 and 0.1.1, @digift/cli 99.99.100...
-
-Full notes: CHANGELOG.md, section [6.3.1].

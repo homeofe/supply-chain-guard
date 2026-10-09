@@ -1,3 +1,32 @@
+## Release v6.5.3 (2026-10-09) (claude-opus-5-5)
+
+Patch release on top of PR 397 (2026-10-08 threat intel, tensorlake) and PR
+398 (2026-10-09 threat intel, the pin-only list for dependency-confusion
+scopes and hijacked packages, the narrowed GlassWorm theme blocks). Both were
+green in CI and on openclaw before merging, and `main` (`cb428bc`) was green
+afterwards (15 of 15 check runs).
+
+Version bumped from 6.5.2 at all 17 configured version sites plus
+`package.json` (37 replacements, bounded so no README CIDR was touched);
+lockfile via `npm install --package-lock-only`. `npm run release:prepare`
+moved `bundleCutoffDate` 2026-09-07 -> 2026-09-09. The first migration plan
+would have moved 65 entries, four of them the Shai-Hulud 111-day republish
+carriers that `campaigns.test.ts` asserts against the offline bundle; they
+now carry the campaign of their payload hash and stay bundled. The migration
+then moved 61 entries, none of them referenced by a test. Active LTS review
+due at 6.5.3: `schedule.json` re-read on 2026-10-09, unchanged;
+`activeLtsMajor` stays 24, `activeLtsReviewedIn` moves to 6.5.4. The first
+release cut after 2026-10-28 moves `activeLtsMajor` to 26 and adds a Node 26
+compat leg. SECURITY.md unchanged (patch release).
+
+Follow-up, not done in this release: the migrated set contains further bare
+names in what look like dependency-confusion scopes (`@aircanada/*` x3,
+`@umschool/*` x5, `@cp-shared-14`, `@caliperx2`, `@aspect-adv-ui` x2,
+`@usemosaik`, `@web2apk`, `@idkruan-10`). Under the 2026-10-09 owner decision
+they belong in `threat-feed-pin-only.json`; each scope needs its records
+checked for listed versions before it is added (see the "Pin-only scopes"
+section of `docs/threat-feed-sources.md`).
+
 ## Daily threat intel (2026-10-09) (claude-opus-5-5)
 
 Scheduled run, rebased onto `main` after PR 397 merged. Windowed import

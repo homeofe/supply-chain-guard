@@ -15,7 +15,7 @@ Change the policy here and the gate names every file that has to follow.
   "supportedMajors": [22, 24],
   "transitionMajors": [],
   "activeLtsMajor": 24,
-  "activeLtsReviewedIn": "6.5.3",
+  "activeLtsReviewedIn": "6.5.4",
   "publishMajor": 24,
   "runtimeMajor": 24,
   "devBaseline": 24
@@ -99,6 +99,13 @@ Re-read for the 6.5.2 release on **2026-10-07**, against `schedule.json` in
 `nodejs/Release`: unchanged. Node 24 is Active LTS until Maintenance on
 2026-10-20, Node 26 enters Active LTS on 2026-10-28. `activeLtsMajor` stays 24
 and the milestone moves to 6.5.3, so the next release reads the schedule again;
+the one cut after 2026-10-28 moves `activeLtsMajor` to 26 and adds the Node 26
+leg.
+
+Re-read for the 6.5.3 release on **2026-10-09**, against `schedule.json` in
+`nodejs/Release`: unchanged. Node 24 is Active LTS until Maintenance on
+2026-10-20, Node 26 enters Active LTS on 2026-10-28. `activeLtsMajor` stays 24
+and the milestone moves to 6.5.4, so the next release reads the schedule again;
 the one cut after 2026-10-28 moves `activeLtsMajor` to 26 and adds the Node 26
 leg.
 

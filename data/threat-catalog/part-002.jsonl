@@ -63742,3 +63742,64 @@
 {"type":"package","value":"eslint-config-support@1.0.5","severity":"critical","confidence":0.9,"source":"MAL-2022-2806 (ghsa-malware)","firstSeen":"2022-06-20"}
 {"type":"package","value":"eslint-config-support@1.0.4","severity":"critical","confidence":0.9,"source":"MAL-2022-2806 (ghsa-malware)","firstSeen":"2022-06-20"}
 {"type":"package","value":"@design-system-coopeuch/web@999.0.2","severity":"critical","confidence":1,"source":"GHSA-vhjp-6vjm-vq35, MAL-2026-3653 (amazon-inspector+ghsa-malware+ossf-package-analysis)","firstSeen":"2026-05-13"}
+{"type":"package","value":"scw-mobile","severity":"critical","confidence":0.9,"source":"GHSA-h9g8-rwcg-hpmh","firstSeen":"2026-09-07"}
+{"type":"package","value":"base-account-core","severity":"critical","confidence":0.9,"source":"GHSA-vgm8-2vf8-769j","firstSeen":"2026-09-07"}
+{"type":"package","value":"cb-wallet-solana-provider","severity":"critical","confidence":0.9,"source":"GHSA-5cg4-38v4-j4vc","firstSeen":"2026-09-07"}
+{"type":"package","value":"cb-wallet-metadata","severity":"critical","confidence":0.9,"source":"GHSA-cxwc-958j-45g8","firstSeen":"2026-09-07"}
+{"type":"package","value":"cb-wallet-http","severity":"critical","confidence":1,"source":"GHSA-mv3f-92cr-83h7, MAL-2026-4507","firstSeen":"2026-09-07"}
+{"type":"package","value":"cb-wallet-store","severity":"critical","confidence":0.9,"source":"GHSA-gw4f-3mgw-h64x","firstSeen":"2026-09-07"}
+{"type":"package","value":"base-app-data","severity":"critical","confidence":0.9,"source":"GHSA-9hpg-rmwp-vg4p","firstSeen":"2026-09-07"}
+{"type":"package","value":"wallet-engine-signing","severity":"critical","confidence":0.9,"source":"GHSA-qw4m-ccr9-7r43","firstSeen":"2026-09-07"}
+{"type":"package","value":"cb-wallet-env","severity":"critical","confidence":0.9,"source":"GHSA-m477-pr6m-v2fp","firstSeen":"2026-09-07"}
+{"type":"package","value":"cb-wallet-analytics","severity":"critical","confidence":0.9,"source":"GHSA-7944-c265-3ff7","firstSeen":"2026-09-07"}
+{"type":"package","value":"cb-wallet-data","severity":"critical","confidence":1,"source":"GHSA-7w56-x3g2-57fg, MAL-2026-4506","firstSeen":"2026-09-07"}
+{"type":"package","value":"scw-core","severity":"critical","confidence":0.9,"source":"GHSA-fv48-xvcx-h3qh","firstSeen":"2026-09-07"}
+{"type":"package","value":"wallet-cds-web","severity":"critical","confidence":0.9,"source":"GHSA-qh9w-32r6-2qpw","firstSeen":"2026-09-07"}
+{"type":"package","value":"krdpass-auth-react-native","severity":"critical","confidence":1,"source":"GHSA-3j7p-44mj-76hx, MAL-2026-16042","firstSeen":"2026-09-08"}
+{"type":"package","value":"pypi:telegram-helper@0.1.1","severity":"critical","confidence":1,"source":"GHSA-vxg4-4jxm-7ff9, MAL-2026-16017 (kam193)","firstSeen":"2026-09-07"}
+{"type":"package","value":"pypi:telegram-helper@0.1.2","severity":"critical","confidence":1,"source":"GHSA-vxg4-4jxm-7ff9, MAL-2026-16017 (kam193)","firstSeen":"2026-09-07"}
+{"type":"package","value":"@cp-shared-14/frontend-ui@6.3.4","severity":"critical","confidence":1,"source":"GHSA-3f8m-gfc3-3g2m, MAL-2026-16015 (ossf-package-analysis)","firstSeen":"2026-09-07"}
+{"type":"package","value":"pypi:cv-train@0.0.5","severity":"critical","confidence":1,"source":"GHSA-8q25-v7xh-4xvp, MAL-2026-16016 (kam193)","firstSeen":"2026-09-07"}
+{"type":"package","value":"pypi:cv-train@99.0.0","severity":"critical","confidence":1,"source":"GHSA-8q25-v7xh-4xvp, MAL-2026-16016 (kam193)","firstSeen":"2026-09-07"}
+{"type":"package","value":"@aircanada/components","severity":"critical","confidence":0.9,"source":"GHSA-w6c3-rrw8-wxrx, MAL-2026-16018 (ghsa-malware)","firstSeen":"2026-09-07"}
+{"type":"package","value":"@aircanada/core","severity":"critical","confidence":0.9,"source":"GHSA-46mp-56rw-qpmm, MAL-2026-16019 (ghsa-malware)","firstSeen":"2026-09-07"}
+{"type":"package","value":"@aircanada/navigation-handler","severity":"critical","confidence":0.9,"source":"GHSA-356v-pcf2-7958, MAL-2026-16020 (ghsa-malware)","firstSeen":"2026-09-07"}
+{"type":"package","value":"service-home","severity":"critical","confidence":0.9,"source":"GHSA-m2c9-2v7c-fxf9, MAL-2026-16039 (ghsa-malware)","firstSeen":"2026-09-07"}
+{"type":"package","value":"op-ts-server-core","severity":"critical","confidence":0.9,"source":"GHSA-cj4c-268v-m597, MAL-2026-16034 (ghsa-malware)","firstSeen":"2026-09-07"}
+{"type":"package","value":"@idkruan-10/dpd-depconf-probe","severity":"critical","confidence":0.9,"source":"GHSA-994q-v55m-r2mw, MAL-2026-16021 (ghsa-malware)","firstSeen":"2026-09-07"}
+{"type":"package","value":"redis-type-intel","severity":"critical","confidence":0.9,"source":"GHSA-v9rh-vg7p-gwqm, MAL-2026-16036 (ghsa-malware)","firstSeen":"2026-09-07"}
+{"type":"package","value":"oscar-redis","severity":"critical","confidence":0.9,"source":"GHSA-c6m6-wr2f-6f63, MAL-2026-16035 (ghsa-malware)","firstSeen":"2026-09-07"}
+{"type":"package","value":"kiki-baileys","severity":"critical","confidence":0.9,"source":"GHSA-g8cr-3r7q-pcr6, MAL-2026-16033 (ghsa-malware)","firstSeen":"2026-09-07"}
+{"type":"package","value":"omni-channel-configurator-wireline-frontend","severity":"critical","confidence":1,"source":"GHSA-p429-pvx5-xj55, MAL-2026-16009","firstSeen":"2026-09-07"}
+{"type":"package","value":"b2b-frontend-external-library","severity":"critical","confidence":1,"source":"GHSA-hmhj-jhrj-285j, MAL-2026-16008","firstSeen":"2026-09-07"}
+{"type":"package","value":"@caliperx2/components","severity":"critical","confidence":1,"source":"GHSA-4jpr-935q-33r2, MAL-2026-16007","firstSeen":"2026-09-07"}
+{"type":"package","value":"vinzz-wcli@1.0.1","severity":"critical","confidence":1,"source":"GHSA-xv3f-69vw-grmg, MAL-2026-16058 (amazon-inspector)","firstSeen":"2026-09-08"}
+{"type":"package","value":"toru-ultimate@1.0.0","severity":"critical","confidence":1,"source":"GHSA-jg37-3w86-3rx2, MAL-2026-16057 (amazon-inspector)","firstSeen":"2026-09-08"}
+{"type":"package","value":"tailwind-aspect-styles@0.4.2","severity":"critical","confidence":1,"source":"GHSA-r28r-839h-4gqw, MAL-2026-16056 (amazon-inspector)","firstSeen":"2026-09-08"}
+{"type":"package","value":"open-item-validator@1.0.3","severity":"critical","confidence":1,"source":"GHSA-jfq9-9hf7-gr4x, MAL-2026-16052 (amazon-inspector)","firstSeen":"2026-09-08"}
+{"type":"package","value":"open-item-validator@1.0.5","severity":"critical","confidence":1,"source":"GHSA-jfq9-9hf7-gr4x, MAL-2026-16052 (amazon-inspector)","firstSeen":"2026-09-08"}
+{"type":"package","value":"tailwindcss-aspectratio-styles@0.3.5","severity":"critical","confidence":1,"source":"GHSA-4gjp-7xcv-m2gc, MAL-2026-16049 (amazon-inspector)","firstSeen":"2026-09-08"}
+{"type":"package","value":"tailwindcss-aspectratio-styles@0.3.4","severity":"critical","confidence":1,"source":"GHSA-4gjp-7xcv-m2gc, MAL-2026-16049 (amazon-inspector)","firstSeen":"2026-09-08"}
+{"type":"package","value":"punypump@1.2.4","severity":"critical","confidence":1,"source":"GHSA-45jc-2qr4-pmgf, MAL-2026-16048 (amazon-inspector)","firstSeen":"2026-09-08"}
+{"type":"package","value":"punypump@1.2.5","severity":"critical","confidence":1,"source":"GHSA-45jc-2qr4-pmgf, MAL-2026-16048 (amazon-inspector)","firstSeen":"2026-09-08"}
+{"type":"package","value":"punypump@1.2.2","severity":"critical","confidence":1,"source":"GHSA-45jc-2qr4-pmgf, MAL-2026-16048 (amazon-inspector)","firstSeen":"2026-09-08"}
+{"type":"package","value":"@umschool/analytics@999.0.1","severity":"critical","confidence":1,"source":"GHSA-2qmq-f9mj-rwcj, MAL-2026-16051 (amazon-inspector)","firstSeen":"2026-09-08"}
+{"type":"package","value":"@umschool/analytics@999.0.0","severity":"critical","confidence":1,"source":"GHSA-2qmq-f9mj-rwcj, MAL-2026-16051 (amazon-inspector)","firstSeen":"2026-09-08"}
+{"type":"package","value":"@umschool/analytics@999.0.2","severity":"critical","confidence":1,"source":"GHSA-2qmq-f9mj-rwcj, MAL-2026-16051 (amazon-inspector)","firstSeen":"2026-09-08"}
+{"type":"package","value":"@umschool/analytics@999.0.4","severity":"critical","confidence":1,"source":"GHSA-2qmq-f9mj-rwcj, MAL-2026-16051 (amazon-inspector)","firstSeen":"2026-09-08"}
+{"type":"package","value":"@umschool/analytics@999.0.3","severity":"critical","confidence":1,"source":"GHSA-2qmq-f9mj-rwcj, MAL-2026-16051 (amazon-inspector)","firstSeen":"2026-09-08"}
+{"type":"package","value":"@aspect-adv-ui/consent-manager@2.4.0","severity":"critical","confidence":1,"source":"GHSA-2m5c-v74g-r4m8, MAL-2026-16050 (amazon-inspector)","firstSeen":"2026-09-08"}
+{"type":"package","value":"@aspect-adv-ui/consent-manager@2.4.1","severity":"critical","confidence":1,"source":"GHSA-2m5c-v74g-r4m8, MAL-2026-16050 (amazon-inspector)","firstSeen":"2026-09-08"}
+{"type":"package","value":"@usemosaik/template-react-js@1.0.1","severity":"critical","confidence":1,"source":"GHSA-8rcc-9ggm-659p, MAL-2026-16047 (amazon-inspector+ghsa-malware)","firstSeen":"2026-09-08"}
+{"type":"package","value":"i18nexus-tools","severity":"critical","confidence":1,"source":"GHSA-9cfw-xh4g-cc2f, MAL-2026-16046 (amazon-inspector+ghsa-malware)","firstSeen":"2026-09-08"}
+{"type":"package","value":"i18nexus","severity":"critical","confidence":0.9,"source":"GHSA-38hw-f37p-99jj, MAL-2026-16045 (ghsa-malware)","firstSeen":"2026-09-08"}
+{"type":"package","value":"@web2apk/baileys","severity":"critical","confidence":1,"source":"GHSA-f4f2-cqqp-jcrx, MAL-2026-16043 (amazon-inspector+ghsa-malware)","firstSeen":"2026-09-08"}
+{"type":"package","value":"open-item-validator@1.0.2","severity":"critical","confidence":0.9,"source":"MAL-2026-16052 (amazon-inspector)","firstSeen":"2026-09-08"}
+{"type":"package","value":"open-item-validator@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2026-16052 (amazon-inspector)","firstSeen":"2026-09-08"}
+{"type":"package","value":"open-item-validator@1.0.4","severity":"critical","confidence":0.9,"source":"MAL-2026-16052 (amazon-inspector)","firstSeen":"2026-09-08"}
+{"type":"package","value":"open-item-validator@1.0.1","severity":"critical","confidence":0.9,"source":"MAL-2026-16052 (amazon-inspector)","firstSeen":"2026-09-08"}
+{"type":"package","value":"plogme@1.0.0","severity":"critical","confidence":1,"source":"GHSA-q276-hmjg-47qw, MAL-2026-16199","firstSeen":"2026-09-08"}
+{"type":"package","value":"plogme@1.0.1","severity":"critical","confidence":1,"source":"GHSA-q276-hmjg-47qw, MAL-2026-16199","firstSeen":"2026-09-08"}
+{"type":"package","value":"plogme@1.0.2","severity":"critical","confidence":1,"source":"GHSA-q276-hmjg-47qw, MAL-2026-16199","firstSeen":"2026-09-08"}
+{"type":"package","value":"plogme@1.0.3","severity":"critical","confidence":1,"source":"GHSA-q276-hmjg-47qw, MAL-2026-16199","firstSeen":"2026-09-08"}
+{"type":"package","value":"open-item-validator","severity":"critical","confidence":1,"source":"GHSA-55qh-42r8-hcgq, MAL-2026-16052 (amazon-inspector+ghsa-malware)","firstSeen":"2026-09-08"}
