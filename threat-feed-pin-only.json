@@ -1,0 +1,30 @@
+{
+  "$comment": "npm scopes that are dependency-confusion targets: an organization's private scope that an attacker registered on the public registry. The malicious versions are the attacker's, the NAME is the victim's own internal package, so a whole-package verdict in one of these scopes is settled into exact pins and never becomes a bare name (which would flag every developer installing the real package from the private registry). A record that yields no version stays an unmapped gap and belongs in threat-feed-unresolvable.json. See docs/threat-feed-sources.md, section 'Pin-only scopes'.",
+  "scopes": [
+    {
+      "scope": "@hrmony/",
+      "reason": "Dependency-confusion squats of a company's internal scope (MAL-2026-17249 to MAL-2026-17282, 2026-09-28), published at internal-looking versions such as 1.99.0 and 40.14.3. The real packages live in the victim's private registry.",
+      "addedOn": "2026-10-09"
+    },
+    {
+      "scope": "@wbnr/",
+      "reason": "Dependency-confusion squats of a company's internal scope at sentinel versions 99.x (MAL-2026-11196, MAL-2026-13436, MAL-2026-17204, MAL-2026-17205). The real packages live in the victim's private registry.",
+      "addedOn": "2026-10-09"
+    },
+    {
+      "scope": "@galicia-toolkit/",
+      "reason": "Dependency-confusion squats at sentinel versions 999.0.x whose postinstall hook exfiltrates host and credential data (MAL-2026-17688 to MAL-2026-17691, 2026-10-08). The real packages live in the victim's private registry.",
+      "addedOn": "2026-10-09"
+    },
+    {
+      "scope": "@design-system-coopeuch/",
+      "reason": "Dependency-confusion squat at sentinel versions 999.0.0 to 999.0.4 published 2026-05-13 (MAL-2026-3653). The real package lives in the victim's private registry.",
+      "addedOn": "2026-10-09"
+    },
+    {
+      "name": "tensorlake",
+      "reason": "Hijacked legitimate SDK: MAL-2026-17650 / GHSA-rqxj-g25x-4v9v say every version beside the one trojanized release 0.5.144 (2026-10-08). The package is live with over 100 releases by its real maintainers, so only the listed version is pinned.",
+      "addedOn": "2026-10-09"
+    }
+  ]
+}

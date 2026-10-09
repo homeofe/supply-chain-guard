@@ -554,6 +554,9 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // Ethereum dead-drop contract resolves to the same host. Aikido only, so the
   // feed confidence is 0.85.
   "iseekaigogo.com",
+  // GlassWorm-linked VS Code / Open VSX theme extensions (October 2026): the
+  // loader fetches its AES-encrypted stage from this host (Socket, single-source).
+  "fingercakes4sale.store",
 ];
 
 // ---------------------------------------------------------------------------
@@ -1560,6 +1563,11 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   // tensorlake npm SDK compromise / Shai-Hulud (October 2026)
   "25a0735d0db7dc40e5d45ce42d9c106067e6a66e184d967cfecfab17c3bcb5ef": "tensorlake compromise: lib/setup.mjs preinstall loader in tensorlake 0.5.144 (SHA256)",
   "b50a00900399ba99fb6ce1fc151519cb99d44320ef2a631f2237e1aea0ad6fec": "tensorlake compromise: lib/Math_Symbol.js obfuscated Shai-Hulud payload in tensorlake 0.5.144 (SHA256)",
+  // GlassWorm-linked theme extensions (October 2026), Socket, single-source
+  "a276b76d3b00f302bb4dfb3690125c85ff472b16049c3c37476ac5e51096df07": "GlassWorm themes: microsoftvs.microsoftvs VSIX package (SHA256)",
+  "5e68ca8c2097caccdb74d2752b85b85595a4bf646b442b8431a2416e87dbf268": "GlassWorm themes: out/extension.js loader in microsoftvs.microsoftvs (SHA256)",
+  "684c877a52d226d50584cb886ca8ec5bec6355d4de853f406734c79d5b387804": "GlassWorm themes: app.js loader in cosmic-themes.theme-cosmic-nebula (SHA256)",
+  "da2d950e50326171adbff9c2bfd6f28998e32623ea7c2c475b9159a45cfb86bb": "GlassWorm themes: decrypted embedded stage in cosmic-themes.theme-cosmic-nebula (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
@@ -1762,6 +1770,12 @@ export const KNOWN_MALICIOUS_GITHUB_ACCOUNTS: string[] = [
   "markcary3",
   "kreuzwenker",
   "victormmpp",
+  // GlassWorm-linked theme extensions (October 2026): the accounts that
+  // authored or host the source of the two confirmed malicious themes
+  // (Socket, single-source)
+  "aubineherodvulbdl",
+  "lohsebhipolg2s",
+  "vovanloc2234-sudo",
 ];
 
 // ---------------------------------------------------------------------------
@@ -1889,6 +1903,11 @@ export const KNOWN_C2_WALLETS: Record<string, string> = {
     "tensorlake compromise: Ethereum mainnet dead-drop C2 resolver contract read by the tensorlake 0.5.144 Shai-Hulud payload (October 2026)",
   "0x779f83aE56309682beDb04816c19d358c4B21040":
     "tensorlake compromise: operator wallet that writes the C2 host into the dead-drop contract (October 2026)",
+
+  // GlassWorm-linked VS Code / Open VSX theme extensions (Socket, October 2026).
+  // Solana address the loader reads its stage location from. Single-source.
+  "BjVeAjPrSKFiingBn4vZvghsGj9KCE8AJVtbc9S8o8SC":
+    "GlassWorm themes: Solana dead-drop wallet for the theme-extension loader (October 2026)",
 };
 
 /**

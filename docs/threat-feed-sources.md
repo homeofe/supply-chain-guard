@@ -152,6 +152,49 @@ that name every version before a fix of packages the npm registry has since
 deleted. No exact version is known, and a bare-name block would flag the
 victim organization's own internal package of the same name.
 
+## Pin-only scopes
+
+`threat-feed-pin-only.json` at the repository root lists npm scopes that are
+dependency-confusion targets: an organization's private scope that an attacker
+registered on the public registry. Each entry has a `scope` (one lowercase npm
+scope with its trailing slash, such as `@example/`), a `reason` of at least 20
+characters and an `addedOn` date. A malformed file throws.
+
+In such a scope the malicious versions are the attacker's, but the NAME is the
+victim's own internal package. The whole-package reading every other npm record
+gets ("introduced: 0" becomes a bare name) would flag every developer at the
+victim organization who installs the real package from its private registry.
+So a whole-package verdict in a listed scope never becomes a bare name. It is
+settled into exact pins instead:
+
+- the versions the record lists, kept even when the registry has deleted the
+  package;
+- plus every version the registry ever published on or before the record's
+  first publication (the same assessment rule as for bounded ranges);
+- never npm's own placeholders `0.0.0-stage` and `0.0.1-security`.
+
+An OpenSSF record that yields no version at all stays an unmapped gap and
+belongs in the unresolvable list. A GitHub advisory lists no versions, so when
+its registry lookup yields none it is reported as `pin-only-no-version`
+rather than as a gap: the OpenSSF record of the same package carries the
+version list. A DataDog whole-package claim in a listed scope pins only its
+sampled versions. The run prints a `Pin-only scopes:` line with the number of
+verdicts it settled this way.
+
+An entry may name one exact package (`name` instead of `scope`) for a hijacked
+LEGITIMATE package whose record says "every version" beside the exact
+trojanized ones (`tensorlake`, 2026-10-08). Such an entry pins ONLY the
+versions the record lists and never registry history, because every older
+release belongs to the rightful owner.
+
+`src/__tests__/feed-pin-only.test.ts` asserts that neither committed store
+holds a bare name covered by the list.
+
+Add a scope only when the records themselves describe a dependency-confusion
+squat (sentinel or internal-looking versions, a scope that belongs to an
+organization). Before adding it, remove that scope's bare names from both
+stores, then run the snapshot import so the pins replace them.
+
 ### 3. OSV.dev querybatch (GitHub corroboration only)
 
 `POST https://api.osv.dev/v1/querybatch`

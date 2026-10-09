@@ -7601,6 +7601,68 @@ describe("Campaign Signatures", () => {
   });
 
   // =================================================================
+  // GlassWorm-linked theme extensions (October 2026)
+  // =================================================================
+
+  describe("GlassWorm-linked theme extensions (October 2026)", () => {
+    it("should detect the stage host", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "c2.js"),
+        'const u = "https://fingercakes4sale.store/x";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the loader SHA256 as text", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hash.js"),
+        'const sha = "5e68ca8c2097caccdb74d2752b85b85595a4bf646b442b8431a2416e87dbf268";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALWARE_HASH"
+      );
+      expect(finding).toBeDefined();
+    });
+
+    it("name-blocks the confirmed malicious extensions in their marketplace only", () => {
+      const feed = getBundledFeed();
+      expect(matchPackageIOC("vscode", "microsoftvs.microsoftvs", "1.0.0", feed)).not.toBeNull();
+      expect(matchPackageIOC("vscode", "cosmic-themes.theme-cosmic-nebula", "1.0.0", feed)).not.toBeNull();
+      expect(matchPackageIOC("openvsx", "cosmic-themes.sql-formatter", "1.0.0", feed)).not.toBeNull();
+      // Confirmed on the VS Code Marketplace build only.
+      expect(matchPackageIOC("openvsx", "microsoftvs.microsoftvs", "1.0.0", feed)).toBeNull();
+    });
+
+    // Cluster-linked pivots in the write-up, not confirmed malware: not blocked.
+    it("does not block the cluster-linked themes", () => {
+      const feed = getBundledFeed();
+      for (const [eco, id] of [
+        ["openvsx", "aurora-them-creator.theme-aurora-nocturne"],
+        ["openvsx", "charcoal-mint-studio.theme-charcoal-mint"],
+        ["openvsx", "solidity-syntax.deep-focus"],
+        ["openvsx", "holiday-themes.theme-coca-cola-christmas"],
+        ["vscode", "lohsebhipolg2s.theme-aurora-borealis"],
+      ]) {
+        expect(matchPackageIOC(eco, id, "1.0.2", feed), `${eco}:${id}`).toBeNull();
+      }
+    });
+
+    it("keeps every GlassWorm theme indicator in the bundle", () => {
+      const feed = getBundledFeed();
+      const set = feed.filter((i) => i.campaign === "GlassWorm theme extensions");
+      expect(set.length, "domain, 4 hashes and 3 extension ids must be bundled").toBe(8);
+    });
+  });
+
+  // =================================================================
   // Install-time infostealers and recon collectors (September 2026)
   // =================================================================
 

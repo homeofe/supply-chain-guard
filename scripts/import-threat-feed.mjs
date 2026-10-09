@@ -308,6 +308,144 @@ export function loadUnresolvableList(root = repoRoot) {
   return records;
 }
 
+/** Repo-root file listing npm scopes that are only ever imported as exact pins. See loadPinOnlyList. */
+const PIN_ONLY_FILE = "threat-feed-pin-only.json";
+/** A pin-only scope: one whole npm scope, written with its trailing slash. */
+const PIN_ONLY_SCOPE = /^@[a-z0-9][a-z0-9._-]*\/$/;
+/** A pin-only package: one exact npm name, scoped or not. */
+const PIN_ONLY_NAME = /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/;
+
+/**
+ * Load the list of npm scopes a human has identified as a dependency-confusion
+ * target: an organization's PRIVATE scope that an attacker registered on the
+ * public registry. An entry may instead name one exact package: a hijacked
+ * LEGITIMATE package whose record says "every version" beside the exact
+ * trojanized ones. That entry pins ONLY the listed versions, never registry
+ * history, because every older release is the rightful owner's.
+ *
+ * In such a scope the malicious versions are the attacker's, but the NAME is the
+ * victim's own internal package. The whole-package reading every other npm
+ * record gets ("introduced: 0" becomes a bare name) would then flag every
+ * developer at the victim organization who installs the real package from its
+ * private registry. Records in a listed scope are therefore settled into exact
+ * pins (applyPinOnlyList) and never become a bare name. A record that yields no
+ * version stays an unmapped gap, recorded in threat-feed-unresolvable.json.
+ *
+ * Returns [] when the file is absent. A malformed file THROWS.
+ *
+ * @returns {Array<{scope?: string, name?: string, reason: string, addedOn: string}>}
+ */
+export function loadPinOnlyList(root = repoRoot) {
+  const file = join(root, PIN_ONLY_FILE);
+  if (!existsSync(file)) return [];
+  let parsed;
+  try {
+    parsed = JSON.parse(readFileSync(file, "utf8"));
+  } catch (err) {
+    throw new Error(`${PIN_ONLY_FILE} is not valid JSON: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  const scopes = parsed?.scopes;
+  if (!Array.isArray(scopes)) throw new Error(`${PIN_ONLY_FILE} must hold a "scopes" array`);
+  const seen = new Set();
+  for (const [index, item] of scopes.entries()) {
+    const where = `${PIN_ONLY_FILE} scopes[${index}]`;
+    if (!item || typeof item !== "object") throw new Error(`${where} is not an object`);
+    for (const key of Object.keys(item)) {
+      if (!["scope", "name", "reason", "addedOn"].includes(key)) throw new Error(`${where} has unknown key ${JSON.stringify(key)}`);
+    }
+    if ((item.scope === undefined) === (item.name === undefined)) {
+      throw new Error(`${where} needs exactly one of "scope" or "name"`);
+    }
+    if (item.scope !== undefined && (typeof item.scope !== "string" || !PIN_ONLY_SCOPE.test(item.scope))) {
+      throw new Error(`${where}: "scope" must be one lowercase npm scope with its trailing slash, e.g. "@example/"`);
+    }
+    if (item.name !== undefined && (typeof item.name !== "string" || !PIN_ONLY_NAME.test(item.name))) {
+      throw new Error(`${where}: "name" must be one lowercase npm package name`);
+    }
+    const key = item.scope ?? item.name;
+    if (typeof item.reason !== "string" || item.reason.trim().length < 20) {
+      throw new Error(`${where} (${key}) needs a reason of at least 20 characters`);
+    }
+    if (parseIsoDay(item.addedOn) === null) {
+      throw new Error(`${where} (${key}) needs "addedOn" as YYYY-MM-DD`);
+    }
+    if (seen.has(key)) throw new Error(`${where} repeats ${key}`);
+    seen.add(key);
+  }
+  return scopes;
+}
+
+/** The pin-only rule an npm package name falls under, or undefined. An exact name wins over its scope. */
+export function pinOnlyRule(name, pinOnly) {
+  if (typeof name !== "string" || !pinOnly?.length) return undefined;
+  const lower = name.toLowerCase();
+  return pinOnly.find((item) => item.name === lower) ?? pinOnly.find((item) => item.scope && lower.startsWith(item.scope));
+}
+
+/** True when an npm package name is covered by the pin-only list. */
+export function isPinOnlyName(name, pinOnly) {
+  return pinOnlyRule(name, pinOnly) !== undefined;
+}
+
+/**
+ * npm's own placeholder versions: `0.0.1-security` on a security holding
+ * package and `0.0.0-stage` during the takedown. npm publishes them, never the
+ * attacker, so pinning one adds no detection.
+ */
+const NPM_PLACEHOLDER_VERSION = /^0\.0\.0-stage$|-security$/;
+
+/**
+ * Take every whole-package npm candidate in a pin-only scope out of `mapped`
+ * and turn it into a registry settlement item for resolveBoundedNpmRanges.
+ *
+ * The item carries the versions the record lists, so a package the registry
+ * has since deleted (404) still pins them; the registry adds any other version
+ * published on or before the record's first publication. A GitHub advisory
+ * lists no versions, so when its registry lookup yields none it is reported as
+ * `pin-only-no-version` rather than as a gap: the OpenSSF record of the same
+ * package carries the version list and is the one --check holds to account.
+ *
+ * @returns {{kept: Array<object>, pending: Array<object>}}
+ */
+export function applyPinOnlyList(mapped, pinOnly) {
+  if (!pinOnly?.length) return { kept: mapped, pending: [] };
+  const kept = [];
+  const pending = [];
+  for (const entry of mapped) {
+    // A DataDog whole-package claim is settled by settleDatadogWholePackages,
+    // which treats a pin-only name as version-scoped (sampled versions only).
+    const bareNpm =
+      entry?.type === "package" &&
+      entry._ecosystemPrefix === "" &&
+      typeof entry._name === "string" &&
+      entry.value === entry._name &&
+      !entry._wholePackageClaim;
+    const rule = bareNpm ? pinOnlyRule(entry._name, pinOnly) : undefined;
+    if (!rule) {
+      kept.push(entry);
+      continue;
+    }
+    pending.push({
+      id: String(entry.source ?? "").split(/[ (,]/)[0],
+      name: entry._name,
+      ranges: [{ type: "SEMVER", events: [{ introduced: "0" }] }],
+      listedVersions: Array.isArray(entry._listedVersions) ? entry._listedVersions : [],
+      firstSeen: entry.firstSeen,
+      source: entry.source,
+      severity: entry.severity,
+      confidence: entry.confidence,
+      origins: entry._origins ?? [],
+      discoverySource: entry._discoverySource,
+      assessedAt: entry._assessedAt,
+      queueDate: entry._queueDate,
+      pinOnly: true,
+      // A hijacked legitimate package: its older releases are the owner's.
+      listedOnly: rule.name !== undefined,
+    });
+  }
+  return { kept, pending };
+}
+
 /** Advisory id a skip detail starts with ("MAL-2022-455 npm/x", "MAL-1 (name)"). */
 function skipAdvisoryId(item) {
   return String(item?.detail ?? "").split(/[ (]/)[0];
@@ -566,6 +704,9 @@ export function mapAdvisory(advisory, { ecosystems } = {}) {
     entry._ecosystemPrefix = prefix;
     entry._name = name;
     entry._discoverySource = DISCOVERY_SOURCE.GITHUB;
+    // A pin-only scope settles a whole-package verdict against the registry
+    // (applyPinOnlyList), which needs the advisory's assessment time.
+    if (range.kind === "all" && typeof advisory.published_at === "string") entry._assessedAt = advisory.published_at;
     entries.push(entry);
   }
 
@@ -715,6 +856,12 @@ export function mapOsvMalwareRecord(record, { ecosystems } = {}) {
       entry._discoverySource = DISCOVERY_SOURCE.OPENSSF;
       entry._origins = origins;
       if (pinnedFromWholeRange && version !== undefined) entry._pinnedFromWholeRange = true;
+      // What a pin-only scope settles a whole-package verdict from
+      // (applyPinOnlyList): the listed versions and the assessment time.
+      if (version === undefined) {
+        entry._listedVersions = versions.filter((v) => SAFE_VERSION.test(v));
+        if (typeof record.published === "string") entry._assessedAt = record.published;
+      }
       if (typeof record._indexModified === "string") {
         entry._queueDate = record._indexModified.slice(0, 10);
       }
@@ -883,10 +1030,20 @@ export async function resolveBoundedNpmRanges(
               Number.isFinite(assessed) &&
               Date.parse(doc.time[version]) <= assessed,
           );
-    const safe = versions.filter((version) => SAFE_VERSION.test(version));
+    // A pin-only item (applyPinOnlyList) also pins every version its record
+    // lists, which survives a registry that has deleted the package, and never
+    // pins npm's own takedown placeholders.
+    const candidates = item.pinOnly
+      ? [...new Set([...(item.listedVersions ?? []), ...(item.listedOnly ? [] : versions)])].filter(
+          (version) => !NPM_PLACEHOLDER_VERSION.test(version),
+        )
+      : versions;
+    const safe = candidates.filter((version) => SAFE_VERSION.test(version));
     if (safe.length === 0) {
       unresolved.push({
-        reason: "unmappable-version-range",
+        // A GitHub advisory lists no versions; the OpenSSF record of the same
+        // package does and is the one held to account as a gap.
+        reason: item.pinOnly && item.discoverySource === DISCOVERY_SOURCE.GITHUB ? "pin-only-no-version" : "unmappable-version-range",
         detail: `${item.id} npm/${item.name}${published === null ? " (not on the registry)" : " (no version in range published before the record)"}`,
       });
       continue;
@@ -3053,6 +3210,7 @@ export async function importUpstreamFeed({
   // be hidden by happening to run a slice.
   const deferralList = loadDeferralList(root, { now });
   const unresolvableList = loadUnresolvableList(root);
+  const pinOnlyList = loadPinOnlyList(root);
   const deferralsActive = deferralsApply({ since, until, ignoreDeferrals });
 
   // 1. Fetch every enabled discovery source. Promise.all is deliberate: any
@@ -3115,10 +3273,20 @@ export async function importUpstreamFeed({
     };
   }
 
+  // 2a. Whole-package verdicts in a dependency-confusion scope never become a
+  // bare name (applyPinOnlyList): they join the registry settlement below.
+  const pinOnlyRouting = applyPinOnlyList(mapped, pinOnlyList);
+  if (pinOnlyRouting.kept !== mapped) {
+    // `kept` IS `mapped` when nothing was routed, so it is only copied back when new.
+    mapped.length = 0;
+    for (const entry of pinOnlyRouting.kept) mapped.push(entry);
+  }
+
   // 2a. Bounded npm ranges without a versions list: settle them against the
   // registry's version history into exact pins (resolveBoundedNpmRanges).
   let rangeResolution = { entries: [], unresolved: [], packagesChecked: 0 };
   const pendingRanges = skipped.filter((item) => item.resolve).map((item) => item.resolve);
+  for (const item of pinOnlyRouting.pending) pendingRanges.push(item);
   if (pendingRanges.length > 0) {
     rangeResolution = await resolveBoundedNpmRanges(pendingRanges, { fetchImpl, timeoutMs });
     const rest = skipped.filter((item) => !item.resolve);
@@ -3193,6 +3361,12 @@ export async function importUpstreamFeed({
       if (entry.type !== "package") continue;
       const { prefix, name, version } = splitPackageValue(entry.value);
       if (version !== undefined) versionScoped.add(`${prefix}${name}`);
+    }
+    // A pin-only scope is version-scoped by definition: its names are the victim's.
+    for (const entry of added) {
+      if (entry._wholePackageClaim && entry._ecosystemPrefix === "" && isPinOnlyName(entry._name, pinOnlyList)) {
+        versionScoped.add(`${entry._ecosystemPrefix}${entry._name}`);
+      }
     }
     const settled = await settleDatadogWholePackages(added, { fetchImpl, timeoutMs, versionScoped });
     datadogSettlement = settled;
@@ -3327,6 +3501,9 @@ export async function importUpstreamFeed({
     // Bounded npm ranges settled into exact pins against the registry.
     rangesResolvedToPins: rangeResolution.entries.length,
     rangePackagesChecked: rangeResolution.packagesChecked,
+    // Whole-package verdicts in a threat-feed-pin-only.json scope, routed to the
+    // registry settlement instead of becoming a bare name.
+    pinOnlyRouted: pinOnlyRouting.pending.length,
     // Gap skips (GAP_SKIP_REASONS) nobody has recorded: --check fails on these.
     unmapped,
     unmappedDetails: skipped
@@ -3698,6 +3875,9 @@ if (isMain) {
     console.log(`  Skipped:              ${report.skippedTotal} ${JSON.stringify(report.skipped)}`);
     if (report.rangePackagesChecked > 0) {
       console.log(`  Ranges via registry:  ${report.rangesResolvedToPins} pin(s) from ${report.rangePackagesChecked} package(s)`);
+    }
+    if (report.pinOnlyRouted > 0) {
+      console.log(`  Pin-only scopes:      ${report.pinOnlyRouted} whole-package verdict(s) settled into pins, never bare - see ${PIN_ONLY_FILE}`);
     }
     console.log(
       `  Unmapped gaps:        ${report.unmapped}` +

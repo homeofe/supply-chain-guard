@@ -84,6 +84,10 @@
     {
       "id": "MAL-2022-475",
       "reason": "Dependency-confusion record naming every version before 1.1.4 of @nexthink/waas, a package the npm registry has deleted (404), so no exact version is known. A bare-name block would flag the victim organization's own internal package of the same name."
+    },
+    {
+      "id": "MAL-2026-17688",
+      "reason": "Dependency-confusion record in the pin-only scope @galicia-toolkit/ (threat-feed-pin-only.json) naming every version of @galicia-toolkit/core with no versions list. The registry holds only npm's 0.0.0-stage takedown placeholder, so no attacker version is known. A bare-name block would flag the victim organization's own internal package of the same name."
     }
   ]
 }

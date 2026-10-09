@@ -1,3 +1,70 @@
+## Daily threat intel (2026-10-09) (claude-opus-5-5)
+
+Scheduled run, rebased onto `main` after PR 397 merged. Windowed import
+(GitHub Advisory Database, OpenSSF, DataDog) on the rebased tree: 125 new, 124
+to the bundle and 1 to the catalog. No page cap, no `--limit`, nothing
+declined, deferred or unmapped, no new `catalogWindows` entry. The first pass
+on the pre-rebase tree proposed 147; the difference is the records PR 397
+already added.
+
+All 35 remaining bare names were probed against the npm registry: 31 are
+security holding packages, 3 `@galicia-toolkit/*` names return 404 and
+`@galicia-toolkit/core` is an unpublished stub. `function-flag` and
+`cdn-img-fetch`, pinned only yesterday because they were live, are now
+security holding packages, so the importer's name blocks are kept.
+
+Snapshot reconcile on the first pass: the dry run proposed only the same bare
+`tensorlake`, so the write was not run. DataDog: 7,883 pins, 513 without a
+sampled version, the six known still-published extension versions and no new
+one.
+
+### Open questions resolved in the same PR (owner decision, 2026-10-09)
+
+Dependency-confusion scopes are pinned, never name-blocked. New
+`threat-feed-pin-only.json` (importer: `loadPinOnlyList`, `applyPinOnlyList`,
+settled by `resolveBoundedNpmRanges`): a whole-package verdict in a listed
+scope becomes exact pins (the versions the record lists, plus registry
+versions published on or before the record, minus npm's `0.0.0-stage` /
+`0.0.1-security` placeholders). Scopes: `@hrmony/`, `@wbnr/`,
+`@galicia-toolkit/`, `@design-system-coopeuch/`. Migration on `main`: the 33
+bare `@hrmony`/`@wbnr` names removed from the bundle (the `@galicia-toolkit`
+and `@design-system-coopeuch` names were never bare on `main`), then the
+import wrote their pins; the snapshot `--check` settles 39 verdicts through
+the list. `@galicia-toolkit/core` (MAL-2026-17688) has no attacker
+version (registry holds only `0.0.0-stage`) and is recorded in
+`threat-feed-unresolvable.json` (now 22 records).
+
+An entry can also name one exact package (`name`): a hijacked LEGITIMATE
+package pinned on its listed versions only, never on registry history.
+`tensorlake` is the first: without it the snapshot `--check` would have
+turned red once MAL-2026-17650 was more than two days old, because the bare
+name removed by review in PR 397 and here counts as "missing". After the
+change: `--check` exit 0, 0 new, 0 unmapped, 22 acknowledged.
+
+A heuristic was measured and rejected: of 206,938 npm whole-range OSV records,
+1,280 list only sentinel versions (major >= 99), but `@hrmony` uses
+internal-looking versions (1.99.0, 40.14.3), so no version rule identifies
+dependency confusion. Scopes are added by hand, with a reason.
+
+GlassWorm themes, corrected after rereading the raw write-up: Socket confirms
+only `microsoftvs.microsoftvs` and `cosmic-themes.theme-cosmic-nebula` (VS
+Code, payload analysed) and, from an earlier report,
+`cosmic-themes.sql-formatter` (Open VSX). The other ids are cluster-linked
+pivots, some without a payload. Blocked: those three; not blocked:
+`holiday-themes.theme-coca-cola-christmas`,
+`lohsebhipolg2s.theme-aurora-borealis`, `solidity-syntax.deep-focus`,
+`aurora-them-creator.theme-aurora-nocturne`,
+`charcoal-mint-studio.theme-charcoal-mint`, and the Open VSX build of
+`cosmic-themes.theme-cosmic-nebula`. Recheck of the two live themes:
+`aurora-them-creator.theme-aurora-nocturne` is published by
+`aubineherodvulbdl` (an account in the write-up), still not confirmed
+malicious; `charcoal-mint-studio.theme-charcoal-mint` by an account not in the
+write-up. GitHub accounts: `hakhangthu7558-sys` dropped (owns only a
+cluster-linked repo); `aubineherodvulbdl`, `lohsebhipolg2s`,
+`vovanloc2234-sudo` kept. Bundle: 8 curated entries (domain, 4 hashes, 3
+extension ids). Stage host, hashes and Solana wallet unchanged. The publisher
+domain `holiday-themes[.]dev` was not added.
+
 ## Security advisories published (2026-10-08) (claude-opus-5-5)
 
 The owner published the five advisories on 2026-10-08 between 06:25 and 06:26

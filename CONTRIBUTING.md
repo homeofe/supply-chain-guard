@@ -295,6 +295,7 @@ data/
   threat-catalog/         # Historical, downloadable package indicators, split into
                           # part-NNN.jsonl of 100,000 lines (scripts/catalog-store.mjs)
 threat-feed-unresolvable.json # Upstream records no mapping can turn into an IOC
+threat-feed-pin-only.json # npm dependency-confusion scopes imported as exact pins, never bare
 scripts/
   catalog-store.mjs       # The one reader/writer of the committed catalog parts
   audit-publish-toolchain.mjs # npm audit of the pinned publish npm, with dated exceptions
