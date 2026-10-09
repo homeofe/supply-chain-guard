@@ -7505,6 +7505,102 @@ describe("Campaign Signatures", () => {
   });
 
   // =================================================================
+  // tensorlake npm SDK compromise / Shai-Hulud (October 2026)
+  // =================================================================
+
+  describe("tensorlake npm SDK compromise (October 2026)", () => {
+    it("should flag tensorlake@0.5.144 as a known-bad version", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { tensorlake: "0.5.144" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_BAD_VERSION"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    // The SDK is legitimate with a long release history; only 0.5.144 was
+    // published from the compromised repository, so the name must never be
+    // blocked. Both advisories carry an all-versions range beside the pin.
+    it("must NOT flag the clean 0.5.143 release", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { tensorlake: "0.5.143" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find(
+          (f) => f.rule === "IOC_KNOWN_BAD_VERSION" || f.rule === "MALICIOUS_DEPENDENCY"
+        ),
+        "only 0.5.144 is malicious",
+      ).toBeUndefined();
+      expect(
+        getBundledFeed().some((i) => i.value === "tensorlake"),
+        "no bare tensorlake name block in the bundle",
+      ).toBe(false);
+    });
+
+    it("should detect the C2 domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "c2.js"),
+        'const c2 = "https://iseekaigogo.com/api";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the setup.mjs loader SHA256 as text", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hash.js"),
+        'const sha = "25a0735d0db7dc40e5d45ce42d9c106067e6a66e184d967cfecfab17c3bcb5ef";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALWARE_HASH"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the Ethereum dead-drop contract", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "chain.js"),
+        'const contract = "0xb614155fd88114d40549b259457bcf921df091b9";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_WALLET");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("keeps every tensorlake indicator in the bundle", () => {
+      const feed = getBundledFeed();
+      const set = feed.filter((i) => i.campaign === "tensorlake npm SDK compromise");
+      expect(set.length, "the pin, the C2 host and both hashes must be bundled").toBe(4);
+    });
+  });
+
+  // =================================================================
   // Install-time infostealers and recon collectors (September 2026)
   // =================================================================
 

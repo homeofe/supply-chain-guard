@@ -7,6 +7,22 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat intel for 2026-10-08: 56 package entries from the GitHub Advisory
+  Database, OpenSSF and the DataDog dataset (45 to the bundle, 11 to the
+  catalog). Includes the `hardhat-*` and `animatecss`/Tailwind impersonation
+  clusters, `troubleshooting` and `browser-metrics-plugin.contrib` (seven
+  and six versions), and name blocks on seven npm security holding packages.
+- The tensorlake npm SDK compromise (October 2026, Shai-Hulud): a version pin
+  on `tensorlake` 0.5.144 in the known-bad npm versions (0.5.143 stays clean),
+  the C2 host `iseekaigogo[.]com`, the SHA-256 hashes of `lib/setup.mjs` and
+  `lib/Math_Symbol.js`, and the Ethereum dead-drop contract and operator wallet
+  in the known C2 wallets. Curated bundle entries with a campaign, from the
+  Socket and Aikido write-ups. No bare name block: both advisories also carry
+  an all-versions range, but the package is a live SDK with a long release
+  history, so only the 0.5.144 pin is kept.
+
 ## [6.5.2] - 2026-10-07
 
 ### Added
@@ -1129,7 +1145,8 @@ reproduction notes in `docs/security-audit-2026-10-03.md`.
   lookup tool, an image push to a registry that is not a public one, `scp`/
   `rsync`/`ssh` to a remote host, `git push` to a remote that is not GitHub,
   or a loopback call when the workflow sets a proxy. A workflow file that
-  cannot be classified no longer ends the scan of the files after it.
+  cannot be classified no longer ends the scan of the files after it
+  (GHSA-pvhm-wc2r-q627).
 - **Rule precision (false positives that blocked `fail-on: medium` in real
   repositories, where suppressing them was not an option).** Each fix keeps
   every must-fire example of its draft firing at its severity.

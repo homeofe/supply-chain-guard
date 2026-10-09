@@ -549,6 +549,11 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // workflow fetched the payload tarball from this host, which is also the
   // exfiltration and reverse-shell C2 (StepSecurity + Flatt Security).
   "ci-artifacts.dev",
+  // tensorlake npm SDK compromise / Shai-Hulud (October 2026): hardcoded C2 and
+  // exfiltration host of the lib/setup.mjs loader in tensorlake 0.5.144. The
+  // Ethereum dead-drop contract resolves to the same host. Aikido only, so the
+  // feed confidence is 0.85.
+  "iseekaigogo.com",
 ];
 
 // ---------------------------------------------------------------------------
@@ -1552,6 +1557,9 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   "031267ee37c5a84c25cb0542cbfeb49f30d5604305b0bdccdeafbedcbbe6849b": "SubQuery compromise: malicious @subql/common 5.8.3 tarball (SHA256)",
   "f0c8b0cde86b98a2869a22fd43ffcf61f1dcca252729e2be291e590e3dc5f49a": "SubQuery compromise: manifest-cache.js loader in @subql/common 5.8.3 (SHA256)",
   "7b2807bfb5bfec2383b46ba8226f47edb330ae6b32178eab61e377f3c3486c47": "SubQuery compromise: decoded credential-stealer and reverse-shell payload (SHA256)",
+  // tensorlake npm SDK compromise / Shai-Hulud (October 2026)
+  "25a0735d0db7dc40e5d45ce42d9c106067e6a66e184d967cfecfab17c3bcb5ef": "tensorlake compromise: lib/setup.mjs preinstall loader in tensorlake 0.5.144 (SHA256)",
+  "b50a00900399ba99fb6ce1fc151519cb99d44320ef2a631f2237e1aea0ad6fec": "tensorlake compromise: lib/Math_Symbol.js obfuscated Shai-Hulud payload in tensorlake 0.5.144 (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
@@ -1872,6 +1880,15 @@ export const KNOWN_C2_WALLETS: Record<string, string> = {
   // testnet. Single-source.
   "0xAD02b5cDE693529d3bdA0266299501ad0193036C":
     "Graphalgo: Arbitrum Sepolia smart-contract dead-drop C2 for the Go RAT delivered through Terraform providers and Go modules (September 2026)",
+  // tensorlake npm SDK compromise / Shai-Hulud (Aikido, October 2026). The payload
+  // calls a read function on this Ethereum mainnet contract to resolve an alternate
+  // C2/exfil host; the operator wallet below last set it on September 21. The public
+  // RPC endpoints it reads through are shared infrastructure and are deliberately NOT
+  // listed, as with the ChainDrop entry above. Single-source.
+  "0xb614155Fd88114d40549b259457Bcf921Df091B9":
+    "tensorlake compromise: Ethereum mainnet dead-drop C2 resolver contract read by the tensorlake 0.5.144 Shai-Hulud payload (October 2026)",
+  "0x779f83aE56309682beDb04816c19d358c4B21040":
+    "tensorlake compromise: operator wallet that writes the C2 host into the dead-drop contract (October 2026)",
 };
 
 /**
@@ -2877,6 +2894,13 @@ export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; descri
   "@subql/common": {
     versions: ["5.8.3"],
     description: "SubQuery compromise: install-time and import-time credential stealer with reverse shell, published via a poisoned trusted-publishing workflow (StepSecurity + Flatt Security, October 2026)",
+  },
+  // tensorlake npm SDK compromise / Shai-Hulud (October 2026). Legitimate SDK
+  // with a long release history; 0.5.144 was published from a compromised
+  // GitHub repository and 0.5.143 is clean, so the name must never be blocked.
+  tensorlake: {
+    versions: ["0.5.144"],
+    description: "tensorlake compromise: preinstall Shai-Hulud credential stealer and worm with a wipe-on-revoke monitor and an Ethereum dead-drop C2 (Socket + Aikido, October 2026)",
   },
 };
 

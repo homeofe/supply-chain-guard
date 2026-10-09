@@ -63730,3 +63730,14 @@
 {"type":"package","value":"eth-lib-helpers","severity":"critical","confidence":0.9,"source":"GHSA-h3xf-4f7r-v9xf","firstSeen":"2026-09-05"}
 {"type":"package","value":"pypi:proxycer@0.1.0","severity":"critical","confidence":1,"source":"GHSA-qff6-cqrr-65wv, MAL-2026-15935 (kam193)","firstSeen":"2026-09-05"}
 {"type":"package","value":"pypi:dbt-sa-cli@0.0.1","severity":"critical","confidence":1,"source":"GHSA-xf8p-r8w2-fx5m, MAL-2026-15934 (kam193)","firstSeen":"2026-09-05"}
+{"type":"package","value":"spf-analytics","severity":"critical","confidence":1,"source":"GHSA-fj97-8h42-crgr, MAL-2026-14486 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-25"}
+{"type":"package","value":"windows_registry_editor@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-mmx2-rhc3-vg25, MAL-2025-49244 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"windows_registry_editor@1.0.0","severity":"critical","confidence":1,"source":"GHSA-mmx2-rhc3-vg25, MAL-2025-49244 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"store-webpack-config@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-v9x4-6r9x-f7mf, MAL-2025-49241 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"store-webpack-config@1.0.0","severity":"critical","confidence":1,"source":"GHSA-v9x4-6r9x-f7mf, MAL-2025-49241 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"e2e-test-utils@2.0.0","severity":"critical","confidence":1,"source":"MAL-2025-47990 (ghsa-malware+reversing-labs)","firstSeen":"2025-10-04"}
+{"type":"package","value":"e2e-test-utils@0.0.1-security","severity":"critical","confidence":1,"source":"MAL-2025-47990 (ghsa-malware+reversing-labs)","firstSeen":"2025-10-04"}
+{"type":"package","value":"eslint-config-support@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2022-2806 (ghsa-malware)","firstSeen":"2022-06-20"}
+{"type":"package","value":"eslint-config-support@1.1.0","severity":"critical","confidence":0.9,"source":"MAL-2022-2806 (ghsa-malware)","firstSeen":"2022-06-20"}
+{"type":"package","value":"eslint-config-support@1.0.5","severity":"critical","confidence":0.9,"source":"MAL-2022-2806 (ghsa-malware)","firstSeen":"2022-06-20"}
+{"type":"package","value":"eslint-config-support@1.0.4","severity":"critical","confidence":0.9,"source":"MAL-2022-2806 (ghsa-malware)","firstSeen":"2022-06-20"}
