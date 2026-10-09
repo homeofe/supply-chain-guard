@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1791441705",
-    "timestamp": "2026-10-08T06:41:45Z",
-    "commit": "7de35f2",
+    "session_id": "cli-1791536815",
+    "timestamp": "2026-10-09T09:06:55Z",
+    "commit": "4969e28",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:4581f56c8bd481c4d5bbfd3c34f0b5bf2bac745506033f07229118b28dbc6397",
-      "updated": "2026-10-08T06:41:01Z",
-      "lines": 14072,
-      "summary": "The owner published the five advisories on 2026-10-08 between 06:25 and 06:26 UTC; this closes the \"Advisories to publish\" item in the v6.5.2 note..."
+      "checksum": "sha256:2a7bbef662cbbe34e42edd61bc1c043464294f2b0b3068aaaec148a0771012ea",
+      "updated": "2026-10-09T09:04:48Z",
+      "lines": 14139,
+      "summary": "Scheduled run, rebased onto `main` after PR 397 merged."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:a6f65b056bc82fd9cae61cd38bac8f92ab649444fb4ce7046a973d46e5cd827e",
@@ -41,14 +41,14 @@
       "summary": "LOG archive index: 5 entries."
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:c0818e3bcea1e9676ee7a977f8dda126dca0e4c17471c69ac486cd1c528378f1",
-      "updated": "2026-10-07T22:32:08Z",
+      "checksum": "sha256:e0ec42e18464f9e69735d501e5ee7a8aab97600a97e462e12ec1bfc4edaa861b",
+      "updated": "2026-10-09T09:06:23Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:6494c443090460fb6e0a5354115f79a201c75333655e4721778600fcb60f7c13",
-      "updated": "2026-10-07T22:32:08Z",
+      "checksum": "sha256:7c035002189e17227692f5a0d1b582260c4321bfa1d8acb0c12ca25c2fe042fb",
+      "updated": "2026-10-09T09:06:23Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "The owner published the five advisories on 2026-10-08 between 06:25 and 06:26 UTC; this closes the \"Advisories to publish\" item in the v6.5.2 note... Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Scheduled run, rebased onto `main` after PR 397 merged. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 934,
-    "manifest_plus_core": 209748,
-    "full_read": 223482
+    "manifest_only": 886,
+    "manifest_plus_core": 210676,
+    "full_read": 224410
   }
 }

@@ -22,6 +22,35 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   Socket and Aikido write-ups. No bare name block: both advisories also carry
   an all-versions range, but the package is a live SDK with a long release
   history, so only the 0.5.144 pin is kept.
+- Threat intel for 2026-10-09: 125 package entries from the GitHub Advisory
+  Database, OpenSSF and the DataDog dataset (124 to the bundle, 1 to the
+  catalog). Clusters: the `@bellaxchuu`, `@xayz` and `@itsmee_aizat.id`
+  Baileys forks, the `@dransay` scope, PyPI `kafka-roller` and
+  `kafka-helmsman` (99.0.x), `wie888r`, `xblaxw`, `testrrrd` and
+  `@wxwxtest/testrrrdd`.
+- GlassWorm-linked VS Code / Open VSX theme extensions (October 2026): stage
+  host `fingercakes4sale[.]store`, four SHA-256 hashes, the Solana dead-drop
+  wallet, three GitHub accounts behind the confirmed malicious themes, and
+  name blocks for the three extensions confirmed as malicious
+  (`microsoftvs.microsoftvs` and `cosmic-themes.theme-cosmic-nebula` on the VS
+  Code Marketplace, `cosmic-themes.sql-formatter` on Open VSX). Single-source
+  (Socket), confidence 0.85.
+- `threat-feed-pin-only.json`: npm scopes that are dependency-confusion
+  targets, plus exact names of hijacked legitimate packages. A whole-package
+  verdict there is settled into exact pins (the versions the record lists,
+  plus, for a scope, every version the registry published before the record)
+  and never becomes a bare name. A test asserts neither store holds a bare
+  name the list covers.
+
+### Changed
+
+- The `@hrmony`, `@wbnr`, `@galicia-toolkit` and `@design-system-coopeuch`
+  dependency-confusion names are now exact pins of the attacker's versions
+  instead of bare names, which also matched the victim organizations' own
+  internal packages. `@galicia-toolkit/core` has no known attacker version and
+  is recorded in `threat-feed-unresolvable.json`. `tensorlake` is listed by
+  exact name, so the reconcile gate no longer counts its removed bare name as
+  missing.
 
 ## [6.5.2] - 2026-10-07
 

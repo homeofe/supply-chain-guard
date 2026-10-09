@@ -63741,3 +63741,4 @@
 {"type":"package","value":"eslint-config-support@1.1.0","severity":"critical","confidence":0.9,"source":"MAL-2022-2806 (ghsa-malware)","firstSeen":"2022-06-20"}
 {"type":"package","value":"eslint-config-support@1.0.5","severity":"critical","confidence":0.9,"source":"MAL-2022-2806 (ghsa-malware)","firstSeen":"2022-06-20"}
 {"type":"package","value":"eslint-config-support@1.0.4","severity":"critical","confidence":0.9,"source":"MAL-2022-2806 (ghsa-malware)","firstSeen":"2022-06-20"}
+{"type":"package","value":"@design-system-coopeuch/web@999.0.2","severity":"critical","confidence":1,"source":"GHSA-vhjp-6vjm-vq35, MAL-2026-3653 (amazon-inspector+ghsa-malware+ossf-package-analysis)","firstSeen":"2026-05-13"}
