@@ -1,3 +1,29 @@
+## Release v6.5.4 (2026-10-11) (claude-opus-5-5)
+
+Patch release on top of PR 400 (2026-10-10 threat intel, MALFEX) and PR 401
+(2026-10-11 threat intel, GhostAction). Both PRs were reviewed before merging:
+the 27 MALFEX indicators were matched string for string against the Checkmarx
+table, the GhostAction hosts against StepSecurity and GitGuardian, and every
+added package entry against its registry. PR 401 had been cut while PR 400 was
+open; `main` was merged into it, so the 116 entries both runs imported are
+kept once.
+
+Release commit: all version sites, `package-lock.json` via
+`npm install --package-lock-only`, `npm run release:prepare` (cutoff
+2026-09-09 to 2026-09-11) and `feed-migrate --write`: 81 package entries, all
+first seen 2026-09-09, none asserted by a test or carrying a campaign (the test
+search was controlled with two values known to be asserted), moved to the
+catalog. Bundle 7,048, catalog 263,886. Node schedule re-read
+against `nodejs/Release` `schedule.json`: unchanged, `activeLtsMajor`
+stays 24, milestone 6.5.5.
+
+Dependabot: the 12 open alerts are all npm's bundled dependencies in
+`.github/publish-toolchain` (undici, brace-expansion, ip-address,
+http-cache-semantics, postcss-selector-parser). npm 11.20.0, 11.21.0 and 12.2.0
+and the npm/cli `latest` and `release/v11` branches still bundle the same
+versions, so the pin stays at 11.19.1 and the alerts stay open. The audit
+exceptions expire on 2026-10-31.
+
 ## Daily threat intel (2026-10-11) (claude-opus-5-5)
 
 Scheduled run, branch cut from `main` at `5f7a132` while PR 400 (2026-10-10)
