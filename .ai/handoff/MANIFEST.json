@@ -3,30 +3,30 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1791733341",
-    "timestamp": "2026-10-11T15:42:21Z",
-    "commit": "62101aa",
+    "session_id": "cli-1791734343",
+    "timestamp": "2026-10-11T15:59:03Z",
+    "commit": "d795467",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:7e7e754e80899b46ea0a1dce91a4da3885fa3d6a82b93aabb8022e6285937f04",
-      "updated": "2026-10-11T15:42:09Z",
-      "lines": 14271,
-      "summary": "Scheduled run, branch cut from `main` at `5f7a132` while PR 400 (2026-10-10) was still open."
+      "checksum": "sha256:3e55ccfe0b1f0ed70460ec5b029be032e909a0ffaf755a37d2e7010a7c7db540",
+      "updated": "2026-10-11T15:59:03Z",
+      "lines": 14297,
+      "summary": "Patch release on top of PR 400 (2026-10-10 threat intel, MALFEX) and PR 401 (2026-10-11 threat intel, GhostAction)."
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:a6e4f132b94b4108d54794f335f3fca7efda7e7fcd3edd83f423550189a0ac5a",
-      "updated": "2026-10-09T09:47:59Z",
+      "checksum": "sha256:7e87e1a0a3ae6e969b2f3da6bd87516d4603a3427908a73388dd1c98abcd7154",
+      "updated": "2026-10-11T15:57:34Z",
       "lines": 231,
       "summary": "Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete."
     },
     "LOG.md": {
-      "checksum": "sha256:1c2f59e41e7d5415922038703a31f5ded96908277000fe29b470b67918d7c653",
-      "updated": "2026-10-09T09:49:38Z",
+      "checksum": "sha256:fabf3de7c0c727597a637899c3cea60535316d66cf2b287fb64b48fdef416da4",
+      "updated": "2026-10-11T15:59:03Z",
       "lines": 90,
-      "summary": "Latest entry: [2026-10-09] v6.5.3"
+      "summary": "Latest entry: [2026-10-11] v6.5.4"
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
@@ -41,14 +41,14 @@
       "summary": "LOG archive index: 5 entries."
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:42b7fee69120eefc23ba33fc0e60a8ee514271d649b6019b3290f224fd62f62e",
-      "updated": "2026-10-09T09:49:38Z",
+      "checksum": "sha256:ab7eb18437bb35c52d9f3e93863cad3f04fab6c3dc4ae419235f6d215fd94980",
+      "updated": "2026-10-11T15:59:03Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:42260a0e12d79f46a6e7c109bd3f7b971f93af6e457b8bc755ae57f869577cdb",
-      "updated": "2026-10-09T09:49:38Z",
+      "checksum": "sha256:767f2b5b258e9824da13ecc149aa5a9c7190326a38d5e7fa59cbcc1f2f728aef",
+      "updated": "2026-10-11T15:59:03Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "Scheduled run, branch cut from `main` at `5f7a132` while PR 400 (2026-10-10) was still open. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Patch release on top of PR 400 (2026-10-10 threat intel, MALFEX) and PR 401 (2026-10-11 threat intel, GhostAction). Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 905,
-    "manifest_plus_core": 212700,
-    "full_read": 226431
+    "manifest_only": 916,
+    "manifest_plus_core": 213072,
+    "full_read": 226802
   }
 }

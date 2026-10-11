@@ -11,6 +11,14 @@
 
 ---
 
+## [2026-10-11] v6.5.4
+
+Threat intel for 2026-10-10: 122 package entries from the GitHub Advisory Database and OpenSSF, all in the offline bundle. Clusters: the asepxyz Baileys fork family (12 names), @fer2809fl/baileys...
+
+Full notes: CHANGELOG.md, section [6.5.4].
+
+---
+
 ## [2026-10-09] v6.5.3
 
 Threat intel for 2026-10-08: 56 package entries from the GitHub Advisory Database, OpenSSF and the DataDog dataset (45 to the bundle, 11 to the catalog). Includes the hardhat-* and...
@@ -80,11 +88,3 @@ Full notes: CHANGELOG.md, section [6.4.0].
 The bundle cutoff advanced from 2026-08-29 to 2026-08-30, moving 145 package indicators dated 2026-08-29 from the bundle into the catalog. None of them is asserted by a test or named in the README...
 
 Full notes: CHANGELOG.md, section [6.3.3].
-
----
-
-## [2026-09-28] v6.3.2
-
-Threat intel (2026-09-27): seven package IOCs from the GitHub Advisory Database, corroborated by OpenSSF, all in the offline bundle: pypi:donutautosellsrc 0.3.7 to 0.3.9, pypi:requests-cache-utils...
-
-Full notes: CHANGELOG.md, section [6.3.2].
