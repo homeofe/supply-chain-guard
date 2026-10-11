@@ -2,7 +2,7 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "6.5.3",
-  "entryCount": 7096,
+  "entryCount": 7129,
   "generatedAt": "2026-10-11T00:00:00.000Z",
   "entries": [
     {
@@ -57742,78 +57742,6 @@
     },
     {
       "type": "package",
-      "value": "react-dropzone-v4@99.0.0",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-7945-qpg8-rjvv, MAL-2026-17758 (amazon-inspector+ossf-package-analysis)",
-      "firstSeen": "2026-10-11"
-    },
-    {
-      "type": "package",
-      "value": "pypi:agent-vx@0.1.0",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-qqmp-mxcj-44p3, MAL-2026-17755 (amazon-inspector+kam193)",
-      "firstSeen": "2026-10-10"
-    },
-    {
-      "type": "package",
-      "value": "pypi:pafer@0.9.7",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-5hwh-vp87-mgmx, MAL-2026-17756 (kam193)",
-      "firstSeen": "2026-10-10"
-    },
-    {
-      "type": "package",
-      "value": "pypi:pafer@0.9.8",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-5hwh-vp87-mgmx, MAL-2026-17756 (kam193)",
-      "firstSeen": "2026-10-10"
-    },
-    {
-      "type": "package",
-      "value": "pypi:webreader@2.3.8",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-82r3-2956-8fx5, MAL-2026-17757 (kam193)",
-      "firstSeen": "2026-10-10"
-    },
-    {
-      "type": "package",
-      "value": "@library-wide/library-shell@99.9.1",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-4vw4-9hf5-5fx8, MAL-2026-17754 (ossf-package-analysis)",
-      "firstSeen": "2026-10-10"
-    },
-    {
-      "type": "package",
-      "value": "pypi:media-manager5@0.1.0",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-hq9p-535j-wcf7, MAL-2026-17753 (kam193)",
-      "firstSeen": "2026-10-10"
-    },
-    {
-      "type": "package",
-      "value": "pypi:agentaix@0.1.0",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-7w8h-6mv7-cwm8, MAL-2026-17752 (amazon-inspector+kam193)",
-      "firstSeen": "2026-10-10"
-    },
-    {
-      "type": "package",
-      "value": "pypi:agentaix@0.2.0",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-7w8h-6mv7-cwm8, MAL-2026-17752 (amazon-inspector+kam193)",
-      "firstSeen": "2026-10-10"
-    },
-    {
-      "type": "package",
       "value": "@myorder-frontend-commons/analytics@99.0.0",
       "severity": "critical",
       "confidence": 1,
@@ -58699,6 +58627,396 @@
       "confidence": 1,
       "source": "GHSA-qq2r-xp7w-5r55, MAL-2026-17713",
       "firstSeen": "2026-10-09"
+    },
+    {
+      "type": "package",
+      "value": "@hrmony/valuenet@1.99.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5958-mpfq-wfrj, MAL-2026-17281 (amazon-inspector+ghsa-malware)",
+      "firstSeen": "2026-09-29"
+    },
+    {
+      "type": "package",
+      "value": "@hrmony/pladddform-testing@40.14.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wc37-mwww-8cwr, MAL-2026-17280 (amazon-inspector+ghsa-malware)",
+      "firstSeen": "2026-09-29"
+    },
+    {
+      "type": "package",
+      "value": "@hrmony/gutscheinverwaltung@1.99.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-g4hp-22g7-9hf5, MAL-2026-17261 (amazon-inspector+ghsa-malware)",
+      "firstSeen": "2026-09-29"
+    },
+    {
+      "type": "package",
+      "value": "@hrmony/hyper-json-builder@1.99.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-r476-wfgx-8rc7, MAL-2026-17282 (amazon-inspector+ghsa-malware)",
+      "firstSeen": "2026-09-29"
+    },
+    {
+      "type": "package",
+      "value": "@hrmony/devtool-configuration@1.99.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qh4w-rc3m-9898, MAL-2026-17260 (amazon-inspector+ghsa-malware)",
+      "firstSeen": "2026-09-29"
+    },
+    {
+      "type": "package",
+      "value": "@hrmony/component-library@28.99.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cjfr-hq8x-q26q, MAL-2026-17259 (amazon-inspector+ghsa-malware)",
+      "firstSeen": "2026-09-29"
+    },
+    {
+      "type": "domain",
+      "value": "cdnzona.discloud.app",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "Checkmarx MALFEX write-up (single-source)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "domain",
+      "value": "apicdn.squareweb.app",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "Checkmarx MALFEX write-up (single-source)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "domain",
+      "value": "bypasscdn.onrender.com",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "Checkmarx MALFEX write-up (single-source)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "domain",
+      "value": "apizona.onrender.com",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "Checkmarx MALFEX write-up (single-source)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "ip",
+      "value": "45.89.30.194",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "Checkmarx MALFEX write-up (single-source)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "ip",
+      "value": "191.96.81.101",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "Checkmarx MALFEX write-up (single-source)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "ip",
+      "value": "51.137.158.178",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "Checkmarx MALFEX write-up (single-source)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "url",
+      "value": "raw.githubusercontent.com/cavecrew/proj/main/banner.png",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "Checkmarx + CloudSEK MALFEX write-ups",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "url",
+      "value": "raw.githubusercontent.com/cavecrew/proj/main/banner.jpg",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "Checkmarx + CloudSEK MALFEX write-ups",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "url",
+      "value": "api.imghippo.com/files/hOG8244hc.png",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "Checkmarx MALFEX write-up (single-source)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "hash",
+      "value": "9aba4685af072231aee049e1a5e294965580001b364d7d00152d84fcec1ce793",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "Checkmarx MALFEX write-up (single-source)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "hash",
+      "value": "fd199d3977e1a2945b6031fc8696660a980e4f4617899baa045efe7ccbc8de67",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "Checkmarx MALFEX write-up (single-source)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "hash",
+      "value": "2989244eac2a4bc7a13a09dec003e5c05ef7c80b2afe0958ce25042d5b804210",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "Checkmarx MALFEX write-up (single-source)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "hash",
+      "value": "4f4f7d64139bde6d458a061c7fb7dd247f70f60a1ab47d87fd3634656586c106",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "Checkmarx MALFEX write-up (single-source)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "hash",
+      "value": "889e13e227bc2b762178b88c35c691db3256e72be64d92ff1f381d29a2789849",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "Checkmarx MALFEX write-up (single-source)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "hash",
+      "value": "e7f86f6cc4380db66d333eaf6f7dfc2c12d232c2bcd526434681245dea25efa4",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "Checkmarx MALFEX write-up (single-source)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "hash",
+      "value": "ff826d2778ea1d40ce8ebfd9d66ecc86d4c811f5654b8a466a7e220ebbbc6807",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "Checkmarx MALFEX write-up (single-source)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "hash",
+      "value": "2f268ca76ab27971d8b16bd4ded26e1f9cd3d4460b894af2d4bdf89f0ab7ec4b",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "Checkmarx MALFEX write-up (single-source)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "hash",
+      "value": "7acf331117900179b483142f216fdcb22c671eb0b1971abd57f01bc036248a6e",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "Checkmarx MALFEX write-up (single-source)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "hash",
+      "value": "c9c374afba4658dff15f71801e88c4d199c91dd2622d72c7b0c55577c8f73437",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "Checkmarx MALFEX write-up (single-source)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "hash",
+      "value": "c7cf2323e4923428984297db7715d75fec5b964fe65c325b53e3fa360f3b8d86",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "Checkmarx MALFEX write-up (single-source)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "hash",
+      "value": "430300450f5acbd69c29f02d8c2e243f7d1d6202d1826f6e4d7715f95c47299b",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "Checkmarx MALFEX write-up (single-source)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "hash",
+      "value": "4cba0c785e66d517eabd0164f34a9c2d04549da93b5ee3eebdce5558daa2f47c",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "Checkmarx MALFEX write-up (single-source)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "hash",
+      "value": "5c933aa533721fa293b284170dd4611a4d88f88cc89f2d9c28ea4e22305b1f75",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "Checkmarx MALFEX write-up (single-source)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "hash",
+      "value": "8f7ed69fb5505b57f06e673826779d459f7735739756de73a6d3347a9c8ea0cc",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "Checkmarx MALFEX write-up (single-source)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "hash",
+      "value": "d54853d6be467567d9f22d7f22ac48214df52c1f9c7a503930e901286423044a",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "Checkmarx MALFEX write-up (single-source)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "hash",
+      "value": "886b84f83a0f760e664046ba40d8c800b7d0cf72190e13ca031ee5cf50f45bee",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "Checkmarx MALFEX write-up (single-source)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "react-dropzone-v4@99.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7945-qpg8-rjvv, MAL-2026-17758 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-11"
+    },
+    {
+      "type": "package",
+      "value": "pypi:agent-vx@0.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qqmp-mxcj-44p3, MAL-2026-17755 (amazon-inspector+kam193)",
+      "firstSeen": "2026-10-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:pafer@0.9.7",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5hwh-vp87-mgmx, MAL-2026-17756 (kam193)",
+      "firstSeen": "2026-10-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:pafer@0.9.8",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5hwh-vp87-mgmx, MAL-2026-17756 (kam193)",
+      "firstSeen": "2026-10-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:webreader@2.3.8",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-82r3-2956-8fx5, MAL-2026-17757 (kam193)",
+      "firstSeen": "2026-10-10"
+    },
+    {
+      "type": "package",
+      "value": "@library-wide/library-shell@99.9.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4vw4-9hf5-5fx8, MAL-2026-17754 (ossf-package-analysis)",
+      "firstSeen": "2026-10-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:media-manager5@0.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hq9p-535j-wcf7, MAL-2026-17753 (kam193)",
+      "firstSeen": "2026-10-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:agentaix@0.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7w8h-6mv7-cwm8, MAL-2026-17752 (amazon-inspector+kam193)",
+      "firstSeen": "2026-10-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:agentaix@0.2.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7w8h-6mv7-cwm8, MAL-2026-17752 (amazon-inspector+kam193)",
+      "firstSeen": "2026-10-10"
     },
     {
       "type": "package",

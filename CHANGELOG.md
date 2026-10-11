@@ -9,15 +9,25 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Added
 
-- Threat intel for 2026-10-11: 206 package entries from the GitHub Advisory
-  Database, OpenSSF and the DataDog dataset, all in the bundle (the importer
-  routed 201 to the bundle and 5 to the catalog; the 5 were moved, see
-  below). Clusters: 25 RubyGems crypto-tooling names at 0.9.1 (MAL-2026-17779
-  to 17802), the `asepxyz` Baileys fork family, `@fer2809fl/baileys` and
-  `cloud-baileys`, the dependency-confusion pins `@galicia-toolkit-nestjs*`,
-  `@brick-v2`, `@coopeuch`, `@myorder-frontend-commons`, `kmf-*`,
-  `nitro-*` and `@s4yhiitestpoc`, PyPI `agentaix`, `pafer` and `webreader`,
-  and crates.io `sharpnes`.
+- Threat intel for 2026-10-10: 122 package entries from the GitHub Advisory
+  Database and OpenSSF, all in the offline bundle. Clusters: the `asepxyz`
+  Baileys fork family (12 names), `@fer2809fl/baileys` and `cloud-baileys`,
+  the `@galicia-toolkit-nestjs*`, `@brick-v2`, `@myorder-frontend-commons`
+  and `kmf-*` dependency-confusion scopes (exact pins), `tailwind-animatecss-*`,
+  PyPI `ig-gox` and the crates.io infostealer `sharpnes`.
+- MALFEX npm campaign (Checkmarx, CloudSEK, October 2026): four payload
+  subdomains on shared hosting platforms, three payload IPs, the `cavecrew`
+  GitHub account and its two payload paths, the Overlord loader path on
+  `api[.]imghippo[.]com`, and 17 SHA-256 hashes. The packages were already
+  covered. The shared apexes and the signed AutoIt3.exe are not listed.
+- Threat intel for 2026-10-11: 93 further package entries from the GitHub
+  Advisory Database and OpenSSF on top of the 2026-10-10 import, all in the
+  offline bundle. Clusters: 24 RubyGems crypto-tooling names at 0.9.1
+  (MAL-2026-17779 to 17802), the dependency-confusion pins `@coopeuch`,
+  `@s4yhiitestpoc`, `@library-wide/library-shell`, `nitro-*`, `ksp-*`,
+  `pay-methods-kmf`, `deposit-limit-fe` and further `kmf-*` and
+  `@myorder-frontend-commons` versions, and PyPI `agentaix`, `agent-vx`,
+  `media-manager5`, `pafer` and `webreader`.
 - GhostAction GitHub Actions secret exfiltration (October 2026): the
   exfiltration IP `193[.]32[.]204[.]199` of the injected
   `security-audit.yml` / `github_actions_security.yml` workflows, the
@@ -29,12 +39,13 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   the Socket, StepSecurity and GitGuardian write-ups. The compromised
   maintainer accounts are victims and are not listed.
 
-### Changed
+### Fixed
 
-- The five `@tvg-mar` records of 2026-09-22 (MAL-2026-16412 to 16416), widened
-  by the GitHub Advisory Database from 9.9.10 pins to whole-package claims,
-  were routed to the catalog by the 2026-09-22 window and are moved into the
-  curated 2026-09-22 bundle block, which now holds 63 records.
+- Five records of 2026-09-22 (the `@tvg-mar` scope, MAL-2026-16412 to 16416)
+  reached GitHub on 2026-10-09 and were routed to the catalog by that day's
+  `catalogWindows` entry, which was declared for a ReversingLabs RubyGems
+  batch. They are moved into the curated 2026-09-22 block of the bundle,
+  which now holds 63 records, and the pre-release review test checks all 63.
 
 ## [6.5.3] - 2026-10-09
 

@@ -139,7 +139,9 @@ describe("Terraform required_providers on one line", () => {
 describe("the 2026-09-22 daily intelligence", () => {
   // The catalog window for that day was set for one ReversingLabs batch
   // (MAL-2026-16487 to 17152); a window covers the whole day, so it also moved
-  // that day's other, fresh records out of the offline bundle.
+  // that day's other, fresh records out of the offline bundle. 58 were found in
+  // the 6.3.0 review; five more of that day (the @tvg-mar scope, MAL-2026-16412
+  // to 16416) reached GitHub on 2026-10-09 and were curated the next day.
   const malIn = (e: FeedIOC, lo: number, hi: number) =>
     [...String(e.source ?? "").matchAll(/MAL-2026-(\d+)/g)].some((m) => Number(m[1]) >= lo && Number(m[1]) <= hi);
   const batch = (e: FeedIOC) => malIn(e, 16487, 17152);
@@ -147,11 +149,9 @@ describe("the 2026-09-22 daily intelligence", () => {
 
   it("ships the records outside the bulk batch in the bundle", () => {
     const fresh = day().filter((e) => malIn(e, 16374, 16466));
-    // 58 at the v6.3.0 review, plus the five @tvg-mar whole-package claims the
-    // advisory database published on 2026-10-11 for the same MAL ids.
     expect(fresh).toHaveLength(63);
-    expect(fresh.map((e) => e.value)).toContain("@tvg-mar/utils");
     expect(fresh.map((e) => e.value)).toContain("ubiquiti-agents-link-mcp");
+    expect(fresh.map((e) => e.value)).toContain("@tvg-mar/utils");
     // Control: the bulk batch itself stays out of the bundle.
     expect(day().filter(batch)).toEqual([]);
   });
