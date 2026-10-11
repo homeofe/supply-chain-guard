@@ -7,6 +7,35 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat intel for 2026-10-11: 206 package entries from the GitHub Advisory
+  Database, OpenSSF and the DataDog dataset, all in the bundle (the importer
+  routed 201 to the bundle and 5 to the catalog; the 5 were moved, see
+  below). Clusters: 25 RubyGems crypto-tooling names at 0.9.1 (MAL-2026-17779
+  to 17802), the `asepxyz` Baileys fork family, `@fer2809fl/baileys` and
+  `cloud-baileys`, the dependency-confusion pins `@galicia-toolkit-nestjs*`,
+  `@brick-v2`, `@coopeuch`, `@myorder-frontend-commons`, `kmf-*`,
+  `nitro-*` and `@s4yhiitestpoc`, PyPI `agentaix`, `pafer` and `webreader`,
+  and crates.io `sharpnes`.
+- GhostAction GitHub Actions secret exfiltration (October 2026): the
+  exfiltration IP `193[.]32[.]204[.]199` of the injected
+  `security-audit.yml` / `github_actions_security.yml` workflows, the
+  earlier-wave endpoints `170[.]39[.]218[.]2` and `45[.]139[.]104[.]115`, and
+  the hosts `carte-avantage[.]com`,
+  `bold-dhawan[.]45-139-104-115[.]plesk[.]page` and
+  `objective-hopper[.]45-139-104-115[.]plesk[.]page` (only the attacker
+  subdomains of the shared apex). Curated bundle entries with a campaign, from
+  the Socket, StepSecurity and GitGuardian write-ups. The compromised
+  maintainer accounts are victims and are not listed.
+
+### Changed
+
+- The five `@tvg-mar` records of 2026-09-22 (MAL-2026-16412 to 16416), widened
+  by the GitHub Advisory Database from 9.9.10 pins to whole-package claims,
+  were routed to the catalog by the 2026-09-22 window and are moved into the
+  curated 2026-09-22 bundle block, which now holds 63 records.
+
 ## [6.5.3] - 2026-10-09
 
 ### Added

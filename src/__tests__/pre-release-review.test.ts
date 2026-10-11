@@ -147,7 +147,10 @@ describe("the 2026-09-22 daily intelligence", () => {
 
   it("ships the records outside the bulk batch in the bundle", () => {
     const fresh = day().filter((e) => malIn(e, 16374, 16466));
-    expect(fresh).toHaveLength(58);
+    // 58 at the v6.3.0 review, plus the five @tvg-mar whole-package claims the
+    // advisory database published on 2026-10-11 for the same MAL ids.
+    expect(fresh).toHaveLength(63);
+    expect(fresh.map((e) => e.value)).toContain("@tvg-mar/utils");
     expect(fresh.map((e) => e.value)).toContain("ubiquiti-agents-link-mcp");
     // Control: the bulk batch itself stays out of the bundle.
     expect(day().filter(batch)).toEqual([]);
@@ -156,14 +159,14 @@ describe("the 2026-09-22 daily intelligence", () => {
   it("stays in the bundle at the next release's migration", () => {
     // check:feed-partition does not evaluate the curated-comment rule; only the
     // migration does. So ask the migration: with the committed cutoff and
-    // windows, none of the 58 may be planned to move.
+    // windows, none of the 63 may be planned to move.
     const root = path.resolve(__dirname, "..", "..");
     const source = fs.readFileSync(path.join(root, "src", "threat-intel.ts"), "utf8");
     const moves = new Set(
       (planMigration(source, loadPartitionConfig(root)) as { move: Array<{ value: string }> }).move.map((m) => m.value),
     );
     const fresh = day().filter((e) => malIn(e, 16374, 16466)).map((e) => e.value);
-    expect(fresh).toHaveLength(58);
+    expect(fresh).toHaveLength(63);
     expect(fresh.filter((v) => moves.has(v))).toEqual([]);
   });
 

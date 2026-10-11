@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1791539387",
-    "timestamp": "2026-10-09T09:49:47Z",
-    "commit": "cb428bc",
+    "session_id": "cli-1791730502",
+    "timestamp": "2026-10-11T14:55:02Z",
+    "commit": "5f7a132",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:2dd2c0b78b8b354792aeec0d26b8cfe760482573972cf8d028a347938077ae75",
-      "updated": "2026-10-09T09:49:01Z",
-      "lines": 14168,
-      "summary": "Patch release on top of PR 397 (2026-10-08 threat intel, tensorlake) and PR 398 (2026-10-09 threat intel, the pin-only list for..."
+      "checksum": "sha256:d719e9df3e5df4461881210873a987f2e651a18529771f560f2f84db19f85f9d",
+      "updated": "2026-10-11T14:55:01Z",
+      "lines": 14213,
+      "summary": "Scheduled run, branch cut from `main` at `5f7a132`."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:a6e4f132b94b4108d54794f335f3fca7efda7e7fcd3edd83f423550189a0ac5a",
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "Patch release on top of PR 397 (2026-10-08 threat intel, tensorlake) and PR 398 (2026-10-09 threat intel, the pin-only list for... Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Scheduled run, branch cut from `main` at `5f7a132`. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 924,
-    "manifest_plus_core": 211148,
-    "full_read": 224879
+    "manifest_only": 884,
+    "manifest_plus_core": 211770,
+    "full_read": 225501
   }
 }

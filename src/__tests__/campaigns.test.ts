@@ -7663,6 +7663,60 @@ describe("Campaign Signatures", () => {
   });
 
   // =================================================================
+  // GhostAction GitHub Actions secret exfiltration (October 2026)
+  // =================================================================
+
+  describe("GhostAction GitHub Actions secret exfiltration (October 2026)", () => {
+    it("should detect the exfiltration IP", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "exfil.js"),
+        'const u = "http://193.32.204.199/?c=monami";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_IP"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect an earlier-wave plesk.page exfiltration host", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "c2.js"),
+        'const u = "https://bold-dhawan.45-139-104-115.plesk.page/collect";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    // plesk.page is a shared hosting apex: only the attacker subdomains are
+    // listed, so another tenant on the same apex must stay clean.
+    it("must NOT flag another subdomain of the shared plesk.page apex", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "c2.js"),
+        'const u = "https://example-shop.plesk.page/";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN")
+      ).toBeUndefined();
+    });
+
+    it("keeps every GhostAction indicator in the bundle", () => {
+      const feed = getBundledFeed();
+      const set = feed.filter((i) => i.campaign === "GhostAction GitHub Actions secret exfiltration");
+      expect(set.length, "3 IPs and 3 hosts must be bundled").toBe(6);
+    });
+  });
+
+  // =================================================================
   // Install-time infostealers and recon collectors (September 2026)
   // =================================================================
 

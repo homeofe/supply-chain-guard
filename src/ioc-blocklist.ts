@@ -557,6 +557,13 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // GlassWorm-linked VS Code / Open VSX theme extensions (October 2026): the
   // loader fetches its AES-encrypted stage from this host (Socket, single-source).
   "fingercakes4sale.store",
+  // GhostAction GitHub Actions secret exfiltration (October 2026): exfiltration
+  // hosts of the earlier waves (September 2025), listed again by StepSecurity and
+  // GitGuardian for log review. plesk.page is a shared hosting apex, so only the
+  // attacker subdomains are listed; objective-hopper is GitGuardian only.
+  "bold-dhawan.45-139-104-115.plesk.page",
+  "objective-hopper.45-139-104-115.plesk.page",
+  "carte-avantage.com",
 ];
 
 // ---------------------------------------------------------------------------
@@ -819,6 +826,15 @@ export const KNOWN_C2_IPS: string[] = [
   // SubQuery @subql/common compromise (October 2026). Resolves the
   // ci-artifacts[.]dev C2 (Flatt Security).
   "185.146.234.137",
+  // GhostAction GitHub Actions secret exfiltration (October 2026): the injected
+  // security-audit.yml / github_actions_security.yml workflows POST harvested
+  // secrets over plain HTTP here, ports 80 and 3000 (Socket + StepSecurity +
+  // GitGuardian).
+  "193.32.204.199",
+  // GhostAction earlier-wave exfiltration endpoints (October 2025 to March 2026,
+  // and the address behind the 2025 plesk.page hosts), StepSecurity + GitGuardian.
+  "170.39.218.2",
+  "45.139.104.115",
 ];
 
 // ---------------------------------------------------------------------------
