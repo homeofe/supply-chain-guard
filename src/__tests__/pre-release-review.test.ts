@@ -139,7 +139,9 @@ describe("Terraform required_providers on one line", () => {
 describe("the 2026-09-22 daily intelligence", () => {
   // The catalog window for that day was set for one ReversingLabs batch
   // (MAL-2026-16487 to 17152); a window covers the whole day, so it also moved
-  // that day's other, fresh records out of the offline bundle.
+  // that day's other, fresh records out of the offline bundle. 58 were found in
+  // the 6.3.0 review; five more of that day (the @tvg-mar scope, MAL-2026-16412
+  // to 16416) reached GitHub on 2026-10-09 and were curated the next day.
   const malIn = (e: FeedIOC, lo: number, hi: number) =>
     [...String(e.source ?? "").matchAll(/MAL-2026-(\d+)/g)].some((m) => Number(m[1]) >= lo && Number(m[1]) <= hi);
   const batch = (e: FeedIOC) => malIn(e, 16487, 17152);
@@ -147,8 +149,9 @@ describe("the 2026-09-22 daily intelligence", () => {
 
   it("ships the records outside the bulk batch in the bundle", () => {
     const fresh = day().filter((e) => malIn(e, 16374, 16466));
-    expect(fresh).toHaveLength(58);
+    expect(fresh).toHaveLength(63);
     expect(fresh.map((e) => e.value)).toContain("ubiquiti-agents-link-mcp");
+    expect(fresh.map((e) => e.value)).toContain("@tvg-mar/utils");
     // Control: the bulk batch itself stays out of the bundle.
     expect(day().filter(batch)).toEqual([]);
   });
@@ -156,14 +159,14 @@ describe("the 2026-09-22 daily intelligence", () => {
   it("stays in the bundle at the next release's migration", () => {
     // check:feed-partition does not evaluate the curated-comment rule; only the
     // migration does. So ask the migration: with the committed cutoff and
-    // windows, none of the 58 may be planned to move.
+    // windows, none of the 63 may be planned to move.
     const root = path.resolve(__dirname, "..", "..");
     const source = fs.readFileSync(path.join(root, "src", "threat-intel.ts"), "utf8");
     const moves = new Set(
       (planMigration(source, loadPartitionConfig(root)) as { move: Array<{ value: string }> }).move.map((m) => m.value),
     );
     const fresh = day().filter((e) => malIn(e, 16374, 16466)).map((e) => e.value);
-    expect(fresh).toHaveLength(58);
+    expect(fresh).toHaveLength(63);
     expect(fresh.filter((v) => moves.has(v))).toEqual([]);
   });
 

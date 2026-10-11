@@ -7663,6 +7663,58 @@ describe("Campaign Signatures", () => {
   });
 
   // =================================================================
+  // MALFEX npm campaign (October 2026)
+  // =================================================================
+
+  describe("MALFEX npm campaign (October 2026)", () => {
+    const scanFile = async (name: string, content: string) => {
+      fs.writeFileSync(path.join(tempDir, name), content);
+      return (await scan({ target: tempDir, format: "text" })).findings;
+    };
+
+    it("should detect a function-flag payload host", async () => {
+      const findings = await scanFile("c2.js", 'const u = "https://apizona.onrender.com/attachments/1/2/x.exe";');
+      const finding = findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect a payload IP", async () => {
+      const findings = await scanFile("ip.js", 'const u = "https://45.89.30.194/attachments/1/2/nocry.exe";');
+      expect(findings.some((f) => f.rule === "IOC_KNOWN_C2_IP")).toBe(true);
+    });
+
+    it("should detect the cavecrew payload path", async () => {
+      const findings = await scanFile("dd.js", 'fetch("https://raw.githubusercontent.com/cavecrew/proj/main/banner.png");');
+      expect(findings.some((f) => f.rule === "IOC_KNOWN_DEAD_DROP")).toBe(true);
+    });
+
+    it("should detect the decoded Overlord RAT SHA256 as text", async () => {
+      const findings = await scanFile("hash.js", 'const sha = "2989244eac2a4bc7a13a09dec003e5c05ef7c80b2afe0958ce25042d5b804210";');
+      expect(findings.some((f) => f.rule === "IOC_KNOWN_MALWARE_HASH")).toBe(true);
+    });
+
+    // The shared hosting apexes are not attacker infrastructure.
+    it("does not flag the shared onrender.com apex", async () => {
+      const findings = await scanFile("ok.js", 'const u = "https://my-app.onrender.com/api";');
+      expect(findings.some((f) => f.rule === "IOC_KNOWN_C2_DOMAIN")).toBe(false);
+    });
+
+    it("flags the reported function-color versions only", () => {
+      const feed = getBundledFeed();
+      expect(matchBareNpmIOC("function-color", "1.7.3", feed)).not.toBeNull();
+      expect(matchBareNpmIOC("function-color", "1.0.0", feed)).not.toBeNull();
+      expect(matchBareNpmIOC("function-color", "1.0.1", feed)).toBeNull();
+    });
+
+    it("keeps every MALFEX atomic indicator in the bundle", () => {
+      const feed = getBundledFeed();
+      const set = feed.filter((i) => i.campaign === "MALFEX npm campaign");
+      expect(set.length, "4 domains, 3 IPs, 3 URLs and 17 hashes must be bundled").toBe(27);
+    });
+  });
+
+  // =================================================================
   // Install-time infostealers and recon collectors (September 2026)
   // =================================================================
 

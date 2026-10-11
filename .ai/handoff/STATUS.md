@@ -1,3 +1,58 @@
+## Daily threat intel (2026-10-10) (claude-opus-5-5)
+
+Scheduled run on `thread` (Linux), worktree from `origin/main` at `5f7a132`.
+
+The VS Code Marketplace was degraded at the start of the run (about 30% of
+gallery queries answered 503, others timed out), and the importer fails closed
+on any extension probe error, so four windowed runs with DataDog aborted before
+writing anything. The windowed import therefore ran with `--no-datadog`
+(GitHub Advisory Database and OpenSSF); DataDog was reconciled by the snapshot
+run below, which went through once the marketplace answered. Worth a look in
+an interactive session: a bounded retry in `probeExtensionVersions` would keep
+one transient 503 from aborting the whole run.
+
+Windowed import: 122 new, 117 to the bundle and 5 to the catalog. No page cap,
+no `--limit`, nothing declined, deferred or unmapped (1 acknowledged); skipped:
+1 withdrawn, 5 pin-only without a version, 1 unmappable range (the acknowledged
+record). All 19 npm bare names probed: every one is a security holding
+package. `cargo:sharpnes` is live on crates.io but was created on 2026-10-09 by
+the publishing account MAL-2026-17713 names, all six versions that day, so the
+bare name stands.
+
+The 5 catalog entries were the `@tvg-mar` scope (MAL-2026-16412 to 16416,
+amazon-inspector and ghsa-malware, firstSeen 2026-09-22), published to GitHub
+only on 2026-10-09 and caught by the 2026-09-22 `catalogWindows` entry declared
+for the ReversingLabs RubyGems batch. They were moved out of the catalog through
+`readCatalogText` / `writeCatalogText` (each line matched once; the catalog part
+is byte-identical to `main` again) into the curated 2026-09-22 block in
+`FEED_CHUNK_21`, which now holds 63. `pre-release-review.test.ts` asserts 63
+through `planMigration`. Final split: 122 to the bundle, 0 to the catalog. No new
+`catalogWindows` entry.
+
+Snapshot reconcile: dry run 0 new, so the write was not run; `--check` exit 0,
+0 new, 0 unmapped, 22 acknowledged, no stale line. DataDog: 4,236 whole-package
+claims, 0 bare names, 7,883 pins, 519 without a sampled version, 1,338 manifest
+lines without a sample, 103 IDE extensions checked; the six known
+still-published extension versions and no new one. Not a Monday, so no full
+GitHub history run.
+
+Enrichment, MALFEX npm campaign (Checkmarx table; CloudSEK corroborates the
+campaign, `cavecrew` and the stealer-chain repo): payload subdomains
+cdnzona[.]discloud[.]app, apicdn[.]squareweb[.]app, bypasscdn[.]onrender[.]com,
+apizona[.]onrender[.]com; IPs 45[.]89[.]30[.]194, 191[.]96[.]81[.]101,
+51[.]137[.]158[.]178; GitHub account `cavecrew` and its two payload paths, the
+Overlord loader path on api[.]imghippo[.]com; 17 SHA-256 hashes. All bundled
+with `family: "MALFEX"`. Not added: the signed AutoIt3.exe hash (legitimate
+binary), the shared apexes, the truncated Discord webhook and attachment URLs,
+the mxdriver delivery domain (no evidence it is attacker-owned). The packages
+were already covered (`function-flag`, `cdn-img-fetch`, `img-to-native`,
+`native-runner` by name; the loaders and `function-color` by pin).
+104[.]234[.]65[.]75 (movinlike) was already listed under requests-cache-utils.
+MAL-2026-17713 also publishes two Telegram bot URLs carrying bot tokens; not
+added, there is no precedent for token-bearing URLs in the repository.
+
+D-062: the queue file is not on this host, so it was not skimmed today.
+
 ## Release v6.5.3 (2026-10-09) (claude-opus-5-5)
 
 Patch release on top of PR 397 (2026-10-08 threat intel, tensorlake) and PR

@@ -7,6 +7,28 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat intel for 2026-10-10: 122 package entries from the GitHub Advisory
+  Database and OpenSSF, all in the offline bundle. Clusters: the `asepxyz`
+  Baileys fork family (12 names), `@fer2809fl/baileys` and `cloud-baileys`,
+  the `@galicia-toolkit-nestjs*`, `@brick-v2`, `@myorder-frontend-commons`
+  and `kmf-*` dependency-confusion scopes (exact pins), `tailwind-animatecss-*`,
+  PyPI `ig-gox` and the crates.io infostealer `sharpnes`.
+- MALFEX npm campaign (Checkmarx, CloudSEK, October 2026): four payload
+  subdomains on shared hosting platforms, three payload IPs, the `cavecrew`
+  GitHub account and its two payload paths, the Overlord loader path on
+  `api[.]imghippo[.]com`, and 17 SHA-256 hashes. The packages were already
+  covered. The shared apexes and the signed AutoIt3.exe are not listed.
+
+### Fixed
+
+- Five records of 2026-09-22 (the `@tvg-mar` scope, MAL-2026-16412 to 16416)
+  reached GitHub on 2026-10-09 and were routed to the catalog by that day's
+  `catalogWindows` entry, which was declared for a ReversingLabs RubyGems
+  batch. They are moved into the curated 2026-09-22 block of the bundle,
+  which now holds 63 records, and the pre-release review test checks all 63.
+
 ## [6.5.3] - 2026-10-09
 
 ### Added

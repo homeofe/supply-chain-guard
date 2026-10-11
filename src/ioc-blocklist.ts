@@ -557,6 +557,14 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // GlassWorm-linked VS Code / Open VSX theme extensions (October 2026): the
   // loader fetches its AES-encrypted stage from this host (Socket, single-source).
   "fingercakes4sale.store",
+  // MALFEX npm campaign (October 2026): function-flag payload hosts (Checkmarx,
+  // single-source for these hosts). Only the attacker subdomains are listed;
+  // the discloud[.]app, squareweb[.]app and onrender[.]com apexes are shared
+  // hosting platforms and deliberately NOT listed.
+  "cdnzona.discloud.app",
+  "apicdn.squareweb.app",
+  "bypasscdn.onrender.com",
+  "apizona.onrender.com",
 ];
 
 // ---------------------------------------------------------------------------
@@ -819,6 +827,12 @@ export const KNOWN_C2_IPS: string[] = [
   // SubQuery @subql/common compromise (October 2026). Resolves the
   // ci-artifacts[.]dev C2 (Flatt Security).
   "185.146.234.137",
+  // MALFEX npm campaign (October 2026): function-flag 2.3.5 to 2.3.9 payload
+  // hosts (Checkmarx, single-source). 104[.]234[.]65[.]75 (movinlike) is
+  // already listed above under requests-cache-utils.
+  "45.89.30.194",
+  "191.96.81.101",
+  "51.137.158.178",
 ];
 
 // ---------------------------------------------------------------------------
@@ -1052,6 +1066,13 @@ export const KNOWN_DEAD_DROPS: string[] = [
   // a real fetch URL both match. The host is also in KNOWN_C2_DOMAINS above.
   "check.git-service.com/rope.pyz",
   "jsonkeeper.com/b/YY8VI",
+  // MALFEX npm campaign (October 2026): payload paths of the cdn-img-fetch
+  // stealer chain and the Overlord RAT loader (Checkmarx; the cavecrew repo is
+  // also named by CloudSEK). raw[.]githubusercontent[.]com and api[.]imghippo[.]com
+  // are shared hosts, so only these exact paths are listed.
+  "raw.githubusercontent.com/cavecrew/proj/main/banner.png",
+  "raw.githubusercontent.com/cavecrew/proj/main/banner.jpg",
+  "api.imghippo.com/files/hOG8244hc.png",
 ];
 
 // ---------------------------------------------------------------------------
@@ -1568,6 +1589,25 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   "5e68ca8c2097caccdb74d2752b85b85595a4bf646b442b8431a2416e87dbf268": "GlassWorm themes: out/extension.js loader in microsoftvs.microsoftvs (SHA256)",
   "684c877a52d226d50584cb886ca8ec5bec6355d4de853f406734c79d5b387804": "GlassWorm themes: app.js loader in cosmic-themes.theme-cosmic-nebula (SHA256)",
   "da2d950e50326171adbff9c2bfd6f28998e32623ea7c2c475b9159a45cfb86bb": "GlassWorm themes: decrypted embedded stage in cosmic-themes.theme-cosmic-nebula (SHA256)",
+  // MALFEX npm campaign (October 2026), Checkmarx. The signed AutoIt3.exe in
+  // the loader archive is a legitimate binary and deliberately NOT listed.
+  "9aba4685af072231aee049e1a5e294965580001b364d7d00152d84fcec1ce793": "MALFEX: Overlord RAT loader served as a PNG (IExpress archive) (SHA256)",
+  "fd199d3977e1a2945b6031fc8696660a980e4f4617899baa045efe7ccbc8de67": "MALFEX: encrypted AutoIt script Oxygen.a3x / h.a3x (SHA256)",
+  "2989244eac2a4bc7a13a09dec003e5c05ef7c80b2afe0958ce25042d5b804210": "MALFEX: decoded Overlord RAT (SHA256)",
+  "4f4f7d64139bde6d458a061c7fb7dd247f70f60a1ab47d87fd3634656586c106": "MALFEX: banner.png stealer-chain payload (SHA256)",
+  "889e13e227bc2b762178b88c35c691db3256e72be64d92ff1f381d29a2789849": "MALFEX: stealer-chain downloader (SHA256)",
+  "e7f86f6cc4380db66d333eaf6f7dfc2c12d232c2bcd526434681245dea25efa4": "MALFEX: stealer-chain downloader (SHA256)",
+  "ff826d2778ea1d40ce8ebfd9d66ecc86d4c811f5654b8a466a7e220ebbbc6807": "MALFEX: stealer-chain downloader (SHA256)",
+  "2f268ca76ab27971d8b16bd4ded26e1f9cd3d4460b894af2d4bdf89f0ab7ec4b": "MALFEX: stealer-chain downloader (SHA256)",
+  "7acf331117900179b483142f216fdcb22c671eb0b1971abd57f01bc036248a6e": "MALFEX: tlxbnhd scripts/postinstall.js (SHA256)",
+  "c9c374afba4658dff15f71801e88c4d199c91dd2622d72c7b0c55577c8f73437": "MALFEX: movinlike Node.js stealer bundle (SHA256)",
+  "c7cf2323e4923428984297db7715d75fec5b964fe65c325b53e3fa360f3b8d86": "MALFEX: img-to-native 1.0.1 index.js (SHA256)",
+  "430300450f5acbd69c29f02d8c2e243f7d1d6202d1826f6e4d7715f95c47299b": "MALFEX: cdn-img-fetch 1.0.0/1.0.1 index.js (SHA256)",
+  "4cba0c785e66d517eabd0164f34a9c2d04549da93b5ee3eebdce5558daa2f47c": "MALFEX: cdn-img-fetch 1.0.2 index.js (SHA256)",
+  "5c933aa533721fa293b284170dd4611a4d88f88cc89f2d9c28ea4e22305b1f75": "MALFEX: cdn-img-fetch 1.0.3 index.js (SHA256)",
+  "8f7ed69fb5505b57f06e673826779d459f7735739756de73a6d3347a9c8ea0cc": "MALFEX: cdn-img-fetch 1.0.3 banner.jpg payload (SHA256)",
+  "d54853d6be467567d9f22d7f22ac48214df52c1f9c7a503930e901286423044a": "MALFEX: function-flag 1.7.3 index.js (SHA256)",
+  "886b84f83a0f760e664046ba40d8c800b7d0cf72190e13ca031ee5cf50f45bee": "MALFEX: function-flag 1.7.3 example.js postinstall (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
@@ -1776,6 +1816,9 @@ export const KNOWN_MALICIOUS_GITHUB_ACCOUNTS: string[] = [
   "aubineherodvulbdl",
   "lohsebhipolg2s",
   "vovanloc2234-sudo",
+  // MALFEX npm campaign (October 2026): operator account hosting the
+  // stealer-chain payloads in cavecrew/proj (Checkmarx + CloudSEK)
+  "cavecrew",
 ];
 
 // ---------------------------------------------------------------------------
