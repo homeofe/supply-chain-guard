@@ -565,6 +565,13 @@ export const KNOWN_C2_DOMAINS: string[] = [
   "apicdn.squareweb.app",
   "bypasscdn.onrender.com",
   "apizona.onrender.com",
+  // GhostAction GitHub Actions secret exfiltration (October 2026): exfiltration
+  // hosts of the earlier waves (September 2025), listed again by StepSecurity and
+  // GitGuardian for log review. plesk.page is a shared hosting apex, so only the
+  // attacker subdomains are listed; objective-hopper is GitGuardian only.
+  "bold-dhawan.45-139-104-115.plesk.page",
+  "objective-hopper.45-139-104-115.plesk.page",
+  "carte-avantage.com",
 ];
 
 // ---------------------------------------------------------------------------
@@ -833,6 +840,15 @@ export const KNOWN_C2_IPS: string[] = [
   "45.89.30.194",
   "191.96.81.101",
   "51.137.158.178",
+  // GhostAction GitHub Actions secret exfiltration (October 2026): the injected
+  // security-audit.yml / github_actions_security.yml workflows POST harvested
+  // secrets over plain HTTP here, ports 80 and 3000 (Socket + StepSecurity +
+  // GitGuardian).
+  "193.32.204.199",
+  // GhostAction earlier-wave exfiltration endpoints (October 2025 to March 2026,
+  // and the address behind the 2025 plesk.page hosts), StepSecurity + GitGuardian.
+  "170.39.218.2",
+  "45.139.104.115",
 ];
 
 // ---------------------------------------------------------------------------

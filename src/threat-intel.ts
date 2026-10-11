@@ -40,7 +40,7 @@ export type FeedIOCInput = Omit<FeedIOC, "confidence"> & {
  * Generation timestamp for the bundled IOC feed (v5.29, issue #208).
  * Pure function of feed updates; preserved across builds.
  */
-export const FEED_GENERATED_AT = "2026-10-10T00:00:00.000Z";
+export const FEED_GENERATED_AT = "2026-10-11T00:00:00.000Z";
 
 // ---------------------------------------------------------------------------
 // Default bundled feed (curated by supply-chain-guard)
@@ -8244,11 +8244,11 @@ const FEED_CHUNK_25: FeedIOC[] = [
   { type: "package", value: "@galicia-toolkit/error-master@999.0.3", severity: "critical", confidence: 1.0, source: "MAL-2026-17689 (amazon-inspector+ghsa-malware)", firstSeen: "2026-10-08" },
 
   // Imported from GitHub Advisory Database (2026-09-26) - see docs/threat-feed-sources.md
-  { type: "package", value: "@myorder-frontend-commons/analytics@99.0.0", severity: "critical", confidence: 1.0, source: "GHSA-rjqp-7c89-4x98, MAL-2026-17749 (ossf-package-analysis)", firstSeen: "2026-10-09" },
-  { type: "package", value: "@myorder-frontend-commons/analytics@10.0.0", severity: "critical", confidence: 1.0, source: "GHSA-rjqp-7c89-4x98, MAL-2026-17749 (ossf-package-analysis)", firstSeen: "2026-10-09" },
-  { type: "package", value: "@myorder-frontend-commons/analytics@3.0.0", severity: "critical", confidence: 1.0, source: "GHSA-rjqp-7c89-4x98, MAL-2026-17749 (ossf-package-analysis)", firstSeen: "2026-10-09" },
-  { type: "package", value: "kmf-bootstrap@100.100.102", severity: "critical", confidence: 1.0, source: "GHSA-97h4-9p9c-qhp2, MAL-2026-17746 (ossf-package-analysis)", firstSeen: "2026-10-09" },
-  { type: "package", value: "kmf-bootstrap@100.100.103", severity: "critical", confidence: 1.0, source: "GHSA-97h4-9p9c-qhp2, MAL-2026-17746 (ossf-package-analysis)", firstSeen: "2026-10-09" },
+  { type: "package", value: "@myorder-frontend-commons/analytics@99.0.0", severity: "critical", confidence: 1.0, source: "GHSA-rjqp-7c89-4x98, MAL-2026-17749 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-10-09" },
+  { type: "package", value: "@myorder-frontend-commons/analytics@10.0.0", severity: "critical", confidence: 1.0, source: "GHSA-rjqp-7c89-4x98, MAL-2026-17749 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-10-09" },
+  { type: "package", value: "@myorder-frontend-commons/analytics@3.0.0", severity: "critical", confidence: 1.0, source: "GHSA-rjqp-7c89-4x98, MAL-2026-17749 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-10-09" },
+  { type: "package", value: "kmf-bootstrap@100.100.102", severity: "critical", confidence: 1.0, source: "GHSA-97h4-9p9c-qhp2, MAL-2026-17746 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-10-09" },
+  { type: "package", value: "kmf-bootstrap@100.100.103", severity: "critical", confidence: 1.0, source: "GHSA-97h4-9p9c-qhp2, MAL-2026-17746 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-10-09" },
   { type: "package", value: "test-account-portal-fe@100.100.102", severity: "critical", confidence: 1.0, source: "GHSA-rh76-qjhp-v9m8, MAL-2026-17748 (ossf-package-analysis)", firstSeen: "2026-10-09" },
   { type: "package", value: "kmf-i18n@100.100.102", severity: "critical", confidence: 1.0, source: "GHSA-c93g-xqm8-mjcg, MAL-2026-17747 (ossf-package-analysis)", firstSeen: "2026-10-09" },
   { type: "package", value: "@fer2809fl/baileys@1.4.5", severity: "critical", confidence: 0.9, source: "GHSA-wv7g-r3r9-ww8v, MAL-2026-17750 (ghsa-malware)", firstSeen: "2026-10-09" },
@@ -8353,7 +8353,7 @@ const FEED_CHUNK_25: FeedIOC[] = [
   { type: "package", value: "asepxyzz", severity: "critical", confidence: 0.9, source: "GHSA-hmqh-m5mj-f7mm, MAL-2026-17739 (ghsa-malware)", firstSeen: "2026-10-09" },
   { type: "package", value: "asepxyz-eslint-config", severity: "critical", confidence: 0.9, source: "GHSA-rhjp-rpj7-8x4q, MAL-2026-17734 (ghsa-malware)", firstSeen: "2026-10-09" },
   { type: "package", value: "asepxyz-signal", severity: "critical", confidence: 0.9, source: "GHSA-38rx-c4rh-xc4p, MAL-2026-17735 (ghsa-malware)", firstSeen: "2026-10-09" },
-  { type: "package", value: "pypi:ig-gox@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-rhpj-mr3r-r4gg, MAL-2026-17712 (kam193)", firstSeen: "2026-10-09" },
+  { type: "package", value: "pypi:ig-gox@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-rhpj-mr3r-r4gg, MAL-2026-17712 (amazon-inspector+kam193)", firstSeen: "2026-10-09" },
   { type: "package", value: "cargo:sharpnes", severity: "critical", confidence: 1.0, source: "GHSA-qq2r-xp7w-5r55, MAL-2026-17713", firstSeen: "2026-10-09" },
   { type: "package", value: "@hrmony/valuenet@1.99.0", severity: "critical", confidence: 1.0, source: "GHSA-5958-mpfq-wfrj, MAL-2026-17281 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-29" },
   { type: "package", value: "@hrmony/pladddform-testing@40.14.3", severity: "critical", confidence: 1.0, source: "GHSA-wc37-mwww-8cwr, MAL-2026-17280 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-29" },
@@ -8399,6 +8399,116 @@ const FEED_CHUNK_25: FeedIOC[] = [
   { type: "hash", value: "886b84f83a0f760e664046ba40d8c800b7d0cf72190e13ca031ee5cf50f45bee", severity: "critical", confidence: 0.85, family: "MALFEX", campaign: "MALFEX npm campaign", source: "Checkmarx MALFEX write-up (single-source)", firstSeen: "2026-10-05" },
 ];
 
+const FEED_CHUNK_26: FeedIOC[] = [
+  // Imported from GitHub Advisory Database (2026-09-27) - see docs/threat-feed-sources.md
+  { type: "package", value: "react-dropzone-v4@99.0.0", severity: "critical", confidence: 1.0, source: "GHSA-7945-qpg8-rjvv, MAL-2026-17758 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-10-11" },
+  { type: "package", value: "pypi:agent-vx@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-qqmp-mxcj-44p3, MAL-2026-17755 (amazon-inspector+kam193)", firstSeen: "2026-10-10" },
+  { type: "package", value: "pypi:pafer@0.9.7", severity: "critical", confidence: 1.0, source: "GHSA-5hwh-vp87-mgmx, MAL-2026-17756 (kam193)", firstSeen: "2026-10-10" },
+  { type: "package", value: "pypi:pafer@0.9.8", severity: "critical", confidence: 1.0, source: "GHSA-5hwh-vp87-mgmx, MAL-2026-17756 (kam193)", firstSeen: "2026-10-10" },
+  { type: "package", value: "pypi:webreader@2.3.8", severity: "critical", confidence: 1.0, source: "GHSA-82r3-2956-8fx5, MAL-2026-17757 (kam193)", firstSeen: "2026-10-10" },
+  { type: "package", value: "@library-wide/library-shell@99.9.1", severity: "critical", confidence: 1.0, source: "GHSA-4vw4-9hf5-5fx8, MAL-2026-17754 (ossf-package-analysis)", firstSeen: "2026-10-10" },
+  { type: "package", value: "pypi:media-manager5@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-hq9p-535j-wcf7, MAL-2026-17753 (kam193)", firstSeen: "2026-10-10" },
+  { type: "package", value: "pypi:agentaix@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-7w8h-6mv7-cwm8, MAL-2026-17752 (amazon-inspector+kam193)", firstSeen: "2026-10-10" },
+  { type: "package", value: "pypi:agentaix@0.2.0", severity: "critical", confidence: 1.0, source: "GHSA-7w8h-6mv7-cwm8, MAL-2026-17752 (amazon-inspector+kam193)", firstSeen: "2026-10-10" },
+  { type: "package", value: "kmf-bootstrap@100.100.106", severity: "critical", confidence: 1.0, source: "MAL-2026-17746 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-10-09" },
+  { type: "package", value: "kmf-bootstrap@100.100.101", severity: "critical", confidence: 1.0, source: "MAL-2026-17746 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-10-09" },
+  { type: "package", value: "kmf-bootstrap@100.100.100", severity: "critical", confidence: 1.0, source: "MAL-2026-17746 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-10-09" },
+  { type: "package", value: "some-very-long-package-name@2.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17778 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "some-very-long-package-name@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17778 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "some-very-long-package-name@3.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17778 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "some-very-long-package-name@2.0.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17778 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "deposit-limit-fe@100.100.106", severity: "critical", confidence: 0.9, source: "MAL-2026-17769 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "deposit-limit-fe@100.100.101", severity: "critical", confidence: 0.9, source: "MAL-2026-17769 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "deposit-limit-fe@100.100.102", severity: "critical", confidence: 0.9, source: "MAL-2026-17769 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "kmf-vendor-pack@100.100.101", severity: "critical", confidence: 1.0, source: "MAL-2026-17744 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-10-09" },
+  { type: "package", value: "kmf-vendor-pack@100.100.100", severity: "critical", confidence: 1.0, source: "MAL-2026-17744 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-10-09" },
+  { type: "package", value: "kmf-vendor-pack@100.100.106", severity: "critical", confidence: 1.0, source: "MAL-2026-17744 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-10-09" },
+  { type: "package", value: "pay-methods-kmf@100.100.102", severity: "critical", confidence: 0.9, source: "MAL-2026-17776 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "pay-methods-kmf@100.100.100", severity: "critical", confidence: 0.9, source: "MAL-2026-17776 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "pay-methods-kmf@100.100.101", severity: "critical", confidence: 0.9, source: "MAL-2026-17776 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "ksp-app@100.100.100", severity: "critical", confidence: 0.9, source: "MAL-2026-17770 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "@s4yhiitestpoc/scan-https-d@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17766 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "react-paginate-v5@99.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17777 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "ksp-client-registry@100.100.100", severity: "critical", confidence: 0.9, source: "MAL-2026-17771 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "ksp-client-registry@100.100.101", severity: "critical", confidence: 0.9, source: "MAL-2026-17771 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "@coopeuch/common@1.999.999", severity: "critical", confidence: 0.9, source: "MAL-2026-17760 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "@myorder-frontend-commons/analytics@1.0.0", severity: "critical", confidence: 1.0, source: "MAL-2026-17749 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-10-09" },
+  { type: "package", value: "@myorder-frontend-commons/analytics@1.2.0", severity: "critical", confidence: 1.0, source: "MAL-2026-17749 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-10-09" },
+  { type: "package", value: "@myorder-frontend-commons/analytics@0.0.1", severity: "critical", confidence: 1.0, source: "MAL-2026-17749 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-10-09" },
+  { type: "package", value: "@myorder-frontend-commons/analytics@2.0.0", severity: "critical", confidence: 1.0, source: "MAL-2026-17749 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-10-09" },
+  { type: "package", value: "@myorder-frontend-commons/analytics@0.1.0", severity: "critical", confidence: 1.0, source: "MAL-2026-17749 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-10-09" },
+  { type: "package", value: "@myorder-frontend-commons/analytics@5.0.0", severity: "critical", confidence: 1.0, source: "MAL-2026-17749 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-10-09" },
+  { type: "package", value: "@myorder-frontend-commons/analytics@0.2.0", severity: "critical", confidence: 1.0, source: "MAL-2026-17749 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-10-09" },
+  { type: "package", value: "@myorder-frontend-commons/analytics@1.1.0", severity: "critical", confidence: 1.0, source: "MAL-2026-17749 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-10-09" },
+  { type: "package", value: "@myorder-frontend-commons/analytics@100.0.0", severity: "critical", confidence: 1.0, source: "MAL-2026-17749 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-10-09" },
+  { type: "package", value: "@s4yhiitestpoc/r3-https@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17765 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "@coopeuch/config@1.999.999", severity: "critical", confidence: 0.9, source: "MAL-2026-17762 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "@coopeuch/core@1.999.999", severity: "critical", confidence: 0.9, source: "MAL-2026-17763 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "cloudflare_module@3.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17768 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "cloudflare_module@1.0.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17768 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "cloudflare_module@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17768 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "nitro-cjs-requirer@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17775 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "nitro-cjs-requirer@0.0.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17775 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "nitro-cjs-requirer@1.1.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17775 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "nitro-cjs-requirer@2.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17775 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "nitro-cjs-requirer@99.0.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17775 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "nitro-cjs-requirer@3.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17775 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "@s4yhiitestpoc/r2-https@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17764 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "another-very-long-name@2.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17767 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "another-very-long-name@1.0.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17767 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "another-very-long-name@2.0.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17767 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "another-very-long-name@1.1.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17767 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "nitro-bundled-dep@99.0.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17774 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "nitro-bundled-dep@2.0.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17774 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "nitro-bundled-dep@1.1.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17774 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "@coopeuch/button@1.999.999", severity: "critical", confidence: 0.9, source: "MAL-2026-17759 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "@coopeuch/components@1.999.999", severity: "critical", confidence: 0.9, source: "MAL-2026-17761 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "nested-lib@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17773 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "nested-lib@1.0.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17773 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "nested-lib@1.1.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17773 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "liferay-workspace-scripts@99.9.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17772 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "ruby:tron-trc20-utils@0.9.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17798 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "ruby:staking-apr-fetcher@0.9.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17796 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "ruby:wallet-hd-derive@0.9.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17800 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "ruby:web3-signer-kit@0.9.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17801 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "ruby:ton-jetton-tools@0.9.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17797 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "ruby:seed-phrase-validator@0.9.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17794 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "ruby:xrp-ledger-utils@0.9.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17802 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "ruby:sol-mint-utils@0.9.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17795 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "ruby:wallet-balance-scanner@0.9.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17799 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "ruby:crypto-tax-export@0.9.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17782 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "ruby:erc20-approve-audit@0.9.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17785 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "ruby:nft-metadata-resolver@0.9.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17792 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "ruby:airdrop-eligibility-check@0.9.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17779 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "ruby:dex-router-abis@0.9.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17784 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "ruby:gas-refuel-bridge@0.9.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17788 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "ruby:mev-sandwich-detect@0.9.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17790 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "ruby:evm-tx-decoder@0.9.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17787 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "ruby:hd-wallet-generator@0.9.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17789 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "ruby:perp-funding-rates@0.9.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17793 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "ruby:block-explorer-api@0.9.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17780 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "ruby:eth-gas-oracle@0.9.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17786 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "ruby:btc-fee-estimator@0.9.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17781 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "ruby:multichain-rpc@0.9.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17791 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "ruby:defi-yield-calculator@0.9.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17783 (amazon-inspector)", firstSeen: "2026-10-11" },
+
+  // GhostAction GitHub Actions secret exfiltration (October 2026). Workflows pushed
+  // through compromised maintainer accounts POST CI secrets and credential-shaped
+  // strings from the whole git history to these hosts. The victim accounts are
+  // not listed. Curated by campaign, so the entries stay in the offline bundle.
+  { type: "ip", value: "193.32.204.199", severity: "critical", confidence: 1.0, campaign: "GhostAction GitHub Actions secret exfiltration", source: "Socket + StepSecurity + GitGuardian GhostAction write-ups", firstSeen: "2026-10-09" },
+  { type: "ip", value: "170.39.218.2", severity: "critical", confidence: 0.9, campaign: "GhostAction GitHub Actions secret exfiltration", source: "StepSecurity + GitGuardian GhostAction write-ups", firstSeen: "2026-10-09" },
+  { type: "ip", value: "45.139.104.115", severity: "critical", confidence: 0.9, campaign: "GhostAction GitHub Actions secret exfiltration", source: "StepSecurity + GitGuardian GhostAction write-ups", firstSeen: "2026-10-09" },
+  { type: "domain", value: "bold-dhawan.45-139-104-115.plesk.page", severity: "critical", confidence: 0.9, campaign: "GhostAction GitHub Actions secret exfiltration", source: "StepSecurity + GitGuardian GhostAction write-ups", firstSeen: "2026-10-09" },
+  { type: "domain", value: "carte-avantage.com", severity: "critical", confidence: 0.9, campaign: "GhostAction GitHub Actions secret exfiltration", source: "StepSecurity + GitGuardian GhostAction write-ups", firstSeen: "2026-10-09" },
+  { type: "domain", value: "objective-hopper.45-139-104-115.plesk.page", severity: "critical", confidence: 0.85, campaign: "GhostAction GitHub Actions secret exfiltration", source: "GitGuardian GhostAction write-up (single-source)", firstSeen: "2026-10-09" },
+
+  // Imported from GitHub Advisory Database (2026-10-11) - see docs/threat-feed-sources.md
+  { type: "package", value: "kmf-i18n@100.100.101", severity: "critical", confidence: 1.0, source: "MAL-2026-17747 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-10-09" },
+  { type: "package", value: "kmf-i18n@100.100.100", severity: "critical", confidence: 1.0, source: "MAL-2026-17747 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-10-09" },
+  { type: "package", value: "test-account-portal-fe@100.100.100", severity: "critical", confidence: 1.0, source: "MAL-2026-17748 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-10-09" },
+];
+
 // Composed from the chunks above. A single array literal of this size trips
 // TS2590 ("union type that is too complex to represent") in tsc; splitting it
 // into capacity-bounded consts and spreading them keeps every entry fully
@@ -8432,6 +8542,7 @@ const BUNDLED_FEED: FeedIOC[] = [
   ...FEED_CHUNK_23,
   ...FEED_CHUNK_24,
   ...FEED_CHUNK_25,
+  ...FEED_CHUNK_26,
 ];
 
 // The former default cache directory, relative to the working directory. The

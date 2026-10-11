@@ -20,6 +20,24 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   GitHub account and its two payload paths, the Overlord loader path on
   `api[.]imghippo[.]com`, and 17 SHA-256 hashes. The packages were already
   covered. The shared apexes and the signed AutoIt3.exe are not listed.
+- Threat intel for 2026-10-11: 93 further package entries from the GitHub
+  Advisory Database and OpenSSF on top of the 2026-10-10 import, all in the
+  offline bundle. Clusters: 24 RubyGems crypto-tooling names at 0.9.1
+  (MAL-2026-17779 to 17802), the dependency-confusion pins `@coopeuch`,
+  `@s4yhiitestpoc`, `@library-wide/library-shell`, `nitro-*`, `ksp-*`,
+  `pay-methods-kmf`, `deposit-limit-fe` and further `kmf-*` and
+  `@myorder-frontend-commons` versions, and PyPI `agentaix`, `agent-vx`,
+  `media-manager5`, `pafer` and `webreader`.
+- GhostAction GitHub Actions secret exfiltration (October 2026): the
+  exfiltration IP `193[.]32[.]204[.]199` of the injected
+  `security-audit.yml` / `github_actions_security.yml` workflows, the
+  earlier-wave endpoints `170[.]39[.]218[.]2` and `45[.]139[.]104[.]115`, and
+  the hosts `carte-avantage[.]com`,
+  `bold-dhawan[.]45-139-104-115[.]plesk[.]page` and
+  `objective-hopper[.]45-139-104-115[.]plesk[.]page` (only the attacker
+  subdomains of the shared apex). Curated bundle entries with a campaign, from
+  the Socket, StepSecurity and GitGuardian write-ups. The compromised
+  maintainer accounts are victims and are not listed.
 
 ### Fixed
 

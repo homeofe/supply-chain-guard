@@ -1,3 +1,51 @@
+## Daily threat intel (2026-10-11) (claude-opus-5-5)
+
+Scheduled run, branch cut from `main` at `5f7a132` while PR 400 (2026-10-10)
+was still open. After PR 400 merged, `main` was merged into this branch in an
+interactive session. The 116 entries both runs imported are kept once (6 of
+them take this run's newer source attribution), the `@tvg-mar` move and its
+test stand as PR 400 merged them (they reached GitHub on 2026-10-09), and what
+only this run found, 93 package entries and the 6 GhostAction indicators,
+sits in the new `FEED_CHUNK_26`. The import counts below are this run's own,
+before that merge.
+
+Windowed import (GitHub Advisory Database, OpenSSF, DataDog): 206 new, the
+importer routing 201 to the bundle and 5 to the catalog. The reviewed dry run
+proposed 157; the 49 more written by the apply are exact pins from
+MAL-2026-17749 and MAL-2026-17759 to 17778 (amazon-inspector) published in
+between. No page cap, no `--limit`, nothing declined, deferred or unmapped (1
+acknowledged). All 20 bare npm names were probed: every one is an npm security
+holding package. `cargo:sharpnes` no longer exists on crates.io.
+
+The 5 catalog-bound entries were the `@tvg-mar` whole-package claims dated
+2026-09-22 (MAL-2026-16412 to 16416), routed by the 2026-09-22 window. Moved
+field for field through `readCatalogText` / `writeCatalogText` into the
+curated 2026-09-22 block (now 63 records); the catalog is byte-identical to
+`main`. `pre-release-review.test.ts` and the window `reason` say 63. No new
+`catalogWindows` entry.
+
+Snapshot reconcile: 3 new pins (`kmf-i18n` 100.100.100 and 100.100.101,
+`test-account-portal-fe` 100.100.100), all to the bundle. `--check` exit 0,
+0 unmapped, 22 acknowledged, nothing stale. Declined 4544 (`@zalastax/nolb-`).
+DataDog: 7,883 pins, 0 bare names, 519 without a sampled version, 1,338
+manifest lines without a sample, 103 IDE extensions checked, the six known
+still-published versions and no new one.
+
+Enrichment: GhostAction GitHub Actions secret exfiltration (Socket,
+StepSecurity, GitGuardian, 2026-10-09). Added to the blocklist and the bundle
+under campaign "GhostAction GitHub Actions secret exfiltration": IPs
+`193[.]32[.]204[.]199` (three sources), `170[.]39[.]218[.]2` and
+`45[.]139[.]104[.]115` (two), hosts `carte-avantage[.]com` and
+`bold-dhawan[.]45-139-104-115[.]plesk[.]page` (two) and
+`objective-hopper[.]45-139-104-115[.]plesk[.]page` (GitGuardian only, 0.85).
+Not added: the victim maintainer accounts, the Interactsh apex, the public
+Monero pool. New describe block in `campaigns.test.ts` with a negative for
+another tenant of the shared plesk apex.
+
+This host mounts `node_modules/.bin`, `package-lock.json` and `scripts/`
+read-only in the agent worktree: dependencies were installed with
+`npm install --no-bin-links --no-save`, and vitest ran under `bwrap` with
+`/tmp` bound to the scratchpad, because many suites hardcode `/tmp`.
 ## Daily threat intel (2026-10-10) (claude-opus-5-5)
 
 Scheduled run on `thread` (Linux), worktree from `origin/main` at `5f7a132`.
