@@ -2,7 +2,7 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "6.5.4",
-  "entryCount": 7076,
+  "entryCount": 7079,
   "generatedAt": "2026-10-12T00:00:00.000Z",
   "entries": [
     {
@@ -59322,6 +59322,30 @@
       "confidence": 1,
       "source": "GHSA-6m9v-pw95-fc67, MAL-2026-16378",
       "firstSeen": "2026-10-12"
+    },
+    {
+      "type": "package",
+      "value": "@myorder-frontend-commons/analytics@101.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17749 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-09"
+    },
+    {
+      "type": "package",
+      "value": "nitro-bundled-dep@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "MAL-2026-17774 (amazon-inspector)",
+      "firstSeen": "2026-10-11"
+    },
+    {
+      "type": "package",
+      "value": "nitro-bundled-dep@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "MAL-2026-17774 (amazon-inspector)",
+      "firstSeen": "2026-10-11"
     }
   ]
 }

@@ -8456,6 +8456,11 @@ const FEED_CHUNK_26: FeedIOC[] = [
   // Imported from GitHub Advisory Database (2026-09-28) - see docs/threat-feed-sources.md
   { type: "package", value: "@user-services/web-components@9.9.9", severity: "critical", confidence: 1.0, source: "GHSA-f3g4-6hpx-9mcq, MAL-2026-16379", firstSeen: "2026-10-12" },
   { type: "package", value: "@tesla-insurance/vinless-quote@9.9.9", severity: "critical", confidence: 1.0, source: "GHSA-6m9v-pw95-fc67, MAL-2026-16378", firstSeen: "2026-10-12" },
+
+  // Imported from GitHub Advisory Database (2026-10-12) - see docs/threat-feed-sources.md
+  { type: "package", value: "@myorder-frontend-commons/analytics@101.0.0", severity: "critical", confidence: 1.0, source: "MAL-2026-17749 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-10-09" },
+  { type: "package", value: "nitro-bundled-dep@0.0.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17774 (amazon-inspector)", firstSeen: "2026-10-11" },
+  { type: "package", value: "nitro-bundled-dep@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17774 (amazon-inspector)", firstSeen: "2026-10-11" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips

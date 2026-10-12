@@ -1,14 +1,3 @@
-{"type":"package","value":"fitri-kue50-sukiwir","severity":"critical","confidence":0.9,"source":"MAL-2025-56344 (amazon-inspector)","firstSeen":"2025-11-10"}
-{"type":"package","value":"fitri-lapis95-sukiwir","severity":"critical","confidence":0.9,"source":"MAL-2025-56345 (amazon-inspector)","firstSeen":"2025-11-10"}
-{"type":"package","value":"fitri-lumpur66-sukiwir","severity":"critical","confidence":0.9,"source":"MAL-2025-56346 (amazon-inspector)","firstSeen":"2025-11-10"}
-{"type":"package","value":"fitri-lutis96-sukiwir","severity":"critical","confidence":0.9,"source":"MAL-2025-56347 (amazon-inspector)","firstSeen":"2025-11-10"}
-{"type":"package","value":"fitri-martabak2-sukiwir","severity":"critical","confidence":0.9,"source":"MAL-2025-56348 (amazon-inspector)","firstSeen":"2025-11-10"}
-{"type":"package","value":"fitri-martabak35-sukiwir","severity":"critical","confidence":0.9,"source":"MAL-2025-56349 (amazon-inspector)","firstSeen":"2025-11-10"}
-{"type":"package","value":"web-app-express","severity":"critical","confidence":1,"source":"MAL-2025-5635 (ghsa-malware+ossf-package-analysis)","firstSeen":"2025-07-05"}
-{"type":"package","value":"fitri-mie5-sukiwir","severity":"critical","confidence":0.9,"source":"MAL-2025-56350 (amazon-inspector)","firstSeen":"2025-11-10"}
-{"type":"package","value":"fitri-mieaceh42-sukiwir","severity":"critical","confidence":0.9,"source":"MAL-2025-56351 (amazon-inspector)","firstSeen":"2025-11-10"}
-{"type":"package","value":"fitri-mieayam43-sukiwir","severity":"critical","confidence":0.9,"source":"MAL-2025-56352 (amazon-inspector)","firstSeen":"2025-11-10"}
-{"type":"package","value":"fitri-nasipecel73-sukiwir","severity":"critical","confidence":0.9,"source":"MAL-2025-56353 (amazon-inspector)","firstSeen":"2025-11-10"}
 {"type":"package","value":"fitri-nasiuduk58-sukiwir","severity":"critical","confidence":0.9,"source":"MAL-2025-56354 (amazon-inspector)","firstSeen":"2025-11-10"}
 {"type":"package","value":"fitri-oncom47-sukiwir","severity":"critical","confidence":0.9,"source":"MAL-2025-56355 (amazon-inspector)","firstSeen":"2025-11-10"}
 {"type":"package","value":"fitri-serabi12-sukiwir","severity":"critical","confidence":0.9,"source":"MAL-2025-56356 (amazon-inspector)","firstSeen":"2025-11-10"}
@@ -63770,8 +63759,6 @@
 {"type":"package","value":"redis-type-intel","severity":"critical","confidence":0.9,"source":"GHSA-v9rh-vg7p-gwqm, MAL-2026-16036 (ghsa-malware)","firstSeen":"2026-09-07"}
 {"type":"package","value":"oscar-redis","severity":"critical","confidence":0.9,"source":"GHSA-c6m6-wr2f-6f63, MAL-2026-16035 (ghsa-malware)","firstSeen":"2026-09-07"}
 {"type":"package","value":"kiki-baileys","severity":"critical","confidence":0.9,"source":"GHSA-g8cr-3r7q-pcr6, MAL-2026-16033 (ghsa-malware)","firstSeen":"2026-09-07"}
-{"type":"package","value":"omni-channel-configurator-wireline-frontend","severity":"critical","confidence":1,"source":"GHSA-p429-pvx5-xj55, MAL-2026-16009","firstSeen":"2026-09-07"}
-{"type":"package","value":"b2b-frontend-external-library","severity":"critical","confidence":1,"source":"GHSA-hmhj-jhrj-285j, MAL-2026-16008","firstSeen":"2026-09-07"}
 {"type":"package","value":"@caliperx2/components","severity":"critical","confidence":1,"source":"GHSA-4jpr-935q-33r2, MAL-2026-16007","firstSeen":"2026-09-07"}
 {"type":"package","value":"vinzz-wcli@1.0.1","severity":"critical","confidence":1,"source":"GHSA-xv3f-69vw-grmg, MAL-2026-16058 (amazon-inspector)","firstSeen":"2026-09-08"}
 {"type":"package","value":"toru-ultimate@1.0.0","severity":"critical","confidence":1,"source":"GHSA-jg37-3w86-3rx2, MAL-2026-16057 (amazon-inspector)","firstSeen":"2026-09-08"}
@@ -63884,3 +63871,7 @@
 {"type":"package","value":"discord-mfa-solver","severity":"critical","confidence":1,"source":"GHSA-vf4w-775x-ccfh, MAL-2026-16100 (amazon-inspector+ghsa-malware)","firstSeen":"2026-09-09"}
 {"type":"package","value":"express-session-timer@1.0.11","severity":"critical","confidence":0.9,"source":"MAL-2026-16065 (amazon-inspector)","firstSeen":"2026-09-09"}
 {"type":"package","value":"express-session-timer@1.0.15","severity":"critical","confidence":0.9,"source":"MAL-2026-16065 (amazon-inspector)","firstSeen":"2026-09-09"}
+{"type":"package","value":"b2b-frontend-external-library@0.0.1","severity":"critical","confidence":0.9,"source":"MAL-2026-16008 (amazon-inspector)","firstSeen":"2026-09-07"}
+{"type":"package","value":"b2b-frontend-external-library@9999.0.0","severity":"critical","confidence":0.9,"source":"MAL-2026-16008 (amazon-inspector)","firstSeen":"2026-09-07"}
+{"type":"package","value":"omni-channel-configurator-wireline-frontend@9999.0.0","severity":"critical","confidence":0.9,"source":"MAL-2026-16009 (amazon-inspector)","firstSeen":"2026-09-07"}
+{"type":"package","value":"omni-channel-configurator-wireline-frontend@0.0.1","severity":"critical","confidence":0.9,"source":"MAL-2026-16009 (amazon-inspector)","firstSeen":"2026-09-07"}
