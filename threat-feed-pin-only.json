@@ -17,9 +17,89 @@
       "addedOn": "2026-10-09"
     },
     {
+      "scope": "@galicia-toolkit-nestjs/",
+      "reason": "Dependency-confusion squats of the same internal namespace family as @galicia-toolkit/ (MAL-2026-17721 to MAL-2026-17724, 2026-10-09), published by one actor at sentinel versions 999.0.x and at internal-looking versions; a preinstall hook loads a native addon that exfiltrates CI and cloud secrets. The real packages live in the victim's private registry.",
+      "addedOn": "2026-10-12"
+    },
+    {
+      "scope": "@galicia-toolkit-nestjs-20/",
+      "reason": "Dependency-confusion squats of the same internal namespace family as @galicia-toolkit/ (MAL-2026-17725 to MAL-2026-17727, 2026-10-09), published by one actor at sentinel versions 999.0.x and at internal-looking versions; a preinstall hook loads a native addon that exfiltrates CI and cloud secrets. The real packages live in the victim's private registry.",
+      "addedOn": "2026-10-12"
+    },
+    {
+      "scope": "@galicia-toolkit-nestjs-20-lite/",
+      "reason": "Dependency-confusion squats of the same internal namespace family as @galicia-toolkit/ (MAL-2026-17728 to MAL-2026-17730, 2026-10-09), published by one actor at sentinel versions 999.0.x and at internal-looking versions; a preinstall hook loads a native addon that exfiltrates CI and cloud secrets. The real packages live in the victim's private registry.",
+      "addedOn": "2026-10-12"
+    },
+    {
+      "scope": "@galicia-toolkit-cheques-nc/",
+      "reason": "Dependency-confusion squats of the same internal namespace family as @galicia-toolkit/ (MAL-2026-17720, 2026-10-09), published by one actor at sentinel versions 999.0.x and at internal-looking versions; a preinstall hook loads a native addon that exfiltrates CI and cloud secrets. The real packages live in the victim's private registry.",
+      "addedOn": "2026-10-12"
+    },
+    {
+      "scope": "@brick-v2/",
+      "reason": "Dependency-confusion squats of the same internal namespace family as @galicia-toolkit/ (MAL-2026-17714 to MAL-2026-17719, 2026-10-09), published by one actor at sentinel versions 999.0.x and at internal-looking versions; a preinstall hook loads a native addon that exfiltrates CI and cloud secrets. The real packages live in the victim's private registry.",
+      "addedOn": "2026-10-12"
+    },
+    {
       "scope": "@design-system-coopeuch/",
       "reason": "Dependency-confusion squat at sentinel versions 999.0.0 to 999.0.4 published 2026-05-13 (MAL-2026-3653). The real package lives in the victim's private registry.",
       "addedOn": "2026-10-09"
+    },
+    {
+      "scope": "@tesla-insurance/",
+      "reason": "Dependency-confusion squats of a company's internal scope at the sentinel version 9.9.10 (MAL-2026-16378, first published 2026-09-22, re-published as a whole-package GitHub advisory on 2026-10-12); an install hook leaks username, hostname and working directory through DNS. The real packages live in the victim's private registry.",
+      "addedOn": "2026-10-12"
+    },
+    {
+      "scope": "@user-services/",
+      "reason": "Dependency-confusion squats of a company's internal scope at the sentinel version 9.9.10 (MAL-2026-16379, first published 2026-09-22, re-published as a whole-package GitHub advisory on 2026-10-12); an install hook leaks username, hostname and working directory through DNS. The real packages live in the victim's private registry.",
+      "addedOn": "2026-10-12"
+    },
+    {
+      "scope": "@smwebserver/",
+      "reason": "Dependency-confusion squat at the sentinel version 99.9.1 whose only content is a dependency on an off-registry ltidisafe tarball (MAL-2026-17456). The name belongs to the victim's internal package, so only the published malicious versions are pinned; a GitHub whole-package advisory re-published it on 2026-10-12.",
+      "addedOn": "2026-10-12"
+    },
+    {
+      "scope": "@library-wide/",
+      "reason": "Dependency-confusion squat at the sentinel version 99.9.1 whose only content is a dependency on an off-registry ltidisafe tarball (MAL-2026-17754). The name belongs to the victim's internal package, so only the published malicious versions are pinned; a GitHub whole-package advisory re-published it on 2026-10-12.",
+      "addedOn": "2026-10-12"
+    },
+    {
+      "scope": "@pinecone-experience/",
+      "reason": "Dependency-confusion squat at the sentinel version 99.9.1 whose only content is a dependency on an off-registry ltidisafe tarball (MAL-2026-17631). The name belongs to the victim's internal package, so only the published malicious versions are pinned; a GitHub whole-package advisory re-published it on 2026-10-12.",
+      "addedOn": "2026-10-12"
+    },
+    {
+      "scope": "@airbnb-extended/",
+      "reason": "Dependency-confusion squat at the sentinel version 99.9.1 whose only content is a dependency on an off-registry ltidisafe tarball (MAL-2026-17184). The name belongs to the victim's internal package, so only the published malicious versions are pinned; a GitHub whole-package advisory re-published it on 2026-10-12.",
+      "addedOn": "2026-10-12"
+    },
+    {
+      "name": "liferay-workspace-scripts",
+      "reason": "Dependency-confusion squat at the sentinel version 99.9.1 whose only content is a dependency on an off-registry ltidisafe tarball (MAL-2026-17772). The name belongs to the victim's internal package, so only the published malicious versions are pinned; a GitHub whole-package advisory re-published it on 2026-10-12.",
+      "addedOn": "2026-10-12"
+    },
+    {
+      "name": "unified-platform",
+      "reason": "Dependency-confusion squat at the sentinel version 99.9.1 whose only content is a dependency on an off-registry ltidisafe tarball (MAL-2026-17566). The name belongs to the victim's internal package, so only the published malicious versions are pinned; a GitHub whole-package advisory re-published it on 2026-10-12.",
+      "addedOn": "2026-10-12"
+    },
+    {
+      "name": "risk-detection",
+      "reason": "Dependency-confusion squat at the sentinel version 99.9.1 whose only content is a dependency on an off-registry ltidisafe tarball (MAL-2026-17563). The name belongs to the victim's internal package, so only the published malicious versions are pinned; a GitHub whole-package advisory re-published it on 2026-10-12.",
+      "addedOn": "2026-10-12"
+    },
+    {
+      "name": "app-sca-info-banking",
+      "reason": "Dependency-confusion squat at version 0.0.24 with a postinstall proof-of-concept that beacons through DNS and HTTP (MAL-2026-17182). The name belongs to the victim's internal package, so only the published malicious version is pinned; a GitHub whole-package advisory re-published it on 2026-10-12.",
+      "addedOn": "2026-10-12"
+    },
+    {
+      "name": "com.apple.unityplugin.storekit",
+      "reason": "Dependency-confusion squat of the package name of Apple's official StoreKit Unity plugin (apple/unityplugins, Unity Package Manager): versions 1.0.1 and 1.0.2 beacon to an OAST host on require (MAL-2026-16477). The real package carries the same name, so only the published malicious versions are pinned; a GitHub whole-package advisory re-published it on 2026-10-12.",
+      "addedOn": "2026-10-12"
     },
     {
       "name": "tensorlake",

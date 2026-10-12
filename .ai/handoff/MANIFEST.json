@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1791734343",
-    "timestamp": "2026-10-11T15:59:03Z",
-    "commit": "d795467",
+    "session_id": "cli-1791813874",
+    "timestamp": "2026-10-12T14:04:34Z",
+    "commit": "78135ee",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:3e55ccfe0b1f0ed70460ec5b029be032e909a0ffaf755a37d2e7010a7c7db540",
-      "updated": "2026-10-11T15:59:03Z",
-      "lines": 14297,
-      "summary": "Patch release on top of PR 400 (2026-10-10 threat intel, MALFEX) and PR 401 (2026-10-11 threat intel, GhostAction)."
+      "checksum": "sha256:49de07ebd98f531f714d48d64ece9df4afb0bf311fcd9414b4b4052c85974dbd",
+      "updated": "2026-10-12T13:42:04Z",
+      "lines": 14350,
+      "summary": "Scheduled run, worktree cut from `origin/main` at `78135ee` (v6.5.4)."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:7e87e1a0a3ae6e969b2f3da6bd87516d4603a3427908a73388dd1c98abcd7154",
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "Patch release on top of PR 400 (2026-10-10 threat intel, MALFEX) and PR 401 (2026-10-11 threat intel, GhostAction). Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Scheduled run, worktree cut from `origin/main` at `78135ee` (v6.5.4). Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 916,
-    "manifest_plus_core": 213072,
-    "full_read": 226802
+    "manifest_only": 893,
+    "manifest_plus_core": 213844,
+    "full_read": 227574
   }
 }

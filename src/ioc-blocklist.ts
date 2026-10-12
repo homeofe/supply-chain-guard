@@ -572,6 +572,23 @@ export const KNOWN_C2_DOMAINS: string[] = [
   "bold-dhawan.45-139-104-115.plesk.page",
   "objective-hopper.45-139-104-115.plesk.page",
   "carte-avantage.com",
+  // s4yhii dependency-confusion squats (October 2026): out-of-band host of the
+  // squats in the @galicia-toolkit-* and @brick-v2 scopes (MAL-2026-17714 to
+  // MAL-2026-17730, amazon-inspector, single-source). Early versions beacon the
+  // hostname via DNS under its dc. subdomain, later ones POST CI and cloud
+  // secrets to it on port 9999. Only the published subdomain is listed.
+  "oob.s4yhii.com",
+  // algamil7x DNS-exfiltration squats (October 2026): DNS exfiltration host of
+  // the dependency-confusion squats MAL-2026-16378 and MAL-2026-16379
+  // (amazon-inspector, single-source). The install hook encodes username,
+  // hostname and working directory into a subdomain and resolves it.
+  "oob.algamil7x.xyz",
+  // ltidisafe dependency-confusion squats (October 2026): the attacker bucket
+  // serving the off-registry ltidisafe tarball every squat of the series
+  // depends on (MAL-2026-17184, -17456, -17563, -17566, -17631, -17754, -17772,
+  // amazon-inspector, single-source). storage.googleapis.com is a shared
+  // apex, so only the bucket host is listed.
+  "ltidi.storage.googleapis.com",
 ];
 
 // ---------------------------------------------------------------------------
