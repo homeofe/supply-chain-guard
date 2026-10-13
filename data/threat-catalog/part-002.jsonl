@@ -63875,3 +63875,7 @@
 {"type":"package","value":"b2b-frontend-external-library@9999.0.0","severity":"critical","confidence":0.9,"source":"MAL-2026-16008 (amazon-inspector)","firstSeen":"2026-09-07"}
 {"type":"package","value":"omni-channel-configurator-wireline-frontend@9999.0.0","severity":"critical","confidence":0.9,"source":"MAL-2026-16009 (amazon-inspector)","firstSeen":"2026-09-07"}
 {"type":"package","value":"omni-channel-configurator-wireline-frontend@0.0.1","severity":"critical","confidence":0.9,"source":"MAL-2026-16009 (amazon-inspector)","firstSeen":"2026-09-07"}
+{"type":"package","value":"alipclutch-baileys","severity":"critical","confidence":1,"source":"GHSA-7c8r-gc84-h9fv, MAL-2026-12108 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-05"}
+{"type":"package","value":"@nexustechpro/baileys","severity":"critical","confidence":1,"source":"GHSA-8w6v-4xp9-rvrr, MAL-2026-16104 (amazon-inspector+ghsa-malware)","firstSeen":"2026-09-09"}
+{"type":"package","value":"@modss/baileys","severity":"critical","confidence":0.9,"source":"GHSA-4c9v-m7qm-2mpr, MAL-2026-15918 (ghsa-malware)","firstSeen":"2026-09-03"}
+{"type":"package","value":"@mikudeveloper/baileys","severity":"critical","confidence":1,"source":"GHSA-2xx9-x9v7-25x2, MAL-2026-16386 (amazon-inspector+ghsa-malware)","firstSeen":"2026-09-22"}
