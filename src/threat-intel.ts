@@ -9800,7 +9800,7 @@ export function getDetectionSetProvenance(
   const cacheMerged = cache.present;
 
   return {
-    bundledVersion: "6.5.5",
+    bundledVersion: "6.5.6",
     bundledEntryCount: BUNDLED_FEED.length,
     generatedAt: FEED_GENERATED_AT,
     cacheMerged,

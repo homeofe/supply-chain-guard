@@ -3,30 +3,30 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1791901343",
-    "timestamp": "2026-10-13T14:22:23Z",
-    "commit": "7b0f3fc",
+    "session_id": "cli-1791909851",
+    "timestamp": "2026-10-13T16:44:11Z",
+    "commit": "5c24ea5",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:1f6a55b9bb350bbf33a0f45b544d0f65823c47664d7436e830b5872d04253764",
-      "updated": "2026-10-13T14:21:09Z",
-      "lines": 14468,
-      "summary": "An automated OpenVuln review (zai-org) of a 6.4.0 snapshot reported seven findings."
+      "checksum": "sha256:e4187d12ff02ca21903fca37354f154b0cb01c0c648e505fc2881593c0bb76c1",
+      "updated": "2026-10-13T16:44:08Z",
+      "lines": 14488,
+      "summary": "Security release for GHSA-gqpg-9mjx-pv4w (entry below)."
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:e82ab72541120d22c664f856efdad813cd54cbffc0785f97172878e940960769",
-      "updated": "2026-10-13T12:50:22Z",
+      "checksum": "sha256:c9ec6a67176fff94325903c7cecdf28e927a5ac444431993794270cb6143a144",
+      "updated": "2026-10-13T16:40:16Z",
       "lines": 231,
       "summary": "Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete."
     },
     "LOG.md": {
-      "checksum": "sha256:74166934cf8968a2ab57c130a731923e03c3ddb3c5501cfec6de7e9da0cfb401",
-      "updated": "2026-10-13T12:50:38Z",
+      "checksum": "sha256:357e161f39cc69dddf376525a8331ecc43c8e65ce6a9a17f8b282470db925379",
+      "updated": "2026-10-13T16:44:11Z",
       "lines": 90,
-      "summary": "Latest entry: [2026-10-13] v6.5.5"
+      "summary": "Latest entry: [2026-10-13] v6.5.6"
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
@@ -41,14 +41,14 @@
       "summary": "LOG archive index: 5 entries."
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:daa5aa6178ab926c5c00aa258343049af9075ba45fc90bc248fce749e9d3a1e9",
-      "updated": "2026-10-13T12:50:38Z",
+      "checksum": "sha256:a2ca5e15a7671f87c3098c95dfd5ab4977f3beb229cea6935ec48d9bce927d2c",
+      "updated": "2026-10-13T16:44:11Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:5eeb74cb4e4731c773a6c9b6e4580978aa9543dd1de857eea7bec9af029e87e0",
-      "updated": "2026-10-13T12:50:38Z",
+      "checksum": "sha256:469ac2b580df9734dfcdda36b5c1abef2a7c1422308fda50649bce8562cbd12b",
+      "updated": "2026-10-13T16:44:11Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "An automated OpenVuln review (zai-org) of a 6.4.0 snapshot reported seven findings. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Security release for GHSA-gqpg-9mjx-pv4w (entry below). Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 900,
-    "manifest_plus_core": 215664,
-    "full_read": 229394
+    "manifest_only": 886,
+    "manifest_plus_core": 215933,
+    "full_read": 229665
   }
 }

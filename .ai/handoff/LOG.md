@@ -11,6 +11,14 @@
 
 ---
 
+## [2026-10-13] v6.5.6
+
+The README quick start installs the scanner and runs it, and the MCP setup guide configures the installed supply-chain-guard command instead of npx. npx is documented only for a start from outside...
+
+Full notes: CHANGELOG.md, section [6.5.6].
+
+---
+
 ## [2026-10-13] v6.5.5
 
 Threat intel for 2026-10-13: 59 package entries from the GitHub Advisory Database and OpenSSF, 55 in the offline bundle and 4 in the catalog. Clusters: malicious forks of the WhatsApp Web library...
@@ -80,11 +88,3 @@ Full notes: CHANGELOG.md, section [6.4.2].
 Threat intel (2026-10-01): 399 package IOCs from the GitHub Advisory Database and OpenSSF, 165 in the offline bundle and 234 in the catalog. Most bundle entries are from 2026-09-30, among them 61...
 
 Full notes: CHANGELOG.md, section [6.4.1].
-
----
-
-## [2026-09-30] v6.4.0
-
-Threat intel (2026-09-30): 138 package IOCs from the GitHub Advisory Database and OpenSSF, 97 in the offline bundle and 41 in the catalog. 35 npm names are blocked outright, each already a...
-
-Full notes: CHANGELOG.md, section [6.4.0].

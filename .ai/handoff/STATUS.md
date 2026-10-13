@@ -1,3 +1,23 @@
+## Release v6.5.6 (2026-10-13) (claude-opus-5-5)
+
+Security release for GHSA-gqpg-9mjx-pv4w (entry below). The fix was merged
+from the advisory's private fork as `5c24ea5`, whose tree is identical to the
+tested commit `7d3923e`. Before the merge, the exact commit passed a private
+CI run (Node 22 and 24 each 213 test files, Windows tool lookup), 42 of 42
+checks on Linux (build, lint, full suite, mutation proof, every documented
+launch form against planted files, MCP server, install guard) and 12 of 12 on
+Windows 11 with a stand-in `git.exe`. CI on `main` for `5c24ea5` was green.
+As for 6.5.2, the advisory merge needed "Do not allow bypassing the above
+settings" switched off for the merge; the owner switched it back on and
+`enforce_admins=true` was verified afterwards.
+
+Release commit: version sites and lockfile to 6.5.6, Node schedule re-read
+(unchanged, milestone 6.5.7). `release:prepare` left the cutoff at
+2026-09-13 (6.5.5 moved it the same day), so nothing migrated.
+
+Advisory to publish with `Patched versions: 6.5.6` (already set):
+GHSA-gqpg-9mjx-pv4w. Owner steps after the release: Request CVE, then Publish.
+
 ## Security fix GHSA-gqpg-9mjx-pv4w (2026-10-13) (claude-opus-5-5)
 
 An automated OpenVuln review (zai-org) of a 6.4.0 snapshot reported seven
