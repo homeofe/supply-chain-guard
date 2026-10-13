@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [6.5.5] - 2026-10-13
+
 ### Added
 
 - Threat intel for 2026-10-13: 59 package entries from the GitHub Advisory
@@ -38,6 +40,11 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Changed
 
+- The bundle cutoff advanced from 2026-09-11 to 2026-09-13, moving 77
+  package indicators dated 2026-09-11 and 2026-09-12 from the bundle into the
+  catalog (the bundle now holds 7,057 entries, the catalog 263,958). None of
+  them is asserted by a test, and none carries a campaign or family. They stay
+  enforced after `feed refresh`.
 - `threat-feed-pin-only.json`: the `@coopeuch/` scope is pin-only. GitHub
   re-published the five squats of that scope (MAL-2026-17759 to
   MAL-2026-17763) as whole-package advisories, and a bare name would flag the
@@ -7435,7 +7442,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.5.4...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.5.5...HEAD
+[6.5.5]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.5
 [6.5.4]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.4
 [6.5.3]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.3
 [6.5.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.2
