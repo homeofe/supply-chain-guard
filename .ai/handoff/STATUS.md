@@ -1,3 +1,29 @@
+## Security fix GHSA-gqpg-9mjx-pv4w (2026-10-13) (claude-opus-5-5)
+
+An automated OpenVuln review (zai-org) of a 6.4.0 snapshot reported seven
+findings. Checked against 6.5.5, six were already fixed in 6.5.2 by
+`src/safe-exec.ts` (GHSA-cq59-vmg7-pmqv). One was not, and the 6.5.2 fix did
+not cover it: npx, npm exec and npm run put `node_modules/.bin` of the start
+directory and every parent first on `PATH` as absolute entries, and
+`resolveExecutable` accepted them. Reproduced on the published 6.5.5 on
+Linux: a committed `node_modules/.bin/git` ran 5 times per
+`npx supply-chain-guard scan .` from inside the checkout, 0 times when npx was
+started from a neutral directory.
+
+Fix: `resolveExecutable` skips every `node_modules/.bin` entry (any depth;
+Windows case-insensitive, either separator). Regression tests in
+`safe-exec.test.ts`: resolver cases both ways (skipped, and look-alike
+directories still searched) and `scan()` / install guard with a planted tool
+first on `PATH`; shown red with the filter removed and green with it restored.
+
+Not fixable here and documented instead: npm runs a committed
+`node_modules/.bin/sh`, and npx runs a committed fake
+`node_modules/supply-chain-guard` package instead of the registry one, even
+with an exact version (both confirmed with npm 11.19.0). The README quick start
+and the MCP guide no longer start the scanner through npx inside the scanned
+content. Full record: `docs/security-audit-2026-10-13.md`. Fix developed in
+the advisory's private fork; nothing was public before the release.
+
 ## Release v6.5.5 (2026-10-13) (claude-opus-5-5)
 
 Patch release with the 2026-10-12 and 2026-10-13 threat intel, cut from `main`

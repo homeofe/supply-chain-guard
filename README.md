@@ -16,12 +16,19 @@ Scan a project. No account, no configuration, and the scan itself makes no
 network request:
 
 ```bash
-npx supply-chain-guard scan .
+npm install -g supply-chain-guard
+supply-chain-guard scan .
 ```
+
+Without installing, start npx from outside the directory and pass its path, for
+example `npx supply-chain-guard scan ./my-project` from the parent directory. Do
+not start it through npx, `npm exec` or `npm run` from inside a directory you do
+not trust: npm then puts that directory's `node_modules/.bin` first on `PATH` and
+can run files from it before the scanner starts ([GHSA-gqpg-9mjx-pv4w](https://github.com/homeofe/supply-chain-guard/security/advisories/GHSA-gqpg-9mjx-pv4w)).
 
 It exits `1` on a high finding or a scan that could not examine everything, and
 `2` on a critical finding, so it can gate a script as it is. To add the historical
-package catalog, run `npx supply-chain-guard feed refresh` once with network
+package catalog, run `supply-chain-guard feed refresh` once with network
 access. The catalog is cached per user (see [Catalog cache](#catalog-cache)), so
 scans from any directory use it; it belongs to the installed version, so refresh
 again after an upgrade.
@@ -191,7 +198,7 @@ package is published from and what the Action and container image run on:
 npm install -g supply-chain-guard
 ```
 
-Or use directly with npx:
+Or use directly with npx, started from outside the directory you scan:
 
 ```bash
 npx supply-chain-guard scan ./my-project
@@ -828,7 +835,7 @@ Honest caveats: Socket's registry-wide behavioral detection is deeper than anyth
 ### Pairs well with
 
 - **CI one-two punch**: run `osv-scanner --lockfile=package-lock.json` for known CVEs and MAL- entries, then `supply-chain-guard scan .` for behavioral and campaign-IOC threats in the installed tree. Two axes, one job, both exit-code gated.
-- **Zero-install npm baseline**: `npm audit --audit-level=high` plus `npx supply-chain-guard scan .` covers advisory-known vulnerabilities and unreported malware without adding a single dependency.
+- **Zero-install npm baseline**: `npm audit --audit-level=high` plus `npx supply-chain-guard scan ./my-project`, started from the parent directory, covers advisory-known vulnerabilities and unreported malware without adding a single dependency.
 - **Pre-install vetting of a suspicious package**: `guarddog npm scan <pkg>` for an independent heuristic score, plus `supply-chain-guard npm <pkg>` for campaign-IOC and install-hook analysis, before it ever touches your machine.
 ## EU Compliance (CRA / NIS2)
 
@@ -1334,7 +1341,9 @@ This form works in every shell (bash, zsh, PowerShell, cmd) and avoids npx
 cold-start timeouts on first connect. On bash/zsh you can use the one-liner
 `claude mcp add supply-chain-guard -- npx -y supply-chain-guard mcp` instead;
 note that PowerShell swallows the bare `--` itself, so on Windows prefer the
-global-install form above.
+global-install form above. The agent host starts the server in its own working
+directory, usually the workspace; if that workspace is not trusted, npx lets npm
+run files from it ([GHSA-gqpg-9mjx-pv4w](https://github.com/homeofe/supply-chain-guard/security/advisories/GHSA-gqpg-9mjx-pv4w)), so the global install is the safer form there too.
 
 Exposes three tools over stdio: `ioc_lookup` (offline IOC + known-bad-version check
 for every supported ecosystem; package verdicts include the historical catalog only

@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1791895839",
-    "timestamp": "2026-10-13T12:50:39Z",
-    "commit": "e548573",
+    "session_id": "cli-1791901343",
+    "timestamp": "2026-10-13T14:22:23Z",
+    "commit": "7b0f3fc",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:c33aca1599d30c9817ff8b3c18f0f34e272092bfc4962b708430d67701d8f48a",
-      "updated": "2026-10-13T12:50:22Z",
-      "lines": 14442,
-      "summary": "Patch release with the 2026-10-12 and 2026-10-13 threat intel, cut from `main` at `e548573` on the owner's instruction."
+      "checksum": "sha256:1f6a55b9bb350bbf33a0f45b544d0f65823c47664d7436e830b5872d04253764",
+      "updated": "2026-10-13T14:21:09Z",
+      "lines": 14468,
+      "summary": "An automated OpenVuln review (zai-org) of a 6.4.0 snapshot reported seven findings."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:e82ab72541120d22c664f856efdad813cd54cbffc0785f97172878e940960769",
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "Patch release with the 2026-10-12 and 2026-10-13 threat intel, cut from `main` at `e548573` on the owner's instruction. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "An automated OpenVuln review (zai-org) of a 6.4.0 snapshot reported seven findings. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 918,
-    "manifest_plus_core": 215298,
-    "full_read": 229028
+    "manifest_only": 900,
+    "manifest_plus_core": 215664,
+    "full_read": 229394
   }
 }

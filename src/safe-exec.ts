@@ -8,6 +8,12 @@
  * scanned package. On POSIX an empty or relative PATH entry does the same.
  * The scanner's whole input is untrusted, so the lookup is done here, from
  * absolute PATH entries only, and the child receives the absolute path.
+ *
+ * Absolute is not enough on its own: npx, npm exec and npm run put the
+ * node_modules/.bin directory of the directory they start in, and of every
+ * parent, at the front of PATH, so started from inside a scanned checkout an
+ * absolute entry points into that checkout (GHSA-gqpg-9mjx-pv4w). Those
+ * entries are skipped too.
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -51,9 +57,22 @@ function isRunnableFile(candidate: string, platform: NodeJS.Platform): boolean {
 }
 
 /**
+ * True for a node_modules/.bin directory, at any depth. npm puts these on PATH
+ * for the directory it was started in and every parent, so one of them can be
+ * inside the content being scanned. No tool resolved here (git, gh, bzip2, xz,
+ * a package manager) is legitimately taken from one.
+ */
+function isNodeModulesBin(dir: string, platform: NodeJS.Platform): boolean {
+  const parts = dir.split(platform === "win32" ? /[\\/]+/ : /\/+/).filter((part) => part.length > 0 && part !== ".");
+  const last = (i: number) => (platform === "win32" ? (parts[parts.length - i] ?? "").toLowerCase() : parts[parts.length - i]);
+  return last(1) === ".bin" && last(2) === "node_modules";
+}
+
+/**
  * Absolute path of `name` from the absolute entries of PATH, or undefined.
- * Empty and relative PATH entries are skipped, and the current directory is
- * never searched implicitly. `name` must be a bare file name.
+ * Empty and relative PATH entries are skipped, and so is every
+ * node_modules/.bin entry; the current directory is never searched
+ * implicitly. `name` must be a bare file name.
  */
 export function resolveExecutable(name: string, options: ResolveExecutableOptions = {}): string | undefined {
   const platform = options.platform ?? process.platform;
@@ -66,7 +85,8 @@ export function resolveExecutable(name: string, options: ResolveExecutableOption
   const dirs = (envValue(env, "PATH", platform) ?? "")
     .split(platform === "win32" ? ";" : ":")
     .map((d) => (platform === "win32" ? d.trim().replace(/^"(.*)"$/, "$1") : d))
-    .filter((d) => d.length > 0 && p.isAbsolute(d) && (platform !== "win32" || /^(?:[A-Za-z]:[\\/]|\\\\)/.test(d)));
+    .filter((d) => d.length > 0 && p.isAbsolute(d) && (platform !== "win32" || /^(?:[A-Za-z]:[\\/]|\\\\)/.test(d)))
+    .filter((d) => !isNodeModulesBin(d, platform));
 
   let names = [name];
   if (platform === "win32") {

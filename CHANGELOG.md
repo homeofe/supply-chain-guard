@@ -7,6 +7,31 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Changed
+
+- The README quick start installs the scanner and runs it, and the MCP setup
+  guide configures the installed `supply-chain-guard` command instead of
+  `npx`. npx is documented only for a start from outside the scanned
+  directory, with the reason (see Security below).
+- `install-guard` no longer runs a package manager found in a
+  `node_modules/.bin` directory on `PATH`, so a project-local `pnpm` or
+  `yarn` there is not used; an installed one is.
+
+### Security
+
+- [GHSA-gqpg-9mjx-pv4w](https://github.com/homeofe/supply-chain-guard/security/advisories/GHSA-gqpg-9mjx-pv4w) (high): started through `npx`, `npm exec` or `npm run` from
+  inside the scanned content, the scanner ran a `git`, `gh`, `bzip2`,
+  `xz` or package manager committed to `node_modules/.bin` of that content.
+  npm puts that directory first on `PATH` as an absolute entry, and the 6.5.2
+  fix for GHSA-cq59-vmg7-pmqv only skipped empty and relative entries, so it
+  did not cover this case. Tool resolution now skips every `node_modules/.bin`
+  entry. npm itself can still run files from the directory it starts in before
+  the scanner runs (a committed `node_modules/.bin/sh`, or a fake
+  `node_modules/supply-chain-guard` package that npx prefers even with an
+  exact version), which no change in this package can prevent; hence the
+  documentation change above. Found by an automated OpenVuln review; see
+  `docs/security-audit-2026-10-13.md`.
+
 ## [6.5.5] - 2026-10-13
 
 ### Added

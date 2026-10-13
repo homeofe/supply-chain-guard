@@ -65,6 +65,41 @@ describe("resolveExecutable", () => {
     }
   });
 
+  // GHSA-gqpg-9mjx-pv4w: npx / npm exec / npm run put node_modules/.bin of the
+  // start directory and every parent at the front of PATH, as absolute entries.
+  it("skips node_modules/.bin entries even though they are absolute", () => {
+    const sep = isWin ? ";" : ":";
+    const planted = path.join(root, "checkout", "node_modules", ".bin");
+    const parent = path.join(root, "node_modules", ".bin");
+    tool(planted, exe);
+    tool(parent, exe);
+    const real = tool(path.join(root, "bin"), exe);
+    const env = { PATH: [planted, planted + path.sep, parent, path.join(root, "bin")].join(sep), PATHEXT: ".EXE" };
+    expect(resolveExecutable("faketool", { env })).toBe(real);
+    expect(resolveExecutable("faketool", { env: { PATH: [planted, parent].join(sep), PATHEXT: ".EXE" } })).toBeUndefined();
+  });
+
+  it("still searches directories that only look similar to node_modules/.bin", () => {
+    const sep = isWin ? ";" : ":";
+    const similar = [
+      path.join(root, "node_modules", ".bin-tools"),
+      path.join(root, "node_modules", "pkg", "bin"),
+      path.join(root, "my_node_modules", ".bin"),
+    ];
+    for (const dir of similar) {
+      const expected = tool(dir, exe);
+      expect(resolveExecutable("faketool", { env: { PATH: [dir].join(sep), PATHEXT: ".EXE" } })).toBe(expected);
+    }
+  });
+
+  it.runIf(isWin)("matches node_modules\\.bin case-insensitively and with either separator on Windows", () => {
+    const planted = path.join(root, "checkout", "Node_Modules", ".BIN");
+    tool(planted, "faketool.exe");
+    const forward = planted.replace(/\\/g, "/");
+    expect(resolveExecutable("faketool", { env: { PATH: planted, PATHEXT: ".EXE" } })).toBeUndefined();
+    expect(resolveExecutable("faketool", { env: { PATH: forward, PATHEXT: ".EXE" } })).toBeUndefined();
+  });
+
   it("refuses anything that is not a bare file name", () => {
     const dir = path.join(root, "bin");
     tool(dir, exe);
@@ -144,5 +179,60 @@ describe("tools are never run from the current or scanned directory", () => {
       process.chdir(cwd);
     }
     expect(fs.existsSync(marker), "the planted npm ran").toBe(false);
+  });
+});
+
+// GHSA-gqpg-9mjx-pv4w regression: started through npx from inside the
+// checkout, npm puts <checkout>/node_modules/.bin first on PATH. A git or
+// package manager committed there must not run. POSIX only: on Windows the
+// planted file would have to be a real .exe, and the resolver tests above
+// cover the Windows path forms.
+describe.skipIf(isWin)("tools are never run from a node_modules/.bin on PATH", () => {
+  let root: string;
+  let savedPath: string | undefined;
+
+  beforeEach(() => {
+    root = fs.mkdtempSync(path.join(os.tmpdir(), "scg-npx-bin-"));
+    savedPath = process.env.PATH;
+    // What npx does when started in root: its node_modules/.bin goes first.
+    process.env.PATH = `${path.join(root, "node_modules", ".bin")}:${savedPath ?? ""}`;
+  });
+  afterEach(() => {
+    if (savedPath === undefined) delete process.env.PATH;
+    else process.env.PATH = savedPath;
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  it("scan does not run a git committed to node_modules/.bin of the scanned checkout", async () => {
+    fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "x", version: "1.0.0" }));
+    // A .git directory as in any real checkout, so the git history check runs too.
+    fs.mkdirSync(path.join(root, ".git"));
+    const bin = path.join(root, "node_modules", ".bin");
+    fs.mkdirSync(bin, { recursive: true });
+    const marker = plantTool(bin, "git");
+    const cwd = process.cwd();
+    try {
+      process.chdir(root);
+      await scan({ target: root, format: "json" });
+    } finally {
+      process.chdir(cwd);
+    }
+    expect(fs.existsSync(marker), "the git from node_modules/.bin ran during scan").toBe(false);
+  });
+
+  it("install guard does not run a package manager from node_modules/.bin", () => {
+    const bin = path.join(root, "node_modules", ".bin");
+    fs.mkdirSync(bin, { recursive: true });
+    const marker = plantTool(bin, "npm");
+    const cwd = process.cwd();
+    try {
+      process.chdir(root);
+      runInstallGuard("npm", ["--version"], { feed: [], log: () => {} });
+    } catch {
+      // npm missing from PATH is fine here; only the marker matters.
+    } finally {
+      process.chdir(cwd);
+    }
+    expect(fs.existsSync(marker), "the npm from node_modules/.bin ran").toBe(false);
   });
 });

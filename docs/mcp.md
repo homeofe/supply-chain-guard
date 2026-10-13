@@ -20,7 +20,11 @@ Recommended agent workflow: call `ioc_lookup` before every `npm install` / `pip 
 
 ## Version pinning guidance
 
-The snippets below use `supply-chain-guard@latest` so the bundled threat-intel feed stays current - for a threat scanner, freshness IS the feature. If your environment requires reproducible toolchains, pin an exact version (e.g. `supply-chain-guard@X.Y.Z`) and bump it on a schedule; a pinned scanner slowly goes blind to new campaigns.
+The snippets below run a global install. Keep it current with `npm install -g supply-chain-guard@latest` so the bundled threat-intel feed stays fresh - for a threat scanner, freshness IS the feature. If your environment requires reproducible toolchains, install an exact version (e.g. `supply-chain-guard@X.Y.Z`) and bump it on a schedule; a pinned scanner slowly goes blind to new campaigns.
+
+## Why not npx in the workspace
+
+An MCP client starts the server in its own working directory, which is usually the workspace the agent works on. Started through `npx` there, npm puts that workspace's `node_modules/.bin` first on `PATH`, and npm itself can run files from the workspace before the scanner starts: a committed `node_modules/.bin/sh`, or a committed `node_modules/supply-chain-guard` package that npx runs instead of the real one, even with an exact version. For a workspace you do not fully trust, use the global install below, or point npx at a fixed directory outside the workspace. See [GHSA-gqpg-9mjx-pv4w](https://github.com/homeofe/supply-chain-guard/security/advisories/GHSA-gqpg-9mjx-pv4w).
 
 ## Claude Code
 
@@ -32,7 +36,8 @@ npm install -g supply-chain-guard
 claude mcp add supply-chain-guard supply-chain-guard mcp
 ```
 
-On bash/zsh you can use the npx one-liner instead:
+On bash/zsh you can use the npx one-liner instead, for workspaces you trust (see
+[Why not npx in the workspace](#why-not-npx-in-the-workspace)):
 
 ```bash
 claude mcp add supply-chain-guard -- npx -y supply-chain-guard@latest mcp
@@ -42,14 +47,14 @@ PowerShell note: PowerShell consumes the bare `--` before the claude CLI sees
 it, so the one-liner fails there with `error: unknown option '-y'`. Use the
 global-install form above on Windows (or quote the token: `'--'`).
 
-Or in `.mcp.json` (project scope):
+Or in `.mcp.json` (project scope), with the global install:
 
 ```json
 {
   "mcpServers": {
     "supply-chain-guard": {
-      "command": "npx",
-      "args": ["-y", "supply-chain-guard@latest", "mcp"]
+      "command": "supply-chain-guard",
+      "args": ["mcp"]
     }
   }
 }
@@ -57,14 +62,14 @@ Or in `.mcp.json` (project scope):
 
 ## Claude Desktop
 
-Add to `claude_desktop_config.json` (Settings > Developer > Edit Config):
+Install it globally (`npm install -g supply-chain-guard`), then add to `claude_desktop_config.json` (Settings > Developer > Edit Config):
 
 ```json
 {
   "mcpServers": {
     "supply-chain-guard": {
-      "command": "npx",
-      "args": ["-y", "supply-chain-guard@latest", "mcp"]
+      "command": "supply-chain-guard",
+      "args": ["mcp"]
     }
   }
 }
@@ -72,14 +77,14 @@ Add to `claude_desktop_config.json` (Settings > Developer > Edit Config):
 
 ## Cursor
 
-Add to `.cursor/mcp.json` in your project (or `~/.cursor/mcp.json` globally):
+Install it globally (`npm install -g supply-chain-guard`), then add to `.cursor/mcp.json` in your project (or `~/.cursor/mcp.json` globally):
 
 ```json
 {
   "mcpServers": {
     "supply-chain-guard": {
-      "command": "npx",
-      "args": ["-y", "supply-chain-guard@latest", "mcp"]
+      "command": "supply-chain-guard",
+      "args": ["mcp"]
     }
   }
 }
