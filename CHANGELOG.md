@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [6.5.6] - 2026-10-13
+
 ### Changed
 
 - The README quick start installs the scanner and runs it, and the MCP setup
@@ -7467,7 +7469,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.5.5...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.5.6...HEAD
+[6.5.6]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.6
 [6.5.5]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.5
 [6.5.4]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.4
 [6.5.3]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.3
