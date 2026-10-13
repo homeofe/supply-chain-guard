@@ -88,6 +88,50 @@
     {
       "id": "MAL-2026-17688",
       "reason": "Dependency-confusion record in the pin-only scope @galicia-toolkit/ (threat-feed-pin-only.json) naming every version of @galicia-toolkit/core with no versions list. The registry holds only npm's 0.0.0-stage takedown placeholder, so no attacker version is known. A bare-name block would flag the victim organization's own internal package of the same name."
+    },
+    {
+      "id": "MAL-2025-17306",
+      "reason": "Dependency-confusion record naming every version of com.apple.unityplugin.accessibility, a package name of Apple's official Unity plugins or of their Apple Arcade internal counterparts, with no versions list. The name is pin-only (threat-feed-pin-only.json) and the registry holds only npm's security holding package, so no attacker version is known. A bare-name block would flag every Unity project using Apple's real plugin."
+    },
+    {
+      "id": "MAL-2025-17307",
+      "reason": "Dependency-confusion record naming every version of com.apple.unityplugin.arcade.cloudkit, a package name of Apple's official Unity plugins or of their Apple Arcade internal counterparts, with no versions list. The name is pin-only (threat-feed-pin-only.json) and the registry holds only npm's security holding package, so no attacker version is known. A bare-name block would flag every Unity project using Apple's real plugin."
+    },
+    {
+      "id": "MAL-2025-17308",
+      "reason": "Dependency-confusion record naming every version of com.apple.unityplugin.arcade.cloudsaves, a package name of Apple's official Unity plugins or of their Apple Arcade internal counterparts, with no versions list. The name is pin-only (threat-feed-pin-only.json) and the registry holds only npm's security holding package, so no attacker version is known. A bare-name block would flag every Unity project using Apple's real plugin."
+    },
+    {
+      "id": "MAL-2025-17309",
+      "reason": "Dependency-confusion record naming every version of com.apple.unityplugin.arcade.fairplay, a package name of Apple's official Unity plugins or of their Apple Arcade internal counterparts, with no versions list. The name is pin-only (threat-feed-pin-only.json) and the registry holds only npm's security holding package, so no attacker version is known. A bare-name block would flag every Unity project using Apple's real plugin."
+    },
+    {
+      "id": "MAL-2025-17310",
+      "reason": "Dependency-confusion record naming every version of com.apple.unityplugin.arcade.splashscreen, a package name of Apple's official Unity plugins or of their Apple Arcade internal counterparts, with no versions list. The name is pin-only (threat-feed-pin-only.json) and the registry holds only npm's security holding package, so no attacker version is known. A bare-name block would flag every Unity project using Apple's real plugin."
+    },
+    {
+      "id": "MAL-2025-17311",
+      "reason": "Dependency-confusion record naming every version of com.apple.unityplugin.core, a package name of Apple's official Unity plugins or of their Apple Arcade internal counterparts, with no versions list. The name is pin-only (threat-feed-pin-only.json) and the registry holds only npm's security holding package, so no attacker version is known. A bare-name block would flag every Unity project using Apple's real plugin."
+    },
+    {
+      "id": "MAL-2025-17312",
+      "reason": "Dependency-confusion record naming every version of com.apple.unityplugin.corehaptics, a package name of Apple's official Unity plugins or of their Apple Arcade internal counterparts, with no versions list. The name is pin-only (threat-feed-pin-only.json) and the registry holds only npm's security holding package, so no attacker version is known. A bare-name block would flag every Unity project using Apple's real plugin."
+    },
+    {
+      "id": "MAL-2025-17313",
+      "reason": "Dependency-confusion record naming every version of com.apple.unityplugin.gamecontroller, a package name of Apple's official Unity plugins or of their Apple Arcade internal counterparts, with no versions list. The name is pin-only (threat-feed-pin-only.json) and the registry holds only npm's security holding package, so no attacker version is known. A bare-name block would flag every Unity project using Apple's real plugin."
+    },
+    {
+      "id": "MAL-2025-17314",
+      "reason": "Dependency-confusion record naming every version of com.apple.unityplugin.gamekit, a package name of Apple's official Unity plugins or of their Apple Arcade internal counterparts, with no versions list. The name is pin-only (threat-feed-pin-only.json) and the registry holds only npm's security holding package, so no attacker version is known. A bare-name block would flag every Unity project using Apple's real plugin."
+    },
+    {
+      "id": "MAL-2025-17315",
+      "reason": "Dependency-confusion record naming every version of com.apple.unityplugin.phase, a package name of Apple's official Unity plugins or of their Apple Arcade internal counterparts, with no versions list. The name is pin-only (threat-feed-pin-only.json) and the registry holds only npm's security holding package, so no attacker version is known. A bare-name block would flag every Unity project using Apple's real plugin."
+    },
+    {
+      "id": "MAL-2025-49110",
+      "reason": "Dependency-confusion record naming every version of com.apple.unityplugin.spatialcontroller, a package name of Apple's official Unity plugins or of their Apple Arcade internal counterparts, with no versions list. The name is pin-only (threat-feed-pin-only.json) and the registry holds only npm's security holding package, so no attacker version is known. A bare-name block would flag every Unity project using Apple's real plugin."
     }
   ]
 }

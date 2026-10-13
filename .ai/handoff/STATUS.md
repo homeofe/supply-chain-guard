@@ -1,3 +1,78 @@
+## Daily threat intel (2026-10-12) (claude-opus-5-5)
+
+Scheduled run, worktree cut from `origin/main` at `78135ee` (v6.5.4).
+
+Windowed import (GitHub Advisory Database, OpenSSF, DataDog): 25 package
+entries, all to the bundle, 0 to the catalog. GitHub published whole-package
+malware advisories during the run for older MAL records, so the proposal grew
+between dry runs (38, then 26 written, then 10 more). Every bare name was
+probed against the registry. Six holding-package names are accepted bare.
+19 were dependency-confusion targets whose malicious versions were already
+pinned: the 17 `@galicia-toolkit-nestjs*`, `@galicia-toolkit-cheques-nc` and
+`@brick-v2` names, plus `@tesla-insurance/vinless-quote` and
+`@user-services/web-components`. Eight more were the `ltidisafe` series
+(`@smwebserver`, `@library-wide`, `@pinecone-experience`, `@airbnb-extended`,
+`liferay-workspace-scripts`, `unified-platform`, `risk-detection`) and
+`app-sca-info-banking`. And `com.apple.unityplugin.storekit` is the real
+package name of Apple's StoreKit Unity plugin (apple/unityplugins). All of
+these went into `threat-feed-pin-only.json` (16 entries: 11 scopes, 5 names),
+which extends the pin-only policy of 2026-10-09 to the same class. The three
+bare lines the importer had already written were removed before commit. The
+pin-only settlement added the 9.9.9 versions of the two `@tesla-insurance` /
+`@user-services` squats (published before the advisory, registry time map).
+
+Non-package indicators (single-source, OSV amazon-inspector analyses, each with
+a campaign so they stay bundled, and a campaigns.test.ts block):
+`oob[.]s4yhii[.]com`, `oob[.]algamil7x[.]xyz`,
+`ltidi[.]storage[.]googleapis[.]com` (bucket host only, shared apex not listed,
+negative test included).
+
+Snapshot reconcile (STEP 1a): 0 to add; `--check` exit 0, 0 unmapped, 22
+acknowledged, none stale. DataDog `still published`: the six known ids only.
+
+Weekly full GitHub history (Monday): 124,539 advisories over 1,246 pages,
+duplicates 142,830, unmapped 0, truncated false, 21 proposed. 17 were the
+galicia/brick bare names above (now pin-only). The other 4 were exact pins of
+`omni-channel-configurator-wireline-frontend` and
+`b2b-frontend-external-library` (0.0.1 and 9999.0.0), not imported because
+both names already sit bare in the catalog.
+
+Follow-up in the same PR, after review of the points above:
+- The catalog held 11 `com.apple.unityplugin.*` names BARE (accessibility,
+  arcade.cloudkit, arcade.cloudsaves, arcade.fairplay, arcade.splashscreen,
+  core, corehaptics, gamecontroller, gamekit, phase, spatialcontroller;
+  MAL-2025-17306 to MAL-2025-17315 and MAL-2025-49110). They are package names
+  of Apple's official Unity plugins (apple/unityplugins) or their Apple Arcade
+  counterparts. The records list no version and the registry holds only npm's
+  2022/2023 holding packages, so nothing can be pinned: the 11 names are
+  pin-only and the 11 records sit in `threat-feed-unresolvable.json` (now 33).
+  The bare lines were removed through `readCatalogText`/`writeCatalogText`,
+  each asserted to match once. Detection given up: none installable, since no
+  attacker version exists on the registry.
+- `omni-channel-configurator-wireline-frontend` and
+  `b2b-frontend-external-library`: pin-only, bare catalog lines removed, the
+  snapshot import pinned 0.0.1 and 9999.0.0 of each (catalog-bound by
+  firstSeen 2026-09-07). The same snapshot run also added three fresh pins
+  published upstream since the morning run: `@myorder-frontend-commons/analytics@101.0.0`
+  (bundle) and `nitro-bundled-dep` 0.0.1 and 1.0.0 (bundle).
+- Why nothing caught it: `feed-pin-only.test.ts` "hold no bare name in a
+  pin-only scope" checks only names ON the list, so an unlisted victim name
+  passes. Cut-proven for the new entries: a bare `com.apple.unityplugin.core`
+  line appended to the catalog turns it red, restored it is green. A guard
+  for an unlisted victim name would need a source of victim names; open.
+- Not investigated: the Monday GitHub-only history run proposed pins for the
+  two names above although a bare catalog entry covered them, which the
+  windowed run does not do. Moot for these names now; the mode difference
+  in the bare-name coverage check is still unexplained.
+- Kept by owner decision: `com.apple.unityplugin.storekit@1.0.1` and `@1.0.2`.
+  They fire only through an npm-family lockfile (package-lock, yarn, pnpm,
+  bun) at exactly those versions; Unity's `Packages/packages-lock.json` and
+  plugin folders are not matched (tested with a bundled-pin control). A
+  future official 1.0.1 or 1.0.2 consumed through npm tooling would be
+  flagged. The exact fix is registry-aware pin matching (the lockfile parsers
+  keep `resolved`, a feed entry can say "public npm only"), a separate code
+  change.
+
 ## Release v6.5.4 (2026-10-11) (claude-opus-5-5)
 
 Patch release on top of PR 400 (2026-10-10 threat intel, MALFEX) and PR 401

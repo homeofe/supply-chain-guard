@@ -7,6 +7,46 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat intel for 2026-10-12: 28 package entries from the GitHub Advisory
+  Database and OpenSSF, all in the offline bundle. Clusters: PyPI
+  `minecraftaccfinder` (eight versions) and `py2ops`, six names npm already
+  replaced with security holding packages, sentinel-version squats such as
+  `@dransay/api`, `ap3-foundations-ui` and `cloudflare_module`, further
+  `nitro-bundled-dep` and `@myorder-frontend-commons` versions, and the
+  earlier 9.9.9 releases of the `@tesla-insurance` and `@user-services`
+  squats, of which only 9.9.10 was pinned.
+- Three out-of-band hosts of dependency-confusion squats, from the OSV
+  per-source analyses (single-source): `oob[.]s4yhii[.]com` (the
+  `@galicia-toolkit-*` and `@brick-v2` squats), `oob[.]algamil7x[.]xyz` (DNS
+  exfiltration of the `@tesla-insurance` and `@user-services` squats) and the
+  bucket host `ltidi[.]storage[.]googleapis[.]com`, which serves the
+  off-registry tarball every squat of the `ltidisafe` series depends on. Only
+  the bucket is listed, not the shared storage apex.
+
+### Changed
+
+- `threat-feed-pin-only.json`: 16 further dependency-confusion targets are
+  settled into exact pins and never become bare names. GitHub re-published
+  their records as whole-package advisories on 2026-10-12, and a bare name
+  would flag the victim's own internal package. One of them,
+  `com.apple.unityplugin.storekit`, is the name of Apple's official StoreKit
+  Unity plugin. Every malicious version was already pinned.
+
+### Fixed
+
+- False positives on Apple's official Unity plugins: the historical catalog
+  blocked 11 `com.apple.unityplugin.*` package names outright (among them
+  `core`, which every Apple Unity plugin depends on). They come from
+  dependency-confusion records of 2025 that list no version, and npm keeps no
+  attacker version of these names, so they are now pin-only and recorded in
+  `threat-feed-unresolvable.json` as acknowledged gaps instead of bare names.
+- `omni-channel-configurator-wireline-frontend` and
+  `b2b-frontend-external-library`, internal package names of a
+  dependency-confusion target, were blocked outright in the catalog. They are
+  now pin-only and pinned at the two malicious versions, 0.0.1 and 9999.0.0.
+
 ## [6.5.4] - 2026-10-11
 
 ### Added

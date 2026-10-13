@@ -2,8 +2,8 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "6.5.4",
-  "entryCount": 7048,
-  "generatedAt": "2026-10-11T00:00:00.000Z",
+  "entryCount": 7079,
+  "generatedAt": "2026-10-12T00:00:00.000Z",
   "entries": [
     {
       "type": "domain",
@@ -59095,6 +59095,257 @@
       "confidence": 1,
       "source": "MAL-2026-17748 (amazon-inspector+ossf-package-analysis)",
       "firstSeen": "2026-10-09"
+    },
+    {
+      "type": "package",
+      "value": "eslint-config-compact-base",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gx7g-jjf6-c7jg, MAL-2026-17157",
+      "firstSeen": "2026-10-12"
+    },
+    {
+      "type": "package",
+      "value": "webpackbootstrap5",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2q27-vrr7-584g, MAL-2026-16201",
+      "firstSeen": "2026-10-12"
+    },
+    {
+      "type": "package",
+      "value": "@zaka13/zakasite",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-j7rx-j64h-2fch",
+      "firstSeen": "2026-10-12"
+    },
+    {
+      "type": "package",
+      "value": "pypi:minecraftaccfinder@0.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gw9m-gc3w-389x, MAL-2026-17809 (kam193)",
+      "firstSeen": "2026-10-12"
+    },
+    {
+      "type": "package",
+      "value": "pypi:minecraftaccfinder@0.1.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gw9m-gc3w-389x, MAL-2026-17809 (kam193)",
+      "firstSeen": "2026-10-12"
+    },
+    {
+      "type": "package",
+      "value": "pypi:minecraftaccfinder@0.1.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gw9m-gc3w-389x, MAL-2026-17809 (kam193)",
+      "firstSeen": "2026-10-12"
+    },
+    {
+      "type": "package",
+      "value": "pypi:minecraftaccfinder@0.3.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gw9m-gc3w-389x, MAL-2026-17809 (kam193)",
+      "firstSeen": "2026-10-12"
+    },
+    {
+      "type": "package",
+      "value": "pypi:minecraftaccfinder@0.3.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gw9m-gc3w-389x, MAL-2026-17809 (kam193)",
+      "firstSeen": "2026-10-12"
+    },
+    {
+      "type": "package",
+      "value": "pypi:minecraftaccfinder@0.4.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gw9m-gc3w-389x, MAL-2026-17809 (kam193)",
+      "firstSeen": "2026-10-12"
+    },
+    {
+      "type": "package",
+      "value": "pypi:minecraftaccfinder@2.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gw9m-gc3w-389x, MAL-2026-17809 (kam193)",
+      "firstSeen": "2026-10-12"
+    },
+    {
+      "type": "package",
+      "value": "pypi:minecraftaccfinder@3.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gw9m-gc3w-389x, MAL-2026-17809 (kam193)",
+      "firstSeen": "2026-10-12"
+    },
+    {
+      "type": "package",
+      "value": "helpersutils-dev-tools",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-w2cw-5p4p-mc64, MAL-2026-16465",
+      "firstSeen": "2026-10-12"
+    },
+    {
+      "type": "package",
+      "value": "testmgkregme",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x8qg-wc79-vfhh, MAL-2026-16317",
+      "firstSeen": "2026-10-12"
+    },
+    {
+      "type": "package",
+      "value": "npmscript_tesstalert_unpkg",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xvj9-j5xj-9f5p, MAL-2026-16309",
+      "firstSeen": "2026-10-12"
+    },
+    {
+      "type": "package",
+      "value": "css-nesting-transform@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3p4f-rhj3-crjv, MAL-2026-17804",
+      "firstSeen": "2026-10-08"
+    },
+    {
+      "type": "package",
+      "value": "@dransay/api@99.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wcrv-mq2h-33qj, MAL-2026-17805",
+      "firstSeen": "2026-10-08"
+    },
+    {
+      "type": "package",
+      "value": "ap3-foundations-ui@99.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4r79-x33v-862h, MAL-2026-17806 (amazon-inspector)",
+      "firstSeen": "2026-10-12"
+    },
+    {
+      "type": "package",
+      "value": "pypi:py2ops@2.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hfr2-qh7r-7xrr, MAL-2026-17807",
+      "firstSeen": "2026-10-09"
+    },
+    {
+      "type": "package",
+      "value": "@s4yhiitestpoc/r2-https-b@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-whjq-6xm5-ggvh, MAL-2026-17808 (amazon-inspector)",
+      "firstSeen": "2026-10-12"
+    },
+    {
+      "type": "package",
+      "value": "hridoy-ultimate@8.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8chm-j6jp-f4h3, MAL-2026-17803 (amazon-inspector)",
+      "firstSeen": "2026-10-11"
+    },
+    {
+      "type": "package",
+      "value": "some-very-long-package-name@99.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rf49-p2c5-fh8p, MAL-2026-17778 (amazon-inspector)",
+      "firstSeen": "2026-10-11"
+    },
+    {
+      "type": "package",
+      "value": "cloudflare_module@99.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9p5g-9jf3-6739, MAL-2026-17768 (amazon-inspector)",
+      "firstSeen": "2026-10-11"
+    },
+    {
+      "type": "package",
+      "value": "tostpro@100.7.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-462h-3mh4-gh4m, MAL-2026-17564 (amazon-inspector)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "domain",
+      "value": "oob.s4yhii.com",
+      "severity": "critical",
+      "confidence": 0.85,
+      "campaign": "s4yhii dependency-confusion squats",
+      "source": "OSV MAL-2026-17714 to MAL-2026-17730 (amazon-inspector, single-source)",
+      "firstSeen": "2026-10-12"
+    },
+    {
+      "type": "domain",
+      "value": "oob.algamil7x.xyz",
+      "severity": "critical",
+      "confidence": 0.85,
+      "campaign": "algamil7x DNS-exfiltration squats",
+      "source": "OSV MAL-2026-16378, MAL-2026-16379 (amazon-inspector, single-source)",
+      "firstSeen": "2026-10-12"
+    },
+    {
+      "type": "domain",
+      "value": "ltidi.storage.googleapis.com",
+      "severity": "critical",
+      "confidence": 0.85,
+      "campaign": "ltidisafe dependency-confusion squats",
+      "source": "OSV MAL-2026-17184, MAL-2026-17456, MAL-2026-17563, MAL-2026-17566, MAL-2026-17631, MAL-2026-17754, MAL-2026-17772 (amazon-inspector, single-source)",
+      "firstSeen": "2026-10-12"
+    },
+    {
+      "type": "package",
+      "value": "@user-services/web-components@9.9.9",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-f3g4-6hpx-9mcq, MAL-2026-16379",
+      "firstSeen": "2026-10-12"
+    },
+    {
+      "type": "package",
+      "value": "@tesla-insurance/vinless-quote@9.9.9",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6m9v-pw95-fc67, MAL-2026-16378",
+      "firstSeen": "2026-10-12"
+    },
+    {
+      "type": "package",
+      "value": "@myorder-frontend-commons/analytics@101.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-17749 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-10-09"
+    },
+    {
+      "type": "package",
+      "value": "nitro-bundled-dep@0.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "MAL-2026-17774 (amazon-inspector)",
+      "firstSeen": "2026-10-11"
+    },
+    {
+      "type": "package",
+      "value": "nitro-bundled-dep@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "MAL-2026-17774 (amazon-inspector)",
+      "firstSeen": "2026-10-11"
     }
   ]
 }
