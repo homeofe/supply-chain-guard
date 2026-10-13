@@ -9,6 +9,17 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Added
 
+- Threat intel for 2026-10-13: 59 package entries from the GitHub Advisory
+  Database and OpenSSF, 55 in the offline bundle and 4 in the catalog.
+  Clusters: malicious forks of the WhatsApp Web library Baileys and its
+  `libsignal-node` dependency published under throwaway scopes and names
+  (`@fazzcodestudio`, `@wanzlonely`, `@saazkira`, `@mikudeveloper`,
+  `@sanzoffc`, `@modss`, `bailslonely`, `alipclutch-baileys` and others), the
+  eleven `@revizahoshii/hoshino-*` packages including an MCP server,
+  `orderly-plugin-liquidity-heatmap` 1.0.0 to 1.0.6, PyPI `npp-ml` 0.1.7 to
+  0.1.9, and sentinel-version squats `brass-common@99.9.1` and
+  `test-account-portal-fe@100.100.101`. Every bare name was probed against
+  the registry and is an npm security holding package.
 - Threat intel for 2026-10-12: 28 package entries from the GitHub Advisory
   Database and OpenSSF, all in the offline bundle. Clusters: PyPI
   `minecraftaccfinder` (eight versions) and `py2ops`, six names npm already
@@ -27,6 +38,11 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Changed
 
+- `threat-feed-pin-only.json`: the `@coopeuch/` scope is pin-only. GitHub
+  re-published the five squats of that scope (MAL-2026-17759 to
+  MAL-2026-17763) as whole-package advisories, and a bare name would flag the
+  victim's internal packages. The malicious sentinel version 1.999.999 stays
+  pinned.
 - `threat-feed-pin-only.json`: 16 further dependency-confusion targets are
   settled into exact pins and never become bare names. GitHub re-published
   their records as whole-package advisories on 2026-10-12, and a bare name

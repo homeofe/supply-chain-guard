@@ -1,3 +1,56 @@
+## Daily threat intel (2026-10-13) (claude-opus-5-5)
+
+Scheduled run. The 2026-10-12 PR was still open when the run started; cut from
+`main` it re-proposed 54 of that PR's entries, including bare names of the
+dependency-confusion targets it had made pin-only. On the owner's instruction
+that PR was merged first and the run was repeated from `origin/main` at
+`983bcc3`.
+
+The import ran on the Linux verification host: storage.googleapis.com was slow from both hosts
+(8.7 MB OSV index in 38 to 71 s), and the importer's default 15 s timeout also
+covers the body read, so every local attempt failed with "invalid text body".
+`--timeout 120000` fixed it. Note for the importer: `fetchOsvExport` replaces
+the underlying TimeoutError with "invalid text body", which hides the cause.
+
+Windowed import, WITHOUT DataDog (`--no-datadog`): 59 package entries, 55 to
+the bundle, 4 to the catalog. No limit, no page cap, no window, nothing
+declined or deferred, 0 unmapped. Bare names: every one probed against the
+registry, every one an npm security holding package. The five `@coopeuch/*`
+names were dependency-confusion targets already pinned at the sentinel
+1.999.999; the scope is now pin-only (`threat-feed-pin-only.json`).
+
+DataDog block NOT imported, open for an interactive session: with DataDog on,
+the run proposed 379 more entries from DataDog alone (8,329 pins today against
+7,883 yesterday), 369 of them older than two weeks and 355 catalog-bound. For
+74 of the 77 packages in the old part, EVERY pinned version is still published
+on npm, often including the current `latest`: `@qwen-code/qwen-code` (22
+versions, 8 maintainers), `@zuplo/cli` (42), `edgeone` (11), `gina` (24),
+`@codexed/codex` (20), `@hybridaione/hybridclaw` (17), `watchmen-cli-win32-x64`
+(22), `@toptal/picasso*` (100.x and 101.0.0), `houdini-*`, `@langwatch/server`.
+A sample in the dataset is the only evidence; nothing has settled whether these
+are hijacked releases or detector false positives, and a pin of a live
+legitimate release is a false positive on every install. The 10 recent
+DataDog-only entries (holding-package names such as `storymesh-win32-x64`,
+`foremerge-win32-x64`, `kartykgithub-*`, and pins such as
+`jscaw-win32-x64-msvc@0.3.1`, `riftri-win32-arm64@0.6.1`,
+`@blackbelt-technology/pi-agent-dashboard@0.9.0`) wait with the block. The
+completeness gate does not see this: `--osv-snapshot --check` exits 0 with
+DataDog on while it lists the 379 as new entries.
+
+Importer gap, not fixed here: `NPM_PLACEHOLDER_VERSION` (npm's own
+`0.0.0-stage` / `-security` takedown placeholders) is only applied to pin-only
+items. GHSA and OSV records that list `= 0.0.0-stage` explicitly pass, so this
+run pinned `@s4yhiitestpoc/r3-https@0.0.0-stage` and
+`@myorder-frontend-commons/analytics@0.0.0-stage` (both versions published by
+the `npm` account). Harmless, but they add no detection.
+
+Snapshot reconcile (STEP 1a, `--no-datadog`): 0 to add; `--check` exit 0,
+0 unmapped, 33 acknowledged, none stale. DataDog `still published`: the six
+known extension ids only.
+
+Vendor enrichment (STEP 1b): no primary source published new atomic
+indicators for the last days; nothing added by hand.
+
 ## Daily threat intel (2026-10-12) (claude-opus-5-5)
 
 Scheduled run, worktree cut from `origin/main` at `78135ee` (v6.5.4).

@@ -77,6 +77,11 @@
       "addedOn": "2026-10-12"
     },
     {
+      "scope": "@coopeuch/",
+      "reason": "Dependency-confusion squats of an organization private scope: @coopeuch/button, common, components, config and core at the sentinel version 1.999.999 (MAL-2026-17759 to MAL-2026-17763, published 2026-10-11, now npm security holding packages). The names belong to the victim internal packages, so only the published malicious version is pinned.",
+      "addedOn": "2026-10-13"
+    },
+    {
       "name": "liferay-workspace-scripts",
       "reason": "Dependency-confusion squat at the sentinel version 99.9.1 whose only content is a dependency on an off-registry ltidisafe tarball (MAL-2026-17772). The name belongs to the victim's internal package, so only the published malicious versions are pinned; a GitHub whole-package advisory re-published it on 2026-10-12.",
       "addedOn": "2026-10-12"
