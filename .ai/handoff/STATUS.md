@@ -1,3 +1,20 @@
+## Release v6.5.5 (2026-10-13) (claude-opus-5-5)
+
+Patch release with the 2026-10-12 and 2026-10-13 threat intel, cut from `main`
+at `e548573` on the owner's instruction. All version sites and the lockfile move
+to 6.5.5. `release:prepare` advanced `bundleCutoffDate` from 2026-09-11 to
+2026-09-13; `feed-migrate --write` moved 77 package indicators (68 dated
+2026-09-11, 9 dated 2026-09-12) to the catalog. None is asserted by a test or
+carries a campaign or family: checked against every test file, with the same
+check flagging 1,885 of the 7,134 bundle entries as the control. Bundle 7,057,
+catalog 263,958. Node schedule re-read against `nodejs/Release`: unchanged,
+milestone 6.5.6.
+
+Still open from the 2026-10-13 daily run: the DataDog-only block (379 entries,
+mostly versions still published on npm) is not imported and needs an
+interactive review; the importer's `0.0.0-stage` placeholder filter covers
+pin-only items only.
+
 ## Daily threat intel (2026-10-13) (claude-opus-5-5)
 
 Scheduled run. The 2026-10-12 PR was still open when the run started; cut from

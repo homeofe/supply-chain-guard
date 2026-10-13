@@ -3,30 +3,30 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1791892452",
-    "timestamp": "2026-10-13T11:54:12Z",
-    "commit": "983bcc3",
+    "session_id": "cli-1791895839",
+    "timestamp": "2026-10-13T12:50:39Z",
+    "commit": "e548573",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:5e6320a025e9e6366dd7c49fad260d17e596ac85ac6fbbe6e1f43e0209510c66",
-      "updated": "2026-10-13T11:54:05Z",
-      "lines": 14425,
-      "summary": "Scheduled run. The 2026-10-12 PR was still open when the run started; cut from `main` it re-proposed 54 of that PR's entries, including bare names..."
+      "checksum": "sha256:c33aca1599d30c9817ff8b3c18f0f34e272092bfc4962b708430d67701d8f48a",
+      "updated": "2026-10-13T12:50:22Z",
+      "lines": 14442,
+      "summary": "Patch release with the 2026-10-12 and 2026-10-13 threat intel, cut from `main` at `e548573` on the owner's instruction."
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:7e87e1a0a3ae6e969b2f3da6bd87516d4603a3427908a73388dd1c98abcd7154",
-      "updated": "2026-10-11T15:57:34Z",
+      "checksum": "sha256:e82ab72541120d22c664f856efdad813cd54cbffc0785f97172878e940960769",
+      "updated": "2026-10-13T12:50:22Z",
       "lines": 231,
       "summary": "Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete."
     },
     "LOG.md": {
-      "checksum": "sha256:fabf3de7c0c727597a637899c3cea60535316d66cf2b287fb64b48fdef416da4",
-      "updated": "2026-10-11T15:59:03Z",
+      "checksum": "sha256:74166934cf8968a2ab57c130a731923e03c3ddb3c5501cfec6de7e9da0cfb401",
+      "updated": "2026-10-13T12:50:38Z",
       "lines": 90,
-      "summary": "Latest entry: [2026-10-11] v6.5.4"
+      "summary": "Latest entry: [2026-10-13] v6.5.5"
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
@@ -41,14 +41,14 @@
       "summary": "LOG archive index: 5 entries."
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:ab7eb18437bb35c52d9f3e93863cad3f04fab6c3dc4ae419235f6d215fd94980",
-      "updated": "2026-10-11T15:59:03Z",
+      "checksum": "sha256:daa5aa6178ab926c5c00aa258343049af9075ba45fc90bc248fce749e9d3a1e9",
+      "updated": "2026-10-13T12:50:38Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:767f2b5b258e9824da13ecc149aa5a9c7190326a38d5e7fa59cbcc1f2f728aef",
-      "updated": "2026-10-11T15:59:03Z",
+      "checksum": "sha256:5eeb74cb4e4731c773a6c9b6e4580978aa9543dd1de857eea7bec9af029e87e0",
+      "updated": "2026-10-13T12:50:38Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "Scheduled run. The 2026-10-12 PR was still open when the run started; cut from `main` it re-proposed 54 of that PR's entries, including bare names... Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Patch release with the 2026-10-12 and 2026-10-13 threat intel, cut from `main` at `e548573` on the owner's instruction. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 933,
-    "manifest_plus_core": 215080,
-    "full_read": 228810
+    "manifest_only": 918,
+    "manifest_plus_core": 215298,
+    "full_read": 229028
   }
 }

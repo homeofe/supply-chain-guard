@@ -11,6 +11,14 @@
 
 ---
 
+## [2026-10-13] v6.5.5
+
+Threat intel for 2026-10-13: 59 package entries from the GitHub Advisory Database and OpenSSF, 55 in the offline bundle and 4 in the catalog. Clusters: malicious forks of the WhatsApp Web library...
+
+Full notes: CHANGELOG.md, section [6.5.5].
+
+---
+
 ## [2026-10-11] v6.5.4
 
 Threat intel for 2026-10-10: 122 package entries from the GitHub Advisory Database and OpenSSF, all in the offline bundle. Clusters: the asepxyz Baileys fork family (12 names), @fer2809fl/baileys...
@@ -80,11 +88,3 @@ Full notes: CHANGELOG.md, section [6.4.1].
 Threat intel (2026-09-30): 138 package IOCs from the GitHub Advisory Database and OpenSSF, 97 in the offline bundle and 41 in the catalog. 35 npm names are blocked outright, each already a...
 
 Full notes: CHANGELOG.md, section [6.4.0].
-
----
-
-## [2026-09-29] v6.3.3
-
-The bundle cutoff advanced from 2026-08-29 to 2026-08-30, moving 145 package indicators dated 2026-08-29 from the bundle into the catalog. None of them is asserted by a test or named in the README...
-
-Full notes: CHANGELOG.md, section [6.3.3].
