@@ -50,6 +50,12 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   lookup up to twice when the request fails with a network error such as a
   timeout. A single slow answer used to reject the whole run, which failed
   the daily completeness check on 2026-10-10.
+- `import-threat-feed --filter-holding-packages` threw "filterHoldingPackages
+  is not a function": the option of that name shadowed the probe function
+  inside `importUpstreamFeed`. The probe now also runs on the list after the
+  DataDog settlement instead of the one before it, so it can no longer bring
+  back a whole-package claim the settlement turned into version pins or
+  dropped for lack of a sample.
 
 ## [6.5.6] - 2026-10-13
 

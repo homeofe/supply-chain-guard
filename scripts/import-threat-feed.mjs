@@ -3269,7 +3269,9 @@ export async function importUpstreamFeed({
   dryRun = false,
   allowTruncated = false,
   ecosystems,
-  filterHoldingPackages = false,
+  // Renamed on destructuring: the option shares its name with the function
+  // filterHoldingPackages, and a local of that name would shadow the call.
+  filterHoldingPackages: dropHoldingPackages = false,
   ignoreDeferrals = false,
   osvSnapshot = false,
   // Off for the programmatic API so injected-fetch callers (the tests) stay
@@ -3486,9 +3488,12 @@ export async function importUpstreamFeed({
     datadogPublishedPins = await settleDatadogPublishedPins(added, { fetchImpl, timeoutMs });
     added = datadogPublishedPins.entries;
   }
+
+  // Optional holding-package probe. On `added`, after every settlement step:
+  // probing an earlier list would restore what the DataDog settlement removed.
   let holdingPackagesFiltered = 0;
-  if (filterHoldingPackages) {
-    const livenessResult = await filterHoldingPackages(addedAfterDeferral, {
+  if (dropHoldingPackages) {
+    const livenessResult = await filterHoldingPackages(added, {
       fetchImpl,
       timeoutMs,
       concurrency: 10,
