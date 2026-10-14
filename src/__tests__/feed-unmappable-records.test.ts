@@ -186,6 +186,34 @@ describe("resolveBoundedNpmRanges", () => {
     expect(result.entries.map((e: { value: string }) => e.value).sort()).toEqual(["scg-reclaimed@1.0.0", "scg-reclaimed@1.1.0"]);
   });
 
+  // @mntv-analysis/ui (MAL-2026-17869, 2026-10-14): OSV dated the record
+  // 2026-10-13T00:00:00Z, the squat went up at 12:02 that day. A day-precision
+  // date covers the whole day; the next day stays out, and a timestamp with a
+  // time of day still cuts at that instant.
+  it("reads a midnight publication date as the whole UTC day", async () => {
+    const { resolveBoundedNpmRanges } = await load();
+    const time = {
+      created: "x",
+      "99.1.1": "2026-10-13T12:02:21Z",
+      "99.1.2": "2026-10-14T00:00:01Z",
+    };
+    const run = (assessedAt: string) =>
+      resolveBoundedNpmRanges([{ ...pending("scg-sameday", [{ introduced: "0" }]), assessedAt }], {
+        fetchImpl: registry({ "scg-sameday": { time } }),
+      });
+    expect((await run("2026-10-13T00:00:00Z")).entries.map((e: { value: string }) => e.value)).toEqual(["scg-sameday@99.1.1"]);
+    expect((await run("2026-10-13T00:00:00.000Z")).entries.map((e: { value: string }) => e.value)).toEqual(["scg-sameday@99.1.1"]);
+    expect((await run("2026-10-13T08:00:00Z")).entries).toEqual([]);
+  });
+
+  it("assessedBound extends only a midnight timestamp", async () => {
+    const { assessedBound } = await load();
+    expect(assessedBound("2026-10-13T00:00:00Z")).toBe(Date.parse("2026-10-13T23:59:59.999Z"));
+    expect(assessedBound("2026-10-13T06:30:55Z")).toBe(Date.parse("2026-10-13T06:30:55Z"));
+    expect(assessedBound(undefined)).toBeNaN();
+    expect(assessedBound("not a date")).toBeNaN();
+  });
+
   it("pins nothing from the registry when the record has no publication date", async () => {
     const { resolveBoundedNpmRanges } = await load();
     const { assessedAt, ...undated } = pending("scg-undated", [{ introduced: "1.0.0" }]);

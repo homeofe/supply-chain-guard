@@ -32,6 +32,16 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   `kartykgithub-susp-pkg-1`, `@kartykgithub/susp-new-2`), and pins of versions
   that are no longer installable (`stillm4ddpocs-demo-sprocket@999.9.20`,
   `tw-pkgprobe-7731@1.0.2`, `cowork-os@0.5.53`, `@inpeek/odata@0.0.0-stage`).
+- Threat intel for 2026-10-14, second batch: five dependency-confusion
+  squats published by one npm account at inflated versions, pinned to those
+  versions and never as bare names, because the names belong to the victims'
+  internal packages: `@mntv-analysis/ui@99.1.1`,
+  `@mntv-analysis/ui-components@50.1.1`,
+  `@mntv-analysis/workspaces-components@65.11.3`,
+  `@user-interface-common/common-styles@66.1.6` and `monkey-tags-ip@53.4.1`
+  (MAL-2026-17869 to MAL-2026-17875). The scopes and the name are on the
+  pin-only list; the two `@newspage` records of the same wave name packages
+  npm has deleted without a version and are recorded as unresolvable.
 
 ### Changed
 
@@ -43,6 +53,9 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   pins: routine releases of established npm packages, including the current
   release of several, that no other source lists. Importing them would have
   flagged ordinary installs of those packages.
+- A pin-only `name` entry can carry `"kind": "squat"` for an unscoped
+  dependency-confusion name: it is settled like a scope, pinning every version
+  the registry published, instead of only the versions the record lists.
 
 ### Fixed
 
@@ -56,6 +69,10 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   DataDog settlement instead of the one before it, so it can no longer bring
   back a whole-package claim the settlement turned into version pins or
   dropped for lack of a sample.
+- The feed importer read a record published at day precision
+  (`2026-10-13T00:00:00Z`, as OSV often writes it) as midnight, so a squat
+  published later that same day counted as "published after the record" and
+  was never pinned. Such a date now covers the whole UTC day.
 
 ## [6.5.6] - 2026-10-13
 

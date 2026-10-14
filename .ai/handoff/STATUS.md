@@ -1,3 +1,48 @@
+## Threat intel 2026-10-14, second batch (claude-opus-5-5)
+
+Interactive run on the owner's request, worktree cut from `origin/main` at
+`fe3f007` (after PR 408, PR 409 and PR 407). Import with DataDog on, under
+the new DataDog-only pin rule: 7 records, one npm account publishing
+dependency-confusion squats at inflated versions with "get the IP"
+descriptions. Unchanged rules would have imported all 7 as BARE names, which
+blocks the victims' own internal packages. Now:
+
+- `@mntv-analysis/`, `@user-interface-common/`, `@newspage/` added as pin-only
+  scopes, `monkey-tags-ip` as a pin-only name with the new `"kind": "squat"`
+  (a name entry used to mean "hijacked legitimate package", listed versions
+  only; these records list none, so it pinned nothing).
+- 5 pins imported, all to the bundle: `@mntv-analysis/ui@99.1.1`,
+  `ui-components@50.1.1`, `workspaces-components@65.11.3`,
+  `@user-interface-common/common-styles@66.1.6`, `monkey-tags-ip@53.4.1`.
+- MAL-2026-17872 and MAL-2026-17873 (`@newspage/*`): deleted from npm (404),
+  no version listed, recorded in `threat-feed-unresolvable.json`.
+
+Importer bug fixed on the way: OSV dates many records at day precision
+(`2026-10-13T00:00:00Z`) and the squats went up at 12:02 that day, so the
+"published before the record" rule dropped every version and left 4 unmapped
+gaps (`--check` would have gone red). `assessedBound` now reads a midnight
+timestamp as the whole UTC day; any other timestamp as written. The snapshot
+dry run afterwards: 0 added, 0 unmapped, 35 acknowledged, none stale (so the
+fix unlocked nothing else). Mutation proof in `feed-pin-only.test.ts` and
+`feed-unmappable-records.test.ts`: 4 cuts (no extension, extension on every
+timestamp, kind ignored, kind not validated), each red; baseline and restore
+green. No vendor write-up for this wave; nothing added by hand.
+
+Dependabot alerts (12, all in `.github/publish-toolchain/package-lock.json`):
+re-checked from the real tarballs, npm 11.19.1, 11.21.0 and 12.2.0 all bundle
+undici 6.28.0, ip-address 10.5.0, brace-expansion 5.0.9, http-cache-semantics
+4.2.0, postcss-selector-parser 7.1.4, i.e. no npm release fixes any of them
+(http-cache-semantics has no fixed upstream release at all). The audit gate
+fails at `high`: the 4 high alerts are excepted, the 8 moderate/low are below
+the threshold. OPEN DECISION for the owner: the 4 exceptions expire
+2026-10-31; unless npm ships fixes first, every PR goes red that day and the
+exceptions need a re-review and a new expiry.
+
+Worktree cleanup: the 409 session's worktree is out of `git worktree list`
+and its local branches are deleted; the empty directory
+`.claude/worktrees/brave-lumiere-1e9b26` could not be removed (held open by
+that session's process).
+
 ## Daily threat intel (2026-10-14) (claude-opus-5-5)
 
 Scheduled run, worktree cut from `origin/main` at `dd5a232` (v6.5.6).

@@ -175,6 +175,27 @@
       "name": "tensorlake",
       "reason": "Hijacked legitimate SDK: MAL-2026-17650 / GHSA-rqxj-g25x-4v9v say every version beside the one trojanized release 0.5.144 (2026-10-08). The package is live with over 100 releases by its real maintainers, so only the listed version is pinned.",
       "addedOn": "2026-10-09"
+    },
+    {
+      "scope": "@mntv-analysis/",
+      "reason": "Dependency-confusion squats of a company's internal scope by one npm account at inflated versions (ui 99.1.1, ui-components 50.1.1, workspaces-components 65.11.3; MAL-2026-17869 to MAL-2026-17871, 2026-10-14). The real packages live in the victim's private registry.",
+      "addedOn": "2026-10-14"
+    },
+    {
+      "scope": "@newspage/",
+      "reason": "Dependency-confusion squats of a company's internal scope from the same 2026-10-14 wave (MAL-2026-17872, MAL-2026-17873), already removed from npm. The real packages live in the victim's private registry.",
+      "addedOn": "2026-10-14"
+    },
+    {
+      "scope": "@user-interface-common/",
+      "reason": "Dependency-confusion squat of a company's internal scope by the same account as @mntv-analysis/ (common-styles 66.1.6, MAL-2026-17874, 2026-10-14). The real package lives in the victim's private registry.",
+      "addedOn": "2026-10-14"
+    },
+    {
+      "name": "monkey-tags-ip",
+      "kind": "squat",
+      "reason": "Dependency-confusion squat of an internal package name by the same account as @mntv-analysis/ (53.4.1, MAL-2026-17875, 2026-10-14). The name belongs to the victim's internal package, so only the published malicious version is pinned.",
+      "addedOn": "2026-10-14"
     }
   ]
 }

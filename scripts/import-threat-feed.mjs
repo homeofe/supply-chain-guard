@@ -351,10 +351,15 @@ export function loadPinOnlyList(root = repoRoot) {
     const where = `${PIN_ONLY_FILE} scopes[${index}]`;
     if (!item || typeof item !== "object") throw new Error(`${where} is not an object`);
     for (const key of Object.keys(item)) {
-      if (!["scope", "name", "reason", "addedOn"].includes(key)) throw new Error(`${where} has unknown key ${JSON.stringify(key)}`);
+      if (!["scope", "name", "kind", "reason", "addedOn"].includes(key)) throw new Error(`${where} has unknown key ${JSON.stringify(key)}`);
     }
     if ((item.scope === undefined) === (item.name === undefined)) {
       throw new Error(`${where} needs exactly one of "scope" or "name"`);
+    }
+    // "hijacked" (the default): a legitimate package, only listed versions are
+    // pinned. "squat": a dependency-confusion name, settled like a scope.
+    if (item.kind !== undefined && (item.name === undefined || !["hijacked", "squat"].includes(item.kind))) {
+      throw new Error(`${where}: "kind" is only for a "name" entry and must be "hijacked" or "squat"`);
     }
     if (item.scope !== undefined && (typeof item.scope !== "string" || !PIN_ONLY_SCOPE.test(item.scope))) {
       throw new Error(`${where}: "scope" must be one lowercase npm scope with its trailing slash, e.g. "@example/"`);
@@ -439,8 +444,10 @@ export function applyPinOnlyList(mapped, pinOnly) {
       assessedAt: entry._assessedAt,
       queueDate: entry._queueDate,
       pinOnly: true,
-      // A hijacked legitimate package: its older releases are the owner's.
-      listedOnly: rule.name !== undefined,
+      // A hijacked legitimate package: its older releases are the owner's. A
+      // name entry of kind "squat" is a dependency-confusion name instead, and
+      // settles like a scope: every version is the attacker's.
+      listedOnly: rule.name !== undefined && rule.kind !== "squat",
     });
   }
   return { kept, pending };
@@ -964,6 +971,22 @@ export function explicitRangeVersions(ranges) {
 }
 
 /**
+ * The latest instant a record's assessment covers, in epoch milliseconds, or
+ * NaN without a usable date. OSV writes many `published` values at day
+ * precision (`2026-10-13T00:00:00Z`): the record covers that whole UTC day, so
+ * a squat published at 12:02 the same day was assessed, not "published after
+ * the record". Read literally, midnight dropped every same-day version of four
+ * dependency-confusion squats on 2026-10-14 and left their OpenSSF records as
+ * unmapped gaps. A timestamp with a time of day is taken as written.
+ */
+export function assessedBound(assessedAt) {
+  if (typeof assessedAt !== "string") return NaN;
+  const at = Date.parse(assessedAt);
+  if (!Number.isFinite(at)) return NaN;
+  return /T00:00:00(?:\.0+)?Z$/.test(assessedAt) ? at + 86_400_000 - 1 : at;
+}
+
+/**
  * Settle npm records whose range is bounded and that carry no `versions` list.
  *
  * The range is evaluated against every version the registry has ever
@@ -1020,7 +1043,7 @@ export async function resolveBoundedNpmRanges(
     // rightful owner then published 0.1.0 to 0.212.0, every one of which the
     // bare range would have marked as malware. No assessment date means no
     // version can be shown to predate it, so none is pinned from the registry.
-    const assessed = typeof item.assessedAt === "string" ? Date.parse(item.assessedAt) : NaN;
+    const assessed = assessedBound(item.assessedAt);
     const versions =
       published === null
         ? explicitRangeVersions(item.ranges)

@@ -185,7 +185,16 @@ An entry may name one exact package (`name` instead of `scope`) for a hijacked
 LEGITIMATE package whose record says "every version" beside the exact
 trojanized ones (`tensorlake`, 2026-10-08). Such an entry pins ONLY the
 versions the record lists and never registry history, because every older
-release belongs to the rightful owner.
+release belongs to the rightful owner. A `name` entry may instead carry
+`"kind": "squat"` for an unscoped dependency-confusion name (`monkey-tags-ip`,
+2026-10-14): it is settled like a scope, since every registry version is the
+attacker's. `"kind": "hijacked"` is the default; `kind` on a `scope` entry
+throws.
+
+"Published before the record" uses the record's own timestamp. OSV writes many
+of them at day precision (`T00:00:00Z`), and such a date covers the whole UTC
+day: a squat published at 12:02 on the record's day was assessed with it. A
+timestamp with a time of day is taken as written.
 
 `src/__tests__/feed-pin-only.test.ts` asserts that neither committed store
 holds a bare name covered by the list.
