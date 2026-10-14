@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1791909851",
-    "timestamp": "2026-10-13T16:44:11Z",
-    "commit": "5c24ea5",
+    "session_id": "cli-1791957708",
+    "timestamp": "2026-10-14T06:01:48Z",
+    "commit": "93d519f",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:e4187d12ff02ca21903fca37354f154b0cb01c0c648e505fc2881593c0bb76c1",
-      "updated": "2026-10-13T16:44:08Z",
-      "lines": 14488,
-      "summary": "Security release for GHSA-gqpg-9mjx-pv4w (entry below)."
+      "checksum": "sha256:e24c2f42942df7f159865f6a118beeaf097a028f4c327f610ab3e000d75e0fef",
+      "updated": "2026-10-14T06:01:41Z",
+      "lines": 14556,
+      "summary": "Scheduled run, worktree cut from `origin/main` at `dd5a232` (v6.5.6)."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:c9ec6a67176fff94325903c7cecdf28e927a5ac444431993794270cb6143a144",
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "Security release for GHSA-gqpg-9mjx-pv4w (entry below). Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Scheduled run, worktree cut from `origin/main` at `dd5a232` (v6.5.6). Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 886,
-    "manifest_plus_core": 215933,
-    "full_read": 229665
+    "manifest_only": 893,
+    "manifest_plus_core": 216956,
+    "full_read": 230688
   }
 }

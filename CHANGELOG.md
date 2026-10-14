@@ -7,6 +7,50 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat intel for 2026-10-14: 27 package entries from the GitHub Advisory
+  Database and OpenSSF, all in the offline bundle. Clusters: the nine
+  `opencode2` platform packages (`opencode2`, `opencode2-linux-x64` and the
+  other OS and architecture variants), the Discord MFA loaders
+  `passwordcrackv2` and `passwordcracker`, PyPI `sysdiagd` 1.2.1 to 1.2.3 (a
+  Discord bot infostealer), PyPI `fontcase` 0.1.0 to 0.1.2, `pyyi`,
+  `crelic-bqwheel-52f66a3f1d` and `npp-ml` 0.1.10, `@chatest/baileys`, and
+  sentinel-version squats of
+  `@accenturecodefoundry/mfe-pot-shared-ui-scds-core` (99.99.2, 99.99.4,
+  99.99.41). Every bare name was probed against the registry; all but the two
+  loaders are npm security holding packages, and the loaders were created by
+  one account on 2026-10-09 with no release that is not malicious.
+- Detection for the repository the Discord MFA loaders pull as a tarball
+  dependency: the GitHub account `lunexindonesia` and its repo path
+  `github[.]com/lunexindonesia/node-net-pool` (single-source, OSV
+  MAL-2026-17865), kept in the offline bundle.
+- Threat intel from the DataDog malicious-software-packages-dataset for
+  2026-10-14: 10 entries, 8 in the offline bundle and 2 in the catalog. Six
+  names npm has replaced with security holding packages (`storymesh-win32-x64`,
+  `foremerge-win32-x64`, `kartykgithub-ph-d`, `kartykgithub-susp-1`,
+  `kartykgithub-susp-pkg-1`, `@kartykgithub/susp-new-2`), and pins of versions
+  that are no longer installable (`stillm4ddpocs-demo-sprocket@999.9.20`,
+  `tw-pkgprobe-7731@1.0.2`, `cowork-os@0.5.53`, `@inpeek/odata@0.0.0-stage`).
+
+### Changed
+
+- The feed importer imports a version pin that only the DataDog dataset
+  vouches for only once that version can no longer be installed. A version
+  that is still published waits for a second source (GHSA, OpenSSF) or for
+  the registry to pull it, and is reported as "DataDog-only pin(s) of a
+  version still published". On 2026-10-14 this held back 369 of 379 such
+  pins: routine releases of established npm packages, including the current
+  release of several, that no other source lists. Importing them would have
+  flagged ordinary installs of those packages.
+
+### Fixed
+
+- The feed importer retries a registry, VS Code Marketplace or Open VSX
+  lookup up to twice when the request fails with a network error such as a
+  timeout. A single slow answer used to reject the whole run, which failed
+  the daily completeness check on 2026-10-10.
+
 ## [6.5.6] - 2026-10-13
 
 ### Changed

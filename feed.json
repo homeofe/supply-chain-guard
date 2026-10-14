@@ -2,8 +2,8 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "6.5.6",
-  "entryCount": 7057,
-  "generatedAt": "2026-10-13T00:00:00.000Z",
+  "entryCount": 7093,
+  "generatedAt": "2026-10-14T00:00:00.000Z",
   "entries": [
     {
       "type": "domain",
@@ -59170,6 +59170,296 @@
       "confidence": 1,
       "source": "GHSA-rh76-qjhp-v9m8, MAL-2026-17748 (amazon-inspector+ossf-package-analysis)",
       "firstSeen": "2026-10-09"
+    },
+    {
+      "type": "package",
+      "value": "passwordcrackv2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-75f2-wpm3-2h52, MAL-2026-17865",
+      "firstSeen": "2026-10-09"
+    },
+    {
+      "type": "package",
+      "value": "passwordcracker",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-jwr3-9ch5-2qw5, MAL-2026-17864",
+      "firstSeen": "2026-10-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:crelic-bqwheel-52f66a3f1d@0.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xwrx-mm2v-334v, MAL-2026-17863 (kam193)",
+      "firstSeen": "2026-10-13"
+    },
+    {
+      "type": "package",
+      "value": "@accenturecodefoundry/mfe-pot-shared-ui-scds-core@99.99.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-36v8-chg8-q674, MAL-2026-17867",
+      "firstSeen": "2026-10-13"
+    },
+    {
+      "type": "package",
+      "value": "@accenturecodefoundry/mfe-pot-shared-ui-scds-core@99.99.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-36v8-chg8-q674, MAL-2026-17867",
+      "firstSeen": "2026-10-13"
+    },
+    {
+      "type": "package",
+      "value": "@accenturecodefoundry/mfe-pot-shared-ui-scds-core@99.99.41",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-36v8-chg8-q674, MAL-2026-17867",
+      "firstSeen": "2026-10-13"
+    },
+    {
+      "type": "package",
+      "value": "pypi:pyyi@2.4.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4vr9-vg98-9xpf, MAL-2026-17866",
+      "firstSeen": "2026-10-12"
+    },
+    {
+      "type": "package",
+      "value": "@kre64/hello-npm-test@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-c43r-xf4h-m548, MAL-2026-17868 (ghsa-malware)",
+      "firstSeen": "2026-10-14"
+    },
+    {
+      "type": "package",
+      "value": "pypi:sysdiagd@1.2.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-64w9-pjq6-x8rh, MAL-2026-17861 (kam193)",
+      "firstSeen": "2026-10-13"
+    },
+    {
+      "type": "package",
+      "value": "pypi:sysdiagd@1.2.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-64w9-pjq6-x8rh, MAL-2026-17861 (kam193)",
+      "firstSeen": "2026-10-13"
+    },
+    {
+      "type": "package",
+      "value": "pypi:sysdiagd@1.2.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-64w9-pjq6-x8rh, MAL-2026-17861 (kam193)",
+      "firstSeen": "2026-10-13"
+    },
+    {
+      "type": "package",
+      "value": "pypi:fontcase@0.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-g72q-7v8m-7r9j, MAL-2026-17862 (kam193)",
+      "firstSeen": "2026-10-13"
+    },
+    {
+      "type": "package",
+      "value": "pypi:fontcase@0.1.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-g72q-7v8m-7r9j, MAL-2026-17862 (kam193)",
+      "firstSeen": "2026-10-13"
+    },
+    {
+      "type": "package",
+      "value": "pypi:fontcase@0.1.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-g72q-7v8m-7r9j, MAL-2026-17862 (kam193)",
+      "firstSeen": "2026-10-13"
+    },
+    {
+      "type": "package",
+      "value": "opencode2-windows-x64",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-6x5j-r784-fx6j, MAL-2026-17860 (ghsa-malware)",
+      "firstSeen": "2026-10-13"
+    },
+    {
+      "type": "package",
+      "value": "opencode2-windows-arm64",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-xr5m-85hf-27r5, MAL-2026-17859 (ghsa-malware)",
+      "firstSeen": "2026-10-13"
+    },
+    {
+      "type": "package",
+      "value": "opencode2-linux-arm64",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-xwcq-r6hw-mc5p, MAL-2026-17855 (ghsa-malware)",
+      "firstSeen": "2026-10-13"
+    },
+    {
+      "type": "package",
+      "value": "opencode2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-8w65-j2wh-mqv7, MAL-2026-17852 (ghsa-malware)",
+      "firstSeen": "2026-10-13"
+    },
+    {
+      "type": "package",
+      "value": "opencode2-darwin-x64",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-pmv2-r2q9-rmg9, MAL-2026-17854 (ghsa-malware)",
+      "firstSeen": "2026-10-13"
+    },
+    {
+      "type": "package",
+      "value": "opencode2-linux-x64-musl",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-qx7m-vw4p-xv3j, MAL-2026-17858 (ghsa-malware)",
+      "firstSeen": "2026-10-13"
+    },
+    {
+      "type": "package",
+      "value": "opencode2-darwin-arm64",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-36mq-frp2-jc97, MAL-2026-17853 (ghsa-malware)",
+      "firstSeen": "2026-10-13"
+    },
+    {
+      "type": "package",
+      "value": "opencode2-linux-arm64-musl",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-cm8m-24p9-hh65, MAL-2026-17856 (ghsa-malware)",
+      "firstSeen": "2026-10-13"
+    },
+    {
+      "type": "package",
+      "value": "opencode2-linux-x64",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-3jr5-3qvm-r54h, MAL-2026-17857 (ghsa-malware)",
+      "firstSeen": "2026-10-13"
+    },
+    {
+      "type": "package",
+      "value": "yoodan-github-single-ver-pkg@1.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-2946-w5c6-hcw2, MAL-2026-17851 (ghsa-malware)",
+      "firstSeen": "2026-10-13"
+    },
+    {
+      "type": "package",
+      "value": "@chatest/baileys",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-c2gc-jwcq-w8r3, MAL-2026-17850 (ghsa-malware)",
+      "firstSeen": "2026-10-13"
+    },
+    {
+      "type": "package",
+      "value": "pypi:npp-ml@0.1.10",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hmg9-h2ww-x4x3, MAL-2026-17847 (kam193)",
+      "firstSeen": "2026-10-12"
+    },
+    {
+      "type": "package",
+      "value": "gemini-computer-use@0.4.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-16355 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-09-21"
+    },
+    {
+      "type": "url",
+      "value": "github.com/lunexindonesia/node-net-pool",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "node-net-pool loader",
+      "campaign": "node-net-pool Discord MFA loader",
+      "source": "MAL-2026-17865 (single-source)",
+      "firstSeen": "2026-10-09"
+    },
+    {
+      "type": "package",
+      "value": "@inpeek/odata@0.0.0-stage",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-04"
+    },
+    {
+      "type": "package",
+      "value": "@kartykgithub/susp-new-2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-14"
+    },
+    {
+      "type": "package",
+      "value": "cowork-os@0.5.53",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-09-20"
+    },
+    {
+      "type": "package",
+      "value": "foremerge-win32-x64",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-14"
+    },
+    {
+      "type": "package",
+      "value": "kartykgithub-ph-d",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-14"
+    },
+    {
+      "type": "package",
+      "value": "kartykgithub-susp-1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-14"
+    },
+    {
+      "type": "package",
+      "value": "kartykgithub-susp-pkg-1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-14"
+    },
+    {
+      "type": "package",
+      "value": "storymesh-win32-x64",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "datadog-malicious-packages",
+      "firstSeen": "2026-10-14"
     }
   ]
 }

@@ -222,6 +222,128 @@ describe("settleDatadogWholePackages", () => {
   });
 });
 
+describe("settleDatadogPublishedPins", () => {
+  const pin = (value: string, prefix = "", source = "datadog-malicious-packages") => {
+    const at = value.lastIndexOf("@");
+    return {
+      type: "package",
+      value: `${prefix}${value}`,
+      severity: "critical",
+      confidence: 0.9,
+      source,
+      firstSeen: "2025-07-20",
+      _ecosystemPrefix: prefix,
+      _name: value.slice(0, at),
+      _discoverySource: "datadog-malicious-software-packages",
+      _origins: ["datadog"],
+    };
+  };
+  const values = (entries: Array<{ value: string }>) => entries.map((e) => e.value).sort();
+
+  // The 2026-10-14 shape: the dataset pinned consecutive routine releases of
+  // established packages (@toptal/picasso 100.x, @qwen-code/qwen-code), every
+  // one still installable and named by no other source.
+  it("does not import a pin of a version an install can still fetch, and reports it", async () => {
+    const { settleDatadogPublishedPins } = await load();
+    const fetchImpl = network({
+      "/@scg%2Fpicasso": { versions: { "100.0.11": {}, "100.0.12": {} }, time: { "100.0.11": "x", "100.0.12": "x" } },
+    });
+    const result = await settleDatadogPublishedPins([pin("@scg/picasso@100.0.12")], { fetchImpl });
+    expect(result.entries).toEqual([]);
+    expect(result.stillPublished).toEqual(["@scg/picasso@100.0.12"]);
+  });
+
+  it("imports a pin once the registry has pulled that version, the package, or replaced it with a holding package", async () => {
+    const { settleDatadogPublishedPins } = await load();
+    const fetchImpl = network({
+      "/scg-cowork": { versions: { "0.5.53": {} }, time: { "0.5.53": "x", "0.5.54": "x" } },
+      "/scg-gone": 404,
+      "/scg-held": { description: "security holding package", versions: { "0.0.1-security": {} }, time: { "0.0.1-security": "x", "1.0.2": "x" } },
+    });
+    const result = await settleDatadogPublishedPins(
+      [pin("scg-cowork@0.5.53"), pin("scg-cowork@0.5.54"), pin("scg-gone@999.9.20"), pin("scg-held@1.0.2")],
+      { fetchImpl },
+    );
+    expect(values(result.entries)).toEqual(["scg-cowork@0.5.54", "scg-gone@999.9.20", "scg-held@1.0.2"]);
+    expect(result.stillPublished).toEqual(["scg-cowork@0.5.53"]);
+    expect(result.probed).toBe(3);
+  });
+
+  // A release with no files cannot be installed; a yanked one still can be.
+  it("judges PyPI releases by their files", async () => {
+    const { settleDatadogPublishedPins } = await load();
+    const fetchImpl = network({
+      "pypi.org/pypi/scg-py": { releases: { "1.0": [{ yanked: true }], "1.1": [] } },
+    });
+    const result = await settleDatadogPublishedPins([pin("scg-py@1.0", "pypi:"), pin("scg-py@1.1", "pypi:")], { fetchImpl });
+    expect(values(result.entries)).toEqual(["pypi:scg-py@1.1"]);
+    expect(result.stillPublished).toEqual(["pypi:scg-py@1.0"]);
+  });
+
+  it("leaves corroborated pins, bare names and extension pins alone and asks no registry for them", async () => {
+    const { settleDatadogPublishedPins } = await load();
+    const calls: string[] = [];
+    const corroborated = pin("scg-both@1.0.0", "", "MAL-2026-1, datadog-malicious-packages");
+    const bare = { ...pin("scg-bare@0"), value: "scg-bare" };
+    const extension = pin("scgpub.ext@1.0.0", "vscode:");
+    const result = await settleDatadogPublishedPins([corroborated, bare, extension], { fetchImpl: network({}, calls) });
+    expect(result.entries).toEqual([corroborated, bare, extension]);
+    expect(calls).toEqual([]);
+  });
+
+  it("rejects the run on a registry outage instead of guessing", async () => {
+    const { settleDatadogPublishedPins } = await load();
+    await expect(
+      settleDatadogPublishedPins([pin("scg-x@1.0.0")], { fetchImpl: network({ "/scg-x": 503 }) }),
+    ).rejects.toThrow(/HTTP 503/);
+  });
+});
+
+describe("fetchRetrying", () => {
+  const flaky = (failures: number, calls: { n: number }) => async () => {
+    calls.n++;
+    if (calls.n <= failures) throw new Error("The operation was aborted due to timeout");
+    return json({ ok: true });
+  };
+
+  it("survives transient timeouts", async () => {
+    const { fetchRetrying } = await load();
+    const calls = { n: 0 };
+    const response = await fetchRetrying(flaky(2, calls), "https://x.test", {}, { retryDelayMs: 0 });
+    expect(response.status).toBe(200);
+    expect(calls.n).toBe(3);
+  });
+
+  it("still rejects after the last attempt", async () => {
+    const { fetchRetrying } = await load();
+    const calls = { n: 0 };
+    await expect(fetchRetrying(flaky(9, calls), "https://x.test", {}, { retryDelayMs: 0 })).rejects.toThrow(/timeout/);
+    expect(calls.n).toBe(3);
+  });
+
+  // An HTTP error is an answer, not a transient failure: the caller judges it.
+  it("never retries an HTTP answer", async () => {
+    const { fetchRetrying } = await load();
+    let n = 0;
+    const response = await fetchRetrying(async () => (n++, json({}, 503)), "https://x.test", {}, { retryDelayMs: 0 });
+    expect(response.status).toBe(503);
+    expect(n).toBe(1);
+  });
+
+  it("carries a transient Open VSX timeout through an extension probe", async () => {
+    const { probeExtensionVersions } = await load();
+    let openVsxCalls = 0;
+    const fetchImpl = async (_url: string | URL, init?: { method?: string }) => {
+      if (init?.method === "POST") return json({ results: [{ extensions: [{ versions: [] }] }] });
+      if (++openVsxCalls === 1) throw new Error("The operation was aborted due to timeout");
+      return json({}, 404);
+    };
+    expect(await probeExtensionVersions("scgpub.scg-ext", ["1.0.0"], { fetchImpl, retryDelayMs: 0 })).toEqual([
+      { version: "1.0.0", inVscode: false, inOpenVsx: false },
+    ]);
+  });
+});
+
 describe("the DataDog source in a full run", () => {
   const repo = () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "scg-dd-"));
@@ -260,10 +382,12 @@ describe("the DataDog source in a full run", () => {
         tree: [
           { path: "scg-gone/1.0.0/2025-05-05-scg-gone-v1.0.0.zip", type: "blob" },
           { path: "scg-live/1.1.0/2025-06-01-scg-live-v1.1.0.zip", type: "blob" },
+          { path: "scg-live/1.2.0/2025-06-02-scg-live-v1.2.0.zip", type: "blob" },
         ],
       },
       "/scg-gone": 404,
-      "/scg-live": { versions: { "1.0.0": {}, "1.1.0": {} }, time: { "1.0.0": "x", "1.1.0": "x" } },
+      // 1.2.0 was published and pulled; 1.1.0 is still installable.
+      "/scg-live": { versions: { "1.0.0": {}, "1.1.0": {} }, time: { "1.0.0": "x", "1.1.0": "x", "1.2.0": "x" } },
       "osv-vulnerabilities": 404,
     });
     const report = await importUpstreamFeed({
@@ -277,9 +401,14 @@ describe("the DataDog source in a full run", () => {
         String(url).includes("api.github.com/advisories") ? json([]) : fetchImpl(url),
       now: new Date("2026-10-05T08:00:00Z"),
     });
-    expect(report.entries.map((e: { value: string }) => e.value).sort()).toEqual(["scg-gone", "scg-live@1.1.0"]);
+    expect(report.entries.map((e: { value: string }) => e.value).sort()).toEqual(["scg-gone", "scg-live@1.2.0"]);
     expect(report.datadog).toEqual(
-      expect.objectContaining({ wholePackageClaimsProbed: 2, settledAsBareName: 1, settledAsPins: 1 }),
+      expect.objectContaining({
+        wholePackageClaimsProbed: 2,
+        settledAsBareName: 1,
+        settledAsPins: 2,
+        pinsStillPublished: ["scg-live@1.1.0"],
+      }),
     );
     expect(report.additionsByDiscovery.datadogOnly).toBe(2);
     const gone = report.entries.find((e: { value: string }) => e.value === "scg-gone");
