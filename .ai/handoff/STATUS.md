@@ -1,3 +1,22 @@
+## Release v6.5.7 (2026-10-14) (claude-opus-5-5)
+
+Security and threat-intel release, cut from `main` at `de57fce` on the owner's
+instruction, after the owner merged the advisory fix for GHSA-77wv-pr2j-p38h
+(tree identical to the commit verified on the Linux host, `ff87a4b`). Ships
+PR 408 (2026-10-14 intel, DataDog-only pin rule, probe retries), PR 409
+(`--filter-holding-packages`), PR 407 (vitest 5.0.3 group) and PR 410
+(dependency-confusion squats as pins, day-precision record dates).
+
+Release commit: all 17 version sites and the lockfile to 6.5.7; the
+replacement count per file matches the 6.5.6 release exactly (38, the README
+IP ranges untouched). `release:prepare` advanced the cutoff from 2026-09-13
+to 2026-09-14; the migration plan moved 0 of 7,098 bundle entries. Node
+schedule re-read against `nodejs/Release`: unchanged, milestone 6.5.8.
+
+Owner steps after the tag's publish run: in GHSA-77wv-pr2j-p38h set Patched
+versions to 6.5.7, Request CVE, Publish; delete the advisory's temporary
+fork if GitHub has not removed it.
+
 ## Security fix GHSA-77wv-pr2j-p38h (2026-10-14) (claude-opus-5-5)
 
 GitHub code scanning alert 89 (CodeQL `js/polynomial-redos`, open since

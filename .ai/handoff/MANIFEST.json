@@ -3,30 +3,30 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1791963383",
-    "timestamp": "2026-10-14T07:36:23Z",
-    "commit": "5717346",
+    "session_id": "cli-1791965228",
+    "timestamp": "2026-10-14T08:07:08Z",
+    "commit": "de57fce",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:755fb94bd085a92931d1ad974b15b1a9b3c5145b5aa75cab39feb0a285df5d00",
-      "updated": "2026-10-14T07:36:16Z",
-      "lines": 14649,
-      "summary": "GitHub code scanning alert 89 (CodeQL `js/polynomial-redos`, open since 2026-10-07) on `VERSION_TEXT_REGEX` in `src/mcp-scanner.ts`."
+      "checksum": "sha256:2ecd94192a39d1f4c07aedc429d3cfadf043817f5f7cf38bf8208372d9ebd4d1",
+      "updated": "2026-10-14T08:06:57Z",
+      "lines": 14668,
+      "summary": "Security and threat-intel release, cut from `main` at `de57fce` on the owner's instruction, after the owner merged the advisory fix for..."
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:c9ec6a67176fff94325903c7cecdf28e927a5ac444431993794270cb6143a144",
-      "updated": "2026-10-13T16:40:16Z",
+      "checksum": "sha256:5e59cd99ccc0fccd03901e41bf03a30e858371755bad337792c28a69fc1f54b7",
+      "updated": "2026-10-14T08:06:46Z",
       "lines": 231,
       "summary": "Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete."
     },
     "LOG.md": {
-      "checksum": "sha256:357e161f39cc69dddf376525a8331ecc43c8e65ce6a9a17f8b282470db925379",
-      "updated": "2026-10-13T16:44:11Z",
+      "checksum": "sha256:3ac65a593dc073d9a0e1cafa5520dc4ff6441919a043d1dce2922bffd0627b6c",
+      "updated": "2026-10-14T08:07:07Z",
       "lines": 90,
-      "summary": "Latest entry: [2026-10-13] v6.5.6"
+      "summary": "Latest entry: [2026-10-14] v6.5.7"
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
@@ -41,14 +41,14 @@
       "summary": "LOG archive index: 5 entries."
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:d2284e5220c814532b1c952103482df7ceb6e6f61a8701f43065974c497356bf",
-      "updated": "2026-10-14T07:18:13Z",
+      "checksum": "sha256:5c07c7dadc84776773ad8b449326b553fa1a8f102082d107cc90e4c0af672945",
+      "updated": "2026-10-14T08:07:07Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:469ac2b580df9734dfcdda36b5c1abef2a7c1422308fda50649bce8562cbd12b",
-      "updated": "2026-10-13T16:44:11Z",
+      "checksum": "sha256:4d4e0d3aafd7b9208e318cb5bf66473147d6b41ba5b10e96030de4cbd72bc596",
+      "updated": "2026-10-14T08:07:07Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "GitHub code scanning alert 89 (CodeQL `js/polynomial-redos`, open since 2026-10-07) on `VERSION_TEXT_REGEX` in `src/mcp-scanner.ts`. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Security and threat-intel release, cut from `main` at `de57fce` on the owner's instruction, after the owner merged the advisory fix for... Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 925,
-    "manifest_plus_core": 218382,
-    "full_read": 232114
+    "manifest_only": 928,
+    "manifest_plus_core": 218645,
+    "full_read": 232373
   }
 }
