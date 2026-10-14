@@ -11,6 +11,14 @@
 
 ---
 
+## [2026-10-14] v6.5.7
+
+Threat intel for 2026-10-14: 27 package entries from the GitHub Advisory Database and OpenSSF, all in the offline bundle. Clusters: the nine opencode2 platform packages (opencode2,...
+
+Full notes: CHANGELOG.md, section [6.5.7].
+
+---
+
 ## [2026-10-13] v6.5.6
 
 The README quick start installs the scanner and runs it, and the MCP setup guide configures the installed supply-chain-guard command instead of npx. npx is documented only for a start from outside...
@@ -80,11 +88,3 @@ Full notes: CHANGELOG.md, section [6.4.3].
 Threat intel (2026-10-03): 88 package IOCs from the GitHub Advisory Database and OpenSSF, 86 in the offline bundle and 2 in the catalog. Among them are 15 more names of the Baileys WhatsApp fork...
 
 Full notes: CHANGELOG.md, section [6.4.2].
-
----
-
-## [2026-10-02] v6.4.1
-
-Threat intel (2026-10-01): 399 package IOCs from the GitHub Advisory Database and OpenSSF, 165 in the offline bundle and 234 in the catalog. Most bundle entries are from 2026-09-30, among them 61...
-
-Full notes: CHANGELOG.md, section [6.4.1].
