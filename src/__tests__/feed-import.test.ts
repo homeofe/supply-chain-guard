@@ -2534,3 +2534,94 @@ describe("filterHoldingPackages", () => {
   });
 });
 
+// --filter-holding-packages in a full run. The option once shadowed the
+// function of the same name, so the flag threw "not a function"; and the probe
+// read the list from before the DataDog settlement, which would have restored
+// every whole-package claim that step had already turned into pins or dropped.
+describe("filterHoldingPackages in a full run", () => {
+  const json = (body: unknown, status = 200) => ({
+    ok: status === 200,
+    status,
+    headers: { get: () => null },
+    json: async () => body,
+    text: async () => JSON.stringify(body),
+  });
+
+  const repo = () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "scg-holding-"));
+    fs.mkdirSync(path.join(root, "src"));
+    fs.mkdirSync(path.join(root, "data", "threat-catalog"), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, "src", "threat-intel.ts"),
+      'export interface FeedIOC { type: string }\nconst BUNDLED_FEED: FeedIOC[] = [\n  { type: "domain", value: "existing.example", severity: "critical", confidence: 1.0 },\n];\n',
+    );
+    fs.writeFileSync(path.join(root, "data", "threat-catalog", "part-000.jsonl"), "");
+    fs.writeFileSync(
+      path.join(root, "feed-partition.config.json"),
+      JSON.stringify({ bundleCutoffDate: "2026-09-04", maxBundledEntries: 15000, maxBundleBytes: 2097152 }),
+    );
+    return root;
+  };
+
+  it("runs after the DataDog settlement and keeps what it dropped dropped", async () => {
+    const { importUpstreamFeed } = await load();
+    const routes: Record<string, unknown> = {
+      "api.github.com/advisories": [],
+      "/commits?path=": [{ commit: { committer: { date: "2026-10-02T00:00:00Z" } } }],
+      // Every name a whole-package claim: the settlement decides what each becomes.
+      "samples/npm/manifest.json": { "scg-gone": null, "scg-live": null, "scg-nosample": null, "scg-held": null },
+      "samples/pypi/manifest.json": {},
+      "samples/ide_extensions/manifest.json": {},
+      "git/trees/main": { tree: [{ path: "samples", type: "tree", sha: "sha-samples" }] },
+      "git/trees/sha-samples": { tree: [{ path: "npm", type: "tree", sha: "sha-npm" }] },
+      "git/trees/sha-npm": { tree: [{ path: "malicious_intent", type: "tree", sha: "sha-mal" }] },
+      "git/trees/sha-mal": {
+        tree: [
+          { path: "scg-gone/1.0.0/2025-05-05-scg-gone-v1.0.0.zip", type: "blob" },
+          { path: "scg-live/1.1.0/2025-06-01-scg-live-v1.1.0.zip", type: "blob" },
+        ],
+      },
+      "/scg-gone": 404,
+      // Live: settled into a pin of the sampled version, never the bare name.
+      // The sampled 1.1.0 is pulled, so the DataDog-only pin rule keeps the pin.
+      "/scg-live": { versions: { "1.0.0": {} }, time: { "1.0.0": "x", "1.1.0": "x" }, maintainers: [{ name: "x" }] },
+      // Live and unsampled: the settlement imports nothing for it.
+      "/scg-nosample": { versions: { "2.0.0": {} }, time: { "2.0.0": "x" }, maintainers: [{ name: "x" }] },
+      // A holding package: settled to a bare name, then removed by the probe.
+      "/scg-held": {
+        description: "security holding package",
+        versions: { "0.0.1-security": {} },
+        time: { "0.0.1-security": "x" },
+        maintainers: [],
+      },
+      "osv-vulnerabilities": 404,
+    };
+    const fetchImpl = async (url: string | URL) => {
+      const u = String(url);
+      for (const [needle, body] of Object.entries(routes)) {
+        if (u.includes(needle)) return body === 404 ? json({}, 404) : json(body);
+      }
+      return json({}, 404);
+    };
+    const root = repo();
+    try {
+      const report = await importUpstreamFeed({
+        root,
+        useDatadog: true,
+        useOssf: false,
+        filterHoldingPackages: true,
+        dryRun: true,
+        since: "2026-10-01",
+        maxPages: 1,
+        fetchImpl,
+        now: new Date("2026-10-05T08:00:00Z"),
+      });
+      expect(report.entries.map((e: { value: string }) => e.value).sort()).toEqual(["scg-gone", "scg-live@1.1.0"]);
+      expect(report.holdingPackagesFiltered).toBe(1);
+      expect(report.datadog).toEqual(expect.objectContaining({ wholePackageClaimsProbed: 4, settledAsBareName: 2 }));
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+

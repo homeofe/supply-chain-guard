@@ -65,6 +65,31 @@ KNOWN_MALICIOUS_GITHUB_ACCOUNTS, the repo path to KNOWN_DEAD_DROPS, and a url
 FeedIOC with campaign and family (single-source, 0.85), plus a describe block
 in `campaigns.test.ts`. The second-stage mail host is a shared public service
 and is not listed.
+## Fix --filter-holding-packages in the feed importer (2026-10-14) (claude-opus-5-5)
+
+`importUpstreamFeed` destructured an option `filterHoldingPackages`, which
+shadowed the exported function of the same name, so the CLI flag threw
+"not a function" on every run. The block also passed `addedAfterDeferral`
+instead of `added`, so once callable it would have undone the DataDog
+settlement (step 3d, and any later settlement step such as the DataDog-only
+pin rule) by re-importing bare whole-package names. The option is now bound
+to `dropHoldingPackages` inside the function (CLI flag and `parseArgs` field
+unchanged) and the probe runs on `added`.
+
+New test "filterHoldingPackages in a full run" in `feed-import.test.ts`: a
+full dry run with the DataDog source and an injected fetch. Proven by cutting:
+with the original code it fails on "not a function"; with the rename kept and
+`addedAfterDeferral` restored it fails with bare `scg-live` and `scg-nosample`
+back in the result; green after restore. Locally only `feed-import.test.ts`
+and `feed-datadog-source.test.ts` were run (184 passed); the full suite is
+left to CI.
+
+Rebased onto PR 408 (step 3e, the DataDog-only pin rule). The fixture's
+sampled `scg-live` 1.1.0 is now a pulled version: 3e correctly holds back a
+DataDog-only pin of a version still published, which made the original
+expectation fail for that reason rather than for this fix. After the change
+both files pass (193), and the `addedAfterDeferral` cut is red again with
+the bare `scg-live` back in the result.
 
 ## Release v6.5.6 (2026-10-13) (claude-opus-5-5)
 
