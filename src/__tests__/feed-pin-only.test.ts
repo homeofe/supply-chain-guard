@@ -72,6 +72,14 @@ describe("loadPinOnlyList", () => {
     expect(() => loadPinOnlyList(withPinOnlyFile({ scopes: [{ ...named, name: "Hijacked SDK" }] }))).toThrow(/"name"/);
   });
 
+  it("accepts kind squat or hijacked on a name entry only", async () => {
+    const { loadPinOnlyList } = await load();
+    const squat = { name: "squat-name", kind: "squat", reason: SCOPE.reason, addedOn: SCOPE.addedOn };
+    expect(loadPinOnlyList(withPinOnlyFile({ scopes: [squat] }))).toEqual([squat]);
+    expect(() => loadPinOnlyList(withPinOnlyFile({ scopes: [{ ...squat, kind: "other" }] }))).toThrow(/"kind"/);
+    expect(() => loadPinOnlyList(withPinOnlyFile({ scopes: [{ ...SCOPE, kind: "squat" }] }))).toThrow(/"kind"/);
+  });
+
   it("throws on a repeated scope and on malformed JSON", async () => {
     const { loadPinOnlyList } = await load();
     expect(() => loadPinOnlyList(withPinOnlyFile({ scopes: [SCOPE, SCOPE] }))).toThrow(/repeats/);
@@ -213,6 +221,27 @@ describe("resolveBoundedNpmRanges on a pin-only item", () => {
       ["hijacked-sdk", true],
       ["@victim-corp/core", false],
     ]);
+  });
+
+  // monkey-tags-ip (MAL-2026-17875, 2026-10-14): an unscoped dependency-confusion
+  // name. Its records list no version, so listed-only would pin nothing; every
+  // registry version is the attacker's, as in a scope.
+  it("routes a name entry of kind squat like a scope, and kind hijacked like the default", async () => {
+    const { applyPinOnlyList, resolveBoundedNpmRanges } = await load();
+    const list = [
+      { name: "squat-name", kind: "squat", reason: SCOPE.reason, addedOn: SCOPE.addedOn },
+      { name: "hijacked-sdk", kind: "hijacked", reason: SCOPE.reason, addedOn: SCOPE.addedOn },
+    ];
+    const bare = (name: string) => ({ type: "package", value: name, _ecosystemPrefix: "", _name: name, source: "MAL-1", _assessedAt: "2026-10-08T12:00:00Z" });
+    const { pending } = applyPinOnlyList([bare("squat-name"), bare("hijacked-sdk")], list);
+    expect(pending.map((p: { name: string; listedOnly: boolean }) => [p.name, p.listedOnly])).toEqual([
+      ["squat-name", false],
+      ["hijacked-sdk", true],
+    ]);
+    const result = await resolveBoundedNpmRanges(pending, {
+      fetchImpl: registry({ "squat-name": { time: { created: D, "0.0.0-stage": D, "53.4.1": D } } }),
+    });
+    expect(result.entries.map((e: { value: string }) => e.value)).toEqual(["squat-name@53.4.1"]);
   });
 
   it("reports a GitHub advisory without any version as pin-only-no-version, not as a gap", async () => {

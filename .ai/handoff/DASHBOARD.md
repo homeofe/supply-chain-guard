@@ -34,8 +34,8 @@ binary may fail locally; the authoritative Ubuntu CI environment provides it.
 |---------|-------|
 | @babel/parser | ^8.0.6 |
 | @elvatis_com/aahp | 4.0.0 |
-| @types/node | ^26.6.3 |
-| @vitest/coverage-v8 | ^5.0.2 |
+| @types/node | ^26.6.4 |
+| @vitest/coverage-v8 | ^5.0.3 |
 | ajv | ^8.20.0 |
 | ajv-formats | ^3.0.1 |
 | commander | ^14.0.3 |

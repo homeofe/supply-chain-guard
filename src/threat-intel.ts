@@ -8487,6 +8487,13 @@ const FEED_CHUNK_26: FeedIOC[] = [
   { type: "package", value: "kartykgithub-susp-1", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-14" },
   { type: "package", value: "kartykgithub-susp-pkg-1", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-14" },
   { type: "package", value: "storymesh-win32-x64", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-14" },
+
+  // Imported from GitHub Advisory Database (2026-09-30) - see docs/threat-feed-sources.md
+  { type: "package", value: "monkey-tags-ip@53.4.1", severity: "critical", confidence: 1.0, source: "GHSA-88vx-pphm-qg2x, MAL-2026-17875", firstSeen: "2026-10-13" },
+  { type: "package", value: "@user-interface-common/common-styles@66.1.6", severity: "critical", confidence: 1.0, source: "GHSA-h9q3-2w8j-vhfr, MAL-2026-17874", firstSeen: "2026-10-13" },
+  { type: "package", value: "@mntv-analysis/ui-components@50.1.1", severity: "critical", confidence: 1.0, source: "GHSA-82g4-6666-2x5v, MAL-2026-17870", firstSeen: "2026-10-13" },
+  { type: "package", value: "@mntv-analysis/workspaces-components@65.11.3", severity: "critical", confidence: 1.0, source: "GHSA-8qv9-76f6-8h3c, MAL-2026-17871", firstSeen: "2026-10-13" },
+  { type: "package", value: "@mntv-analysis/ui@99.1.1", severity: "critical", confidence: 1.0, source: "GHSA-xrv8-6w5h-xhhf, MAL-2026-17869", firstSeen: "2026-10-13" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips
