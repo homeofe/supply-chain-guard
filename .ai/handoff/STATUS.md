@@ -1,3 +1,26 @@
+## Security fix GHSA-77wv-pr2j-p38h (2026-10-14) (claude-opus-5-5)
+
+GitHub code scanning alert 89 (CodeQL `js/polynomial-redos`, open since
+2026-10-07) on `VERSION_TEXT_REGEX` in `src/mcp-scanner.ts`. Not in the
+2026-10-07 security review. Reproduced through `scan()`: an `.mcp.json` that
+launches a version-pinned feed name (names are public) with a long `^1.X.X...!`
+range. The regex alone: 0.4 s at 32 KB, fourfold per doubling; through
+`scan()` the same curve. Near the 5 MB file cap that is hours per scan; in CI
+a timeout, so loud, never a clean result. Advisory severity set to low
+(availability only); the owner may change it.
+
+Fix: `parseVersionParts` returns null for version text over 256 characters.
+Every caller already reads null as "not understood: do not exclude", so an
+oversized range now yields the range finding instead of a stall. Two tests in
+`mcp-scanner.test.ts` (npm and PyPI launcher, 200 KB range) assert the finding
+and a 2 s bound. Proven by cutting the length check: both red at about 18 s;
+restored green.
+
+Done in the advisory's temporary private fork, per the advisory process.
+Owner steps: merge the advisory PR, cut the release, set Patched versions,
+Request CVE, Publish. Afterwards close code scanning alert 89 as fixed (or it
+closes on the next CodeQL run on `main`).
+
 ## Threat intel 2026-10-14, second batch (claude-opus-5-5)
 
 Interactive run on the owner's request, worktree cut from `origin/main` at

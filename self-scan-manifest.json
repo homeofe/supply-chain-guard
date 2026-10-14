@@ -21,7 +21,7 @@
     "src/__tests__/issue-168-policy-visibility.test.ts": "3a6a42740a87b66a38cbf531755fcdb89c3ebd84f879dd68bd29bf92b368c620",
     "src/__tests__/issue-24-ioc-evasion.test.ts": "ee8b4add5d229f4d04db7fb3575507984fc2933372d0140ad62a06baa1b080bd",
     "src/__tests__/issue-54-hardening.test.ts": "83bbac322af52ee5eeddb6571353f2d40e86e90e425028454660aa35206481ac",
-    "src/__tests__/mcp-scanner.test.ts": "9c1e505176f81adb902f95e603fcfbff9c2c2ec126de6e04c06ae340149d325d",
+    "src/__tests__/mcp-scanner.test.ts": "60da5bb144cbbb30bcdc4fd48612bb493e8664623e7931f53f10b66e042f0a68",
     "src/__tests__/mcp-server.test.ts": "dcc921f1cdc53b44aedefa2dcfd5002b583b07eb827576841be5734aea829065",
     "src/__tests__/multi-line-pattern-engine.test.ts": "16192c3c7b36983811bf167e64787ab2a67ae47e22465833aedcd19667b996ed",
     "src/__tests__/multi-line-rule-precision.test.ts": "2ba1a61fcf1adc5458f8a3d4b63e6327f6800ea8c486258259a2c251c1f74dde",

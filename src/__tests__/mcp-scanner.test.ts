@@ -444,6 +444,24 @@ describe("MCP Scanner", () => {
       expect(hits({ s: { command: "uvx", args: ["evil-py!=2.3.4"] } })).toHaveLength(0);
     });
 
+    // A crafted range must not stall the scan: the version-text regex
+    // backtracks quadratically on a long run of ".X". Oversized text is not
+    // understood, which errs toward a finding, never toward a clean result.
+    it("should flag, not stall on, an oversized npm range", () => {
+      const range = `^1${".X".repeat(100_000)}!`;
+      const started = performance.now();
+      const found = hits({ s: { command: "npx", args: ["-y", `evil-mcp@${range}`] } });
+      expect(performance.now() - started).toBeLessThan(2000);
+      expect(found.length).toBeGreaterThan(0);
+    });
+
+    it("should flag, not stall on, an oversized PyPI range", () => {
+      const started = performance.now();
+      const found = hits({ s: { command: "uvx", args: [`evil-py>=1${".X".repeat(100_000)}!`] } });
+      expect(performance.now() - started).toBeLessThan(2000);
+      expect(found.length).toBeGreaterThan(0);
+    });
+
     it("should not let an npm bare-name entry answer for a PyPI launcher", () => {
       const feed: FeedIOC[] = [{ type: "package", value: "shared-name", severity: "critical", confidence: 0.9 }];
       expect(hits({ s: { command: "uvx", args: ["shared-name"] } }, feed)).toHaveLength(0);

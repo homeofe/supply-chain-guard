@@ -74,6 +74,18 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   published later that same day counted as "published after the record" and
   was never pinned. Such a date now covers the whole UTC day.
 
+### Security
+
+- [GHSA-77wv-pr2j-p38h](https://github.com/homeofe/supply-chain-guard/security/advisories/GHSA-77wv-pr2j-p38h) (low):
+  a crafted version range in an MCP config (`npx -y <package>@<range>` in
+  `.mcp.json` and the other MCP config files) could stall a scan. When the
+  launched name matches a version-pinned feed entry, the range is evaluated,
+  and the regular expression that splits version text backtracked
+  quadratically on a long run of `.X`: a 200 KB range held the scan for about
+  18 s, and a range near the 5 MB file cap for hours. Version text longer than
+  256 characters is no longer parsed; it counts as "may match", so the range
+  finding is still reported. Reported by GitHub code scanning (CodeQL).
+
 ## [6.5.6] - 2026-10-13
 
 ### Changed

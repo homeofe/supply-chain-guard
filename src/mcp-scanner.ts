@@ -582,8 +582,19 @@ type VersionParts = number[];
 const VERSION_TEXT_REGEX =
   /^[=v]*(\d+|[xX*])((?:\.(?:\d+|[xX*]))*)(?:[-+.]?[A-Za-z][0-9A-Za-z.+-]*|[-+][0-9A-Za-z.+-]+)?$/;
 
+/**
+ * Longest version text that is parsed at all. VERSION_TEXT_REGEX backtracks
+ * quadratically on a long run of ".X" (32 KB took 0.4 s, and a range near the
+ * 5 MB file cap would hold a scan for hours), and the text comes from the
+ * scanned config. Longer text is "not understood", which every caller treats
+ * as "may match", so a crafted range yields a finding instead of a stall.
+ */
+const MAX_VERSION_TEXT = 256;
+
 function parseVersionParts(text: string): { parts: Array<number | null> } | null {
-  const m = VERSION_TEXT_REGEX.exec(text.trim());
+  const trimmed = text.trim();
+  if (trimmed.length > MAX_VERSION_TEXT) return null;
+  const m = VERSION_TEXT_REGEX.exec(trimmed);
   if (!m) return null;
   const pieces = [m[1]!, ...(m[2] ?? "").split(".").filter(Boolean)];
   return { parts: pieces.map((p) => (/^\d+$/.test(p) ? Number(p) : null)) };
