@@ -1,3 +1,34 @@
+## Daily threat intel (2026-10-14) (claude-opus-5-5)
+
+Scheduled run, worktree cut from `origin/main` at `dd5a232` (v6.5.6).
+
+Windowed import, WITHOUT DataDog (`--no-datadog`), as on 2026-10-13: 27
+package entries, all to the bundle. No limit, no page cap, no window, nothing
+declined or deferred, 0 unmapped (1 acknowledged). Bare names probed against
+the registry: the nine `opencode2*` names and `@chatest/baileys` are npm
+security holding packages; `passwordcrackv2` and `passwordcracker` are live,
+created 2026-10-09 by one account, every version malicious per the advisory.
+
+The run first applied the import WITH DataDog by mistake (406 entries: 45 to
+the bundle, 361 to the catalog, the DataDog-only part again 379) and reverted
+it before anything was committed. The DataDog block stays open for an
+interactive session, unchanged from the 2026-10-13 note below.
+
+Snapshot reconcile (STEP 1a): with DataDog on, both the dry run and `--check`
+failed three times on Open VSX timeouts (a different extension each time;
+`probeExtensionVersions` has no retry and fails closed, which is correct).
+With `--no-datadog`: 0 to add (257,870 duplicates), `--check` exit 0, 0
+unmapped, 33 acknowledged, none stale. DataDog `still published`: the six
+known extension ids only (from the windowed dry run, which completed).
+
+Vendor enrichment (STEP 1b): no vendor write-up for the last days. From OSV
+MAL-2026-17865: the loaders declare `node-net-pool` as a tarball of
+github[.]com/lunexindonesia/node-net-pool. Added the account to
+KNOWN_MALICIOUS_GITHUB_ACCOUNTS, the repo path to KNOWN_DEAD_DROPS, and a url
+FeedIOC with campaign and family (single-source, 0.85), plus a describe block
+in `campaigns.test.ts`. The second-stage mail host is a shared public service
+and is not listed.
+
 ## Release v6.5.6 (2026-10-13) (claude-opus-5-5)
 
 Security release for GHSA-gqpg-9mjx-pv4w (entry below). The fix was merged

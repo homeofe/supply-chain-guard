@@ -7715,6 +7715,44 @@ describe("Campaign Signatures", () => {
   });
 
   // =================================================================
+  // node-net-pool Discord MFA loader (October 2026)
+  // =================================================================
+
+  describe("node-net-pool Discord MFA loader (October 2026)", () => {
+    const scanFile = async (name: string, content: string) => {
+      fs.writeFileSync(path.join(tempDir, name), content);
+      return (await scan({ target: tempDir, format: "text" })).findings;
+    };
+
+    it("should detect the attacker repo as a tarball dependency", async () => {
+      const findings = await scanFile(
+        "deps.js",
+        'module.exports = { "node-net-pool": "https://github.com/lunexindonesia/node-net-pool/archive/refs/heads/main.tar.gz" };',
+      );
+      expect(findings.some((f) => f.rule === "IOC_KNOWN_DEAD_DROP")).toBe(true);
+      expect(findings.some((f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT")).toBe(true);
+    });
+
+    it("does not flag a look-alike account name", async () => {
+      const findings = await scanFile("ok.js", 'const u = "https://github.com/lunexindonesia2/other";');
+      expect(findings.some((f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT")).toBe(false);
+      expect(findings.some((f) => f.rule === "IOC_KNOWN_DEAD_DROP")).toBe(false);
+    });
+
+    it("flags both loader packages by name", () => {
+      const feed = getBundledFeed();
+      expect(matchBareNpmIOC("passwordcrackv2", "1.1.1", feed)).not.toBeNull();
+      expect(matchBareNpmIOC("passwordcracker", "1.0.0", feed)).not.toBeNull();
+    });
+
+    it("keeps the repo path in the bundle", () => {
+      const feed = getBundledFeed();
+      const set = feed.filter((i) => i.campaign === "node-net-pool Discord MFA loader");
+      expect(set.map((i) => i.value)).toEqual(["github.com/lunexindonesia/node-net-pool"]);
+    });
+  });
+
+  // =================================================================
   // GhostAction GitHub Actions secret exfiltration (October 2026)
   // =================================================================
 

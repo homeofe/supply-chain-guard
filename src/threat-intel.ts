@@ -40,7 +40,7 @@ export type FeedIOCInput = Omit<FeedIOC, "confidence"> & {
  * Generation timestamp for the bundled IOC feed (v5.29, issue #208).
  * Pure function of feed updates; preserved across builds.
  */
-export const FEED_GENERATED_AT = "2026-10-13T00:00:00.000Z";
+export const FEED_GENERATED_AT = "2026-10-14T00:00:00.000Z";
 
 // ---------------------------------------------------------------------------
 // Default bundled feed (curated by supply-chain-guard)
@@ -8438,6 +8438,45 @@ const FEED_CHUNK_26: FeedIOC[] = [
   { type: "package", value: "api-nebula", severity: "critical", confidence: 1.0, source: "GHSA-q4h6-37pw-8pc9, MAL-2026-17531 (amazon-inspector+ghsa-malware)", firstSeen: "2026-10-05" },
   { type: "package", value: "llm-nebula", severity: "critical", confidence: 1.0, source: "GHSA-w7wp-5j6j-rgg5, MAL-2026-17230 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-28" },
   { type: "package", value: "test-account-portal-fe@100.100.101", severity: "critical", confidence: 1.0, source: "GHSA-rh76-qjhp-v9m8, MAL-2026-17748 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-10-09" },
+
+  // Imported from GitHub Advisory Database (2026-09-30) - see docs/threat-feed-sources.md
+  { type: "package", value: "passwordcrackv2", severity: "critical", confidence: 1.0, source: "GHSA-75f2-wpm3-2h52, MAL-2026-17865", firstSeen: "2026-10-09" },
+  { type: "package", value: "passwordcracker", severity: "critical", confidence: 1.0, source: "GHSA-jwr3-9ch5-2qw5, MAL-2026-17864", firstSeen: "2026-10-10" },
+  { type: "package", value: "pypi:crelic-bqwheel-52f66a3f1d@0.0.1", severity: "critical", confidence: 1.0, source: "GHSA-xwrx-mm2v-334v, MAL-2026-17863 (kam193)", firstSeen: "2026-10-13" },
+  { type: "package", value: "@accenturecodefoundry/mfe-pot-shared-ui-scds-core@99.99.2", severity: "critical", confidence: 1.0, source: "GHSA-36v8-chg8-q674, MAL-2026-17867", firstSeen: "2026-10-13" },
+  { type: "package", value: "@accenturecodefoundry/mfe-pot-shared-ui-scds-core@99.99.4", severity: "critical", confidence: 1.0, source: "GHSA-36v8-chg8-q674, MAL-2026-17867", firstSeen: "2026-10-13" },
+  { type: "package", value: "@accenturecodefoundry/mfe-pot-shared-ui-scds-core@99.99.41", severity: "critical", confidence: 1.0, source: "GHSA-36v8-chg8-q674, MAL-2026-17867", firstSeen: "2026-10-13" },
+  { type: "package", value: "pypi:pyyi@2.4.1", severity: "critical", confidence: 1.0, source: "GHSA-4vr9-vg98-9xpf, MAL-2026-17866", firstSeen: "2026-10-12" },
+  { type: "package", value: "@kre64/hello-npm-test@1.0.0", severity: "critical", confidence: 0.9, source: "GHSA-c43r-xf4h-m548, MAL-2026-17868 (ghsa-malware)", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:sysdiagd@1.2.1", severity: "critical", confidence: 1.0, source: "GHSA-64w9-pjq6-x8rh, MAL-2026-17861 (kam193)", firstSeen: "2026-10-13" },
+  { type: "package", value: "pypi:sysdiagd@1.2.2", severity: "critical", confidence: 1.0, source: "GHSA-64w9-pjq6-x8rh, MAL-2026-17861 (kam193)", firstSeen: "2026-10-13" },
+  { type: "package", value: "pypi:sysdiagd@1.2.3", severity: "critical", confidence: 1.0, source: "GHSA-64w9-pjq6-x8rh, MAL-2026-17861 (kam193)", firstSeen: "2026-10-13" },
+  { type: "package", value: "pypi:fontcase@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-g72q-7v8m-7r9j, MAL-2026-17862 (kam193)", firstSeen: "2026-10-13" },
+  { type: "package", value: "pypi:fontcase@0.1.1", severity: "critical", confidence: 1.0, source: "GHSA-g72q-7v8m-7r9j, MAL-2026-17862 (kam193)", firstSeen: "2026-10-13" },
+  { type: "package", value: "pypi:fontcase@0.1.2", severity: "critical", confidence: 1.0, source: "GHSA-g72q-7v8m-7r9j, MAL-2026-17862 (kam193)", firstSeen: "2026-10-13" },
+  { type: "package", value: "opencode2-windows-x64", severity: "critical", confidence: 0.9, source: "GHSA-6x5j-r784-fx6j, MAL-2026-17860 (ghsa-malware)", firstSeen: "2026-10-13" },
+  { type: "package", value: "opencode2-windows-arm64", severity: "critical", confidence: 0.9, source: "GHSA-xr5m-85hf-27r5, MAL-2026-17859 (ghsa-malware)", firstSeen: "2026-10-13" },
+  { type: "package", value: "opencode2-linux-arm64", severity: "critical", confidence: 0.9, source: "GHSA-xwcq-r6hw-mc5p, MAL-2026-17855 (ghsa-malware)", firstSeen: "2026-10-13" },
+  { type: "package", value: "opencode2", severity: "critical", confidence: 0.9, source: "GHSA-8w65-j2wh-mqv7, MAL-2026-17852 (ghsa-malware)", firstSeen: "2026-10-13" },
+  { type: "package", value: "opencode2-darwin-x64", severity: "critical", confidence: 0.9, source: "GHSA-pmv2-r2q9-rmg9, MAL-2026-17854 (ghsa-malware)", firstSeen: "2026-10-13" },
+  { type: "package", value: "opencode2-linux-x64-musl", severity: "critical", confidence: 0.9, source: "GHSA-qx7m-vw4p-xv3j, MAL-2026-17858 (ghsa-malware)", firstSeen: "2026-10-13" },
+  { type: "package", value: "opencode2-darwin-arm64", severity: "critical", confidence: 0.9, source: "GHSA-36mq-frp2-jc97, MAL-2026-17853 (ghsa-malware)", firstSeen: "2026-10-13" },
+  { type: "package", value: "opencode2-linux-arm64-musl", severity: "critical", confidence: 0.9, source: "GHSA-cm8m-24p9-hh65, MAL-2026-17856 (ghsa-malware)", firstSeen: "2026-10-13" },
+  { type: "package", value: "opencode2-linux-x64", severity: "critical", confidence: 0.9, source: "GHSA-3jr5-3qvm-r54h, MAL-2026-17857 (ghsa-malware)", firstSeen: "2026-10-13" },
+  { type: "package", value: "yoodan-github-single-ver-pkg@1.0.1", severity: "critical", confidence: 0.9, source: "GHSA-2946-w5c6-hcw2, MAL-2026-17851 (ghsa-malware)", firstSeen: "2026-10-13" },
+  { type: "package", value: "@chatest/baileys", severity: "critical", confidence: 0.9, source: "GHSA-c2gc-jwcq-w8r3, MAL-2026-17850 (ghsa-malware)", firstSeen: "2026-10-13" },
+  { type: "package", value: "pypi:npp-ml@0.1.10", severity: "critical", confidence: 1.0, source: "GHSA-hmg9-h2ww-x4x3, MAL-2026-17847 (kam193)", firstSeen: "2026-10-12" },
+  { type: "package", value: "gemini-computer-use@0.4.3", severity: "critical", confidence: 1.0, source: "MAL-2026-16355 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-09-21" },
+
+  // node-net-pool Discord MFA loader (October 2026). passwordcrackv2 and
+  // passwordcracker (MAL-2026-17865, MAL-2026-17864) declare node-net-pool as a
+  // tarball of the attacker repo github[.]com/lunexindonesia/node-net-pool and
+  // require it on load; on Windows it fetches a second stage and persists via
+  // the Run keys. The account was created 2026-10-05 and holds only that repo.
+  // The packages come from the advisory import; this is the repo path, which
+  // the OSV record alone names (single-source, 0.85). The mail host serving the
+  // second stage is a shared public service and is deliberately NOT listed.
+  { type: "url", value: "github.com/lunexindonesia/node-net-pool", severity: "critical", confidence: 0.85, family: "node-net-pool loader", campaign: "node-net-pool Discord MFA loader", source: "MAL-2026-17865 (single-source)", firstSeen: "2026-10-09" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips

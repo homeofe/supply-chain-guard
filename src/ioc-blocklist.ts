@@ -1106,6 +1106,10 @@ export const KNOWN_DEAD_DROPS: string[] = [
   "raw.githubusercontent.com/cavecrew/proj/main/banner.png",
   "raw.githubusercontent.com/cavecrew/proj/main/banner.jpg",
   "api.imghippo.com/files/hOG8244hc.png",
+  // node-net-pool Discord MFA loader (October 2026): attacker repo that
+  // passwordcrackv2 / passwordcracker pull as a tarball dependency (OSV
+  // MAL-2026-17865, single-source)
+  "github.com/lunexindonesia/node-net-pool",
 ];
 
 // ---------------------------------------------------------------------------
@@ -1852,6 +1856,10 @@ export const KNOWN_MALICIOUS_GITHUB_ACCOUNTS: string[] = [
   // MALFEX npm campaign (October 2026): operator account hosting the
   // stealer-chain payloads in cavecrew/proj (Checkmarx + CloudSEK)
   "cavecrew",
+  // node-net-pool Discord MFA loader (October 2026): account created
+  // 2026-10-05 whose only repo is the loader payload (OSV MAL-2026-17865,
+  // single-source)
+  "lunexindonesia",
 ];
 
 // ---------------------------------------------------------------------------

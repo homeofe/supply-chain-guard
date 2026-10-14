@@ -7,6 +7,25 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat intel for 2026-10-14: 27 package entries from the GitHub Advisory
+  Database and OpenSSF, all in the offline bundle. Clusters: the nine
+  `opencode2` platform packages (`opencode2`, `opencode2-linux-x64` and the
+  other OS and architecture variants), the Discord MFA loaders
+  `passwordcrackv2` and `passwordcracker`, PyPI `sysdiagd` 1.2.1 to 1.2.3 (a
+  Discord bot infostealer), PyPI `fontcase` 0.1.0 to 0.1.2, `pyyi`,
+  `crelic-bqwheel-52f66a3f1d` and `npp-ml` 0.1.10, `@chatest/baileys`, and
+  sentinel-version squats of
+  `@accenturecodefoundry/mfe-pot-shared-ui-scds-core` (99.99.2, 99.99.4,
+  99.99.41). Every bare name was probed against the registry; all but the two
+  loaders are npm security holding packages, and the loaders were created by
+  one account on 2026-10-09 with no release that is not malicious.
+- Detection for the repository the Discord MFA loaders pull as a tarball
+  dependency: the GitHub account `lunexindonesia` and its repo path
+  `github[.]com/lunexindonesia/node-net-pool` (single-source, OSV
+  MAL-2026-17865), kept in the offline bundle.
+
 ## [6.5.6] - 2026-10-13
 
 ### Changed
