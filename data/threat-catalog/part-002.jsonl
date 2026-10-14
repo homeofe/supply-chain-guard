@@ -63956,3 +63956,5 @@
 {"type":"package","value":"@biz44/id79-client@1.1.80","severity":"critical","confidence":1,"source":"GHSA-38g4-jrgw-cqgh, MAL-2026-16168","firstSeen":"2026-09-12"}
 {"type":"package","value":"@biz44/id12-client@1.1.13","severity":"critical","confidence":1,"source":"GHSA-57p7-wfrw-75gv, MAL-2026-16166","firstSeen":"2026-09-12"}
 {"type":"package","value":"@biz44/id10-client@1.1.11","severity":"critical","confidence":1,"source":"GHSA-3fp9-rc4g-j5v2, MAL-2026-16165","firstSeen":"2026-09-12"}
+{"type":"package","value":"stillm4ddpocs-demo-sprocket@999.9.20","severity":"critical","confidence":0.9,"source":"datadog-malicious-packages","firstSeen":"2026-08-22"}
+{"type":"package","value":"tw-pkgprobe-7731@1.0.2","severity":"critical","confidence":0.9,"source":"datadog-malicious-packages","firstSeen":"2026-08-14"}

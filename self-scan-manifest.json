@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "algorithm": "sha256",
   "files": {
-    "feed.json": "ef89453e5b3254a0237f17a55b50446554d0dd7896eb2f7ab00a7b2d988986a7",
+    "feed.json": "477a113e2469b31d21f654b4e8475741d1b5956c7e19ba8ded98cd647bb351aa",
     "src/__tests__/active-validation.test.ts": "ae5d61208caa6fb24ee32218cc2af813ec2516efbaeb7ef87314992d58388b35",
     "src/__tests__/beacon-miner.test.ts": "123372c301f87ca318a7dfcaadb36939d6d090d65e8c69e597f18cc8fe970a72",
     "src/__tests__/campaigns.test.ts": "215360bc4d67d9ac0b0713968d904fb5c606a3ee1144e1e1c06612b7089c6186",
@@ -57,7 +57,7 @@
     "src/scanner.ts": "6c6fb635788d378b4c9f766a71b1a761154590912e11ac2bc5aeb040cfac9952",
     "src/secret-simulator.ts": "cd41a74b10a9e08fc0245a7d93e3c8059591c7614dc580599acd5cfe25089693",
     "src/solana-monitor.ts": "7ad41ccea3b6b18d535ec5ef6191cc740bd203be407a83b423d0c79e98699eec",
-    "src/threat-intel.ts": "16665b055a0d02fb3c89073c958a099d5a9a58843021fb6fe91c31803f652591",
+    "src/threat-intel.ts": "b9e4ca2819e5f1c48c5424ec345f5a41a9a8bc8e0a2b244c66febf0215db84ea",
     "src/workflow-modeler.ts": "9da285d7f2e19bf800c5c4018b3469c8b66c525d50818973f7726e4d4bdd11be"
   }
 }

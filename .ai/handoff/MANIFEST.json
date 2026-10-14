@@ -3,17 +3,17 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1791955589",
-    "timestamp": "2026-10-14T05:26:29Z",
-    "commit": "dd5a232",
+    "session_id": "cli-1791957708",
+    "timestamp": "2026-10-14T06:01:48Z",
+    "commit": "93d519f",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:be7a031f25d102ffbda1873f7d271c8048fec11ef0b32a19708d8be008b6cf73",
-      "updated": "2026-10-14T05:26:20Z",
-      "lines": 14519,
+      "checksum": "sha256:e24c2f42942df7f159865f6a118beeaf097a028f4c327f610ab3e000d75e0fef",
+      "updated": "2026-10-14T06:01:41Z",
+      "lines": 14556,
       "summary": "Scheduled run, worktree cut from `origin/main` at `dd5a232` (v6.5.6)."
     },
     "NEXT_ACTIONS.md": {
@@ -80,7 +80,7 @@
   "quick_context": "Scheduled run, worktree cut from `origin/main` at `dd5a232` (v6.5.6). Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
     "manifest_only": 893,
-    "manifest_plus_core": 216384,
-    "full_read": 230116
+    "manifest_plus_core": 216956,
+    "full_read": 230688
   }
 }

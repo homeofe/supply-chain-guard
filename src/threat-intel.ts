@@ -8477,6 +8477,16 @@ const FEED_CHUNK_26: FeedIOC[] = [
   // the OSV record alone names (single-source, 0.85). The mail host serving the
   // second stage is a shared public service and is deliberately NOT listed.
   { type: "url", value: "github.com/lunexindonesia/node-net-pool", severity: "critical", confidence: 0.85, family: "node-net-pool loader", campaign: "node-net-pool Discord MFA loader", source: "MAL-2026-17865 (single-source)", firstSeen: "2026-10-09" },
+
+  // Imported from GitHub Advisory Database (2026-09-30) - see docs/threat-feed-sources.md
+  { type: "package", value: "@inpeek/odata@0.0.0-stage", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-04" },
+  { type: "package", value: "@kartykgithub/susp-new-2", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-14" },
+  { type: "package", value: "cowork-os@0.5.53", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-09-20" },
+  { type: "package", value: "foremerge-win32-x64", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-14" },
+  { type: "package", value: "kartykgithub-ph-d", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-14" },
+  { type: "package", value: "kartykgithub-susp-1", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-14" },
+  { type: "package", value: "kartykgithub-susp-pkg-1", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-14" },
+  { type: "package", value: "storymesh-win32-x64", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-14" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips

@@ -250,7 +250,25 @@ provenances kept.
     `@toptal/picasso` instead of its ten trojanized ones;
   - a claim with no sampled version is not imported and is listed by name.
 
-  Any registry failure other than 404 rejects the run.
+  Any registry failure other than 404 rejects the run. A network error
+  (timeout, reset) is retried twice with a fresh timeout before it counts;
+  an HTTP error status is never retried. The same holds for the two
+  marketplace lookups of the IDE extensions below, whose single timeouts had
+  failed the daily completeness check.
+- **A pin only DataDog vouches for needs the version to be gone.** Every npm
+  or PyPI version pin from this source alone, whether from a versions list or
+  from a settled whole-package claim, is checked against the registry: it is
+  imported only when that version can no longer be installed (unpublished,
+  pulled, replaced by a holding package, or a PyPI release without files).
+  A version that is still published waits for a second source or for the
+  registry to pull it, is listed as "DataDog-only pin(s) of a version still
+  published", and is picked up by the first run after either happens. This is
+  the rule the IDE extensions below already follow. On 2026-10-14 it held back
+  369 of 379 such pins: consecutive routine releases of established packages
+  (`@qwen-code/qwen-code`, `@zuplo/cli`, `gina`, the `@toptal/picasso` 100.x
+  line), all still installable and listed by no OSV record, which would have
+  flagged every install. A pin also named by GHSA or OpenSSF is imported as
+  before.
 - **Dates.** The manifests carry none. `firstSeen` is the earliest sample date
   from the dataset's file tree (`<date>-<name>-v<version>.zip`), or the day of
   the first import for a name without a sample; the release cutoff then moves

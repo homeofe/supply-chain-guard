@@ -2514,6 +2514,35 @@ export const DATADOG_EXTENSION_DIR = "ide_extensions";
 export const VSCODE_MARKETPLACE_QUERY = "https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery";
 export const OPEN_VSX_API = "https://open-vsx.org/api";
 
+/** Pause before the second network attempt of a probe; doubled for the third. */
+export const PROBE_RETRY_DELAY_MS = 2000;
+
+/**
+ * A probe request that survives a transient network failure. Only a THROWN
+ * error (timeout, reset, DNS) is retried, up to `attempts` times with a fresh
+ * timeout each; any HTTP answer, including an error status, is returned as is
+ * for the caller to judge. After the last attempt the error propagates, so a
+ * probe still rejects the run rather than guessing. Single timeouts against the
+ * VS Code Marketplace and Open VSX failed the daily completeness gate
+ * (2026-10-10, and four local runs on 2026-10-14) while the same requests
+ * answered in 0.1 s when repeated.
+ */
+export async function fetchRetrying(
+  fetchImpl,
+  url,
+  init,
+  { timeoutMs = 15000, attempts = 3, retryDelayMs = PROBE_RETRY_DELAY_MS } = {},
+) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await fetchImpl(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
+    } catch (err) {
+      if (attempt >= attempts) throw err;
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs * 2 ** (attempt - 1)));
+    }
+  }
+}
+
 /** `samples/ide_extensions/<category>/<publisher.name>/<version>.vsix` -> id -> versions. */
 export function parseDatadogExtensionSamples(paths) {
   const versions = new Map();
@@ -2531,16 +2560,25 @@ export function parseDatadogExtensionSamples(paths) {
  * version history and Open VSX's per-version endpoint. Any answer other than
  * "found" or "not found" rejects the run.
  */
-export async function probeExtensionVersions(id, versions, { fetchImpl = globalThis.fetch, timeoutMs = 15000 } = {}) {
+export async function probeExtensionVersions(
+  id,
+  versions,
+  { fetchImpl = globalThis.fetch, timeoutMs = 15000, retryDelayMs = PROBE_RETRY_DELAY_MS } = {},
+) {
   const headers = { "User-Agent": "supply-chain-guard-feed-import" };
+  const retry = { timeoutMs, retryDelayMs };
   let response;
   try {
-    response = await fetchImpl(VSCODE_MARKETPLACE_QUERY, {
-      method: "POST",
-      headers: { ...headers, "Content-Type": "application/json", Accept: "application/json;api-version=7.2-preview.1" },
-      body: JSON.stringify({ filters: [{ criteria: [{ filterType: 7, value: id }], pageSize: 1 }], flags: 1 }),
-      signal: AbortSignal.timeout(timeoutMs),
-    });
+    response = await fetchRetrying(
+      fetchImpl,
+      VSCODE_MARKETPLACE_QUERY,
+      {
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/json", Accept: "application/json;api-version=7.2-preview.1" },
+        body: JSON.stringify({ filters: [{ criteria: [{ filterType: 7, value: id }], pageSize: 1 }], flags: 1 }),
+      },
+      retry,
+    );
   } catch (err) {
     throw new Error(`VS Code Marketplace request failed for ${id}: ${err instanceof Error ? err.message : String(err)}`);
   }
@@ -2555,7 +2593,7 @@ export async function probeExtensionVersions(id, versions, { fetchImpl = globalT
     const url = `${OPEN_VSX_API}/${encodeURIComponent(id.slice(0, dot))}/${encodeURIComponent(id.slice(dot + 1))}/${encodeURIComponent(version)}`;
     let ovsx;
     try {
-      ovsx = await fetchImpl(url, { headers, signal: AbortSignal.timeout(timeoutMs) });
+      ovsx = await fetchRetrying(fetchImpl, url, { headers }, retry);
     } catch (err) {
       throw new Error(`Open VSX request failed for ${id}@${version}: ${err instanceof Error ? err.message : String(err)}`);
     }
@@ -2689,34 +2727,46 @@ export function mapDatadogDataset(
  * What the registry says about a package: `removed` (404, npm security
  * holding package, or every version unpublished) or the versions it publishes.
  */
-export async function probeRegistry(prefix, name, { fetchImpl = globalThis.fetch, timeoutMs = 15000 } = {}) {
+export async function probeRegistry(
+  prefix,
+  name,
+  { fetchImpl = globalThis.fetch, timeoutMs = 15000, retryDelayMs = PROBE_RETRY_DELAY_MS } = {},
+) {
   const url =
     prefix === "pypi:"
       ? `https://pypi.org/pypi/${encodeURIComponent(name)}/json`
       : `${NPM_REGISTRY_URL}/${name.startsWith("@") ? `@${encodeURIComponent(name.slice(1))}` : encodeURIComponent(name)}`;
   let response;
   try {
-    response = await fetchImpl(url, {
-      headers: { "User-Agent": "supply-chain-guard-feed-import", Accept: "application/json" },
-      signal: AbortSignal.timeout(timeoutMs),
-    });
+    response = await fetchRetrying(
+      fetchImpl,
+      url,
+      { headers: { "User-Agent": "supply-chain-guard-feed-import", Accept: "application/json" } },
+      { timeoutMs, retryDelayMs },
+    );
   } catch (err) {
     throw new Error(`registry request failed for ${name}: ${err instanceof Error ? err.message : String(err)}`);
   }
-  if (response.status === 404) return { removed: true, versions: [] };
+  // `live`: the versions an install can still fetch today. `versions`: every
+  // version the registry ever recorded, unpublished ones included.
+  if (response.status === 404) return { removed: true, versions: [], live: [] };
   if (!response.ok) throw new Error(`registry returned HTTP ${response.status} for ${name}`);
   const doc = await response.json();
   if (prefix === "pypi:") {
-    const versions = Object.keys(doc?.releases ?? {});
-    return { removed: versions.length === 0, versions };
+    const releases = doc?.releases ?? {};
+    const versions = Object.keys(releases);
+    // A release without files cannot be installed; a yanked one still can be
+    // with an exact pin, so it counts as live.
+    const live = versions.filter((v) => Array.isArray(releases[v]) && releases[v].length > 0);
+    return { removed: versions.length === 0, versions, live };
   }
   const versions = Object.keys(doc?.time ?? {}).filter((k) => !["created", "modified", "unpublished"].includes(k));
   const live = Object.keys(doc?.versions ?? {});
   const holding =
     doc?.description === "security holding package" ||
     (live.length > 0 && live.every((v) => /-security$/.test(v)));
-  if (holding || live.length === 0) return { removed: true, versions };
-  return { removed: false, versions };
+  if (holding || live.length === 0) return { removed: true, versions, live: holding ? [] : live };
+  return { removed: false, versions, live };
 }
 
 /**
@@ -2766,6 +2816,61 @@ export async function settleDatadogWholePackages(
     }
   });
   return { entries: out, probed: claims.length, bare, pinned, liveWithoutSamples };
+}
+
+/** A candidate only the DataDog dataset vouches for, pinned to one npm or PyPI version. */
+function isDatadogOnlyPin(entry) {
+  return (
+    entry._discoverySource === DISCOVERY_SOURCE.DATADOG &&
+    entry.source === DATADOG_SOURCE_LABEL &&
+    (entry._ecosystemPrefix === "" || entry._ecosystemPrefix === "pypi:") &&
+    splitPackageValue(entry.value).version !== undefined
+  );
+}
+
+/**
+ * Import a DataDog-only version pin only when that version can no longer be
+ * installed, the rule the dataset's IDE extensions already follow
+ * (extensionPrefixesFor). A registry removes a malicious release after the
+ * incident, so the removal corroborates the sample, and a pin on a version
+ * nobody can install cannot flag anyone. A version that is still published
+ * needs a second source; until GHSA or OpenSSF names it, or the registry pulls
+ * it, it is reported and not imported, and a later run picks it up then.
+ *
+ * Measured on 2026-10-14: 379 DataDog-only pins over 87 packages, and for 78 of
+ * them every pinned version was still installable, often the current `latest`
+ * of established packages (@qwen-code/qwen-code with 22 consecutive releases,
+ * @zuplo/cli with 42, gina, edgeone, the houdini platform binaries, the
+ * @toptal/picasso 100.x line). No OSV record listed any of those versions. A
+ * real hijack is a short burst the registry removes; a release cadence pinned
+ * end to end is a detector false positive, and pinning it flags every install.
+ *
+ * Entries corroborated by another source carry that source's label after
+ * coalescing and are left alone, as are extension pins and bare names (already
+ * settled against the registry). Any registry failure rejects the run.
+ */
+export async function settleDatadogPublishedPins(
+  entries,
+  { fetchImpl = globalThis.fetch, timeoutMs = 15000, retryDelayMs = PROBE_RETRY_DELAY_MS, concurrency = 8 } = {},
+) {
+  const packages = [...new Set(entries.filter(isDatadogOnlyPin).map((e) => `${e._ecosystemPrefix}${e._name}`))];
+  const probes = await mapConcurrent(packages, concurrency, (key) => {
+    const prefix = key.startsWith("pypi:") ? "pypi:" : "";
+    return probeRegistry(prefix, key.slice(prefix.length), { fetchImpl, timeoutMs, retryDelayMs });
+  });
+  const liveByPackage = new Map(packages.map((key, i) => [key, new Set(probes[i].live)]));
+  const kept = [];
+  const stillPublished = [];
+  for (const entry of entries) {
+    if (!isDatadogOnlyPin(entry)) {
+      kept.push(entry);
+      continue;
+    }
+    const { version } = splitPackageValue(entry.value);
+    if (liveByPackage.get(`${entry._ecosystemPrefix}${entry._name}`).has(version)) stillPublished.push(entry.value);
+    else kept.push(entry);
+  }
+  return { entries: kept, probed: packages.length, stillPublished };
 }
 
 /**
@@ -3372,6 +3477,15 @@ export async function importUpstreamFeed({
     datadogSettlement = settled;
     added = dedupe(existing, settled.entries, bundled).added;
   }
+
+  // 3e. DataDog-only pins on versions still published: not imported without a
+  // second source (settleDatadogPublishedPins). After 3d, so the pins a live
+  // whole-package claim yields are judged the same way as manifest pins.
+  let datadogPublishedPins = { probed: 0, stillPublished: [] };
+  if (added.some((entry) => entry._discoverySource === DISCOVERY_SOURCE.DATADOG)) {
+    datadogPublishedPins = await settleDatadogPublishedPins(added, { fetchImpl, timeoutMs });
+    added = datadogPublishedPins.entries;
+  }
   let holdingPackagesFiltered = 0;
   if (filterHoldingPackages) {
     const livenessResult = await filterHoldingPackages(addedAfterDeferral, {
@@ -3462,6 +3576,9 @@ export async function importUpstreamFeed({
           // Live packages the dataset calls malicious with no sampled version:
           // not imported, listed so a human can look.
           liveWithoutSamples: datadogSettlement.liveWithoutSamples,
+          // DataDog-only pins of versions an install can still fetch: not
+          // imported until a second source or the registry's removal confirms them.
+          pinsStillPublished: datadogPublishedPins.stillPublished,
           // Manifest versions with no sample in their own ecosystem: not imported.
           manifestWithoutSample:
             sourceResults.find(({ adapter }) => adapter.id === DISCOVERY_SOURCE.DATADOG)?.adapter.lastWithoutSample ?? [],
@@ -3902,6 +4019,7 @@ if (isMain) {
         `  DataDog dataset:      ${report.datadog.wholePackageClaimsProbed} whole-package claim(s) probed: ` +
           `${report.datadog.settledAsBareName} bare name(s), ${report.datadog.settledAsPins} pin(s), ` +
           `${report.datadog.liveWithoutSamples.length} without a sampled version (live, or version-scoped by another source; not imported), ` +
+          `${report.datadog.pinsStillPublished.length} DataDog-only pin(s) of a version still published (not imported, need a second source), ` +
           `${report.datadog.manifestWithoutSample.length} manifest line(s) without a sample in their ecosystem (not imported), ` +
           `${report.datadog.extensionsPinned} IDE extension(s) checked, ${report.datadog.extensionsStillPublished.length} sampled version(s) still published (not imported, review), ` +
           `${report.datadog.extensionsWithoutSample.length} without a sample`,

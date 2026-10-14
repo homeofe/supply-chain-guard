@@ -11,14 +11,51 @@ created 2026-10-09 by one account, every version malicious per the advisory.
 
 The run first applied the import WITH DataDog by mistake (406 entries: 45 to
 the bundle, 361 to the catalog, the DataDog-only part again 379) and reverted
-it before anything was committed. The DataDog block stays open for an
-interactive session, unchanged from the 2026-10-13 note below.
+it before anything was committed.
+
+DataDog block (open since 2026-10-13), reviewed and closed on the owner's go
+in the same session. 379 pins over 87 npm packages, probed against the
+registry and OSV (control: ph-common returns its MAL record):
+- 78 packages: every pinned version still installable, often the current
+  `latest` of an established package (`@qwen-code/qwen-code` 22 consecutive
+  releases, `@zuplo/cli` 42, `gina` 24, `edgeone`, `houdini-*` binaries,
+  `@toptal/picasso` 100.x). OSV lists none of those versions; the 25 names
+  with MAL records are covered for OTHER versions (the real 2025 Toptal
+  compromise, 54.0.x). A release cadence pinned end to end is a detector
+  false positive, not a hijack. Not imported.
+- 10 entries with evidence the version cannot be installed any more: six
+  holding packages (bare), `stillm4ddpocs-demo-sprocket@999.9.20` and
+  `tw-pkgprobe-7731@1.0.2` (whole package unpublished), `cowork-os@0.5.53`
+  (that version pulled), `@inpeek/odata@0.0.0-stage` (holding placeholder,
+  harmless, no detection value). Imported: 8 bundle, 2 catalog.
+
+The rule is now in the importer (`settleDatadogPublishedPins`, step 3e): a
+DataDog-only npm/PyPI pin is imported only when the version is no longer
+installable, the rule extensions already follow. The 369 held back are listed
+as "DataDog-only pin(s) of a version still published" and are picked up by
+the first run after npm pulls them or GHSA/OpenSSF names them. The live run
+proposed exactly the 10 above. `--no-datadog` is no longer needed for the
+daily run.
+
+Probe retries: `fetchRetrying` retries a thrown network error twice (fresh
+timeout, 2 s then 4 s), never an HTTP status, for the registry probe and both
+marketplace lookups. The CI completeness run of 2026-10-10 failed on one
+Marketplace timeout. With it, `--osv-snapshot --check` WITH DataDog exits 0
+locally (0 new, 0 unmapped). Mutation proof in `feed-datadog-source.test.ts`:
+six cuts (published pins kept, step not wired, no retry, PyPI files ignored,
+corroboration ignored, Open VSX not retried), each red, baseline and restore
+green.
+
+Found in passing, NOT fixed here: in `importUpstreamFeed` the boolean option
+`filterHoldingPackages` shadows the module function of the same name, so
+`--filter-holding-packages` throws, and the block passes `addedAfterDeferral`,
+which would discard the DataDog settlement steps. Off by default.
 
 Snapshot reconcile (STEP 1a): with DataDog on, both the dry run and `--check`
 failed three times on Open VSX timeouts (a different extension each time;
-`probeExtensionVersions` has no retry and fails closed, which is correct).
-With `--no-datadog`: 0 to add (257,870 duplicates), `--check` exit 0, 0
-unmapped, 33 acknowledged, none stale. DataDog `still published`: the six
+`probeExtensionVersions` had no retry and fails closed). With `--no-datadog`:
+0 to add (257,870 duplicates), `--check` exit 0, 0 unmapped, 33
+acknowledged, none stale. After the retry above, also exit 0 WITH DataDog. DataDog `still published`: the six
 known extension ids only (from the windowed dry run, which completed).
 
 Vendor enrichment (STEP 1b): no vendor write-up for the last days. From OSV
