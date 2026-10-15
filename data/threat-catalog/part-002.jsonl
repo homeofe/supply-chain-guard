@@ -63958,3 +63958,5 @@
 {"type":"package","value":"@biz44/id10-client@1.1.11","severity":"critical","confidence":1,"source":"GHSA-3fp9-rc4g-j5v2, MAL-2026-16165","firstSeen":"2026-09-12"}
 {"type":"package","value":"stillm4ddpocs-demo-sprocket@999.9.20","severity":"critical","confidence":0.9,"source":"datadog-malicious-packages","firstSeen":"2026-08-22"}
 {"type":"package","value":"tw-pkgprobe-7731@1.0.2","severity":"critical","confidence":0.9,"source":"datadog-malicious-packages","firstSeen":"2026-08-14"}
+{"type":"package","value":"babel-polyfill-plugin-corejs2","severity":"critical","confidence":1,"source":"GHSA-9g6r-83hw-6cq2, MAL-2026-14426 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-24"}
+{"type":"package","value":"eth-react-provider","severity":"critical","confidence":1,"source":"GHSA-rr86-r66c-qc54, MAL-2026-14300 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-19"}

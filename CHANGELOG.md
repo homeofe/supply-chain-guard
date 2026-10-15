@@ -7,6 +7,30 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat intel for 2026-10-15: 49 package entries from the GitHub Advisory
+  Database, OpenSSF and the DataDog dataset, 47 in the offline bundle and 2 in
+  the catalog. Clusters: PyPI `saeka` (26 versions, GHSA-mg63-mhjw-2w9m), PyPI
+  `seapy-ops` (8 versions, MAL-2026-17880), `@xxxfnbs21/hello-demo` (8
+  versions), the sentinel-version squat `@flexmr/ui` 99.99.99, `pxnpm` 7.0.1
+  and 7.0.2, `util-foriepft` 1.0.0, and the bare name `truffle-kit`
+  (unpublished). The two catalog entries are the bare names
+  `babel-polyfill-plugin-corejs2` and `eth-react-provider` (first seen in
+  August, both npm security holding packages). Every bare name was probed
+  against the registry.
+- Detection for the Apex Accelerator fake Web3 accelerator (Elastic Security
+  Labs, 2026-10-12, single-source, confidence 0.85), the same operator lineage
+  as the July Apex macOS infostealer: the packages `@apexacc/cli` and
+  `@apexacc/audit` (malicious from first publish, added to the existing anchored
+  Apex name rule), 14 operator domains (`apexaccs[.]org` and its `arena`,
+  `token` and `vrf` hosts, `arena.apexfdn[.]xyz`, `verify.apexfdn[.]xyz`,
+  `ccmihr[.]com`, `0auth-chromium[.]com`, `ehegisnightmare[.]icu`,
+  `arenapex[.]cloud`, `cloudmain365duo[.]top`, `fdn4apex[.]com`,
+  `main.router-apex[.]com`, `update.apex-arena-router[.]com`), 9 SHA-256
+  hashes of the Bun, Rust, CloudSyncD and Windows loader stages, and the GitHub
+  account `apexaccs`. All kept in the offline bundle under the campaign name.
+
 ## [6.5.7] - 2026-10-14
 
 ### Added
