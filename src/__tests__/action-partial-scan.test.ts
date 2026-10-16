@@ -256,7 +256,7 @@ describe("Marketplace Action fail-closed contract", () => {
     expect(scanScript).toContain('SCG_RUN_DIR=$(mktemp -d "$RUNNER_TEMP/scg-action.XXXXXX")');
     expect(scanScript).not.toContain('$RUNNER_TEMP/scg-report.json');
     expect(commentScript).toContain("fs.openSync(process.env.SCG_REPORT_PATH, 'r')");
-    expect(action).toContain("uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0");
+    expect(action).toContain("uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0");
     expect(action).toContain("package-manager-cache: false");
     expect(action).toContain("uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0");
   });
