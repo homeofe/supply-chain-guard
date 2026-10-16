@@ -1,3 +1,14 @@
+## GitHub Actions group bump (2026-10-16) (claude-opus-5-5)
+
+Dependabot PR 413: `actions/setup-node` 7.0.0 to 7.1.0, `upload-artifact`
+7.0.2, `download-artifact` 8.0.2, `codeql-action` 4.38.3 (init, analyze,
+upload-sarif). Patch and minor only. It was red on two counts, both caused by
+the bump itself: `action-partial-scan.test.ts` asserts the exact
+`setup-node` pin in `action.yml`, so the assertion now names the 7.1.0 SHA
+(checked against the upstream `v7.1.0` tag: `949feb24`), and `aahp-verify`
+needs a handoff change on any workflow edit, which this note is. Merged on
+the owner's instruction together with PR 412 and PR 414.
+
 ## Daily threat intel (2026-10-16) (claude-opus-5-5)
 
 Scheduled run. The branch was first cut while PR 412 was still open, so it
