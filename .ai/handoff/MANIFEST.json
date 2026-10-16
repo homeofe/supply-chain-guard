@@ -3,30 +3,30 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1792137192",
-    "timestamp": "2026-10-16T07:53:12Z",
-    "commit": "c1ac167",
+    "session_id": "cli-1792138943",
+    "timestamp": "2026-10-16T08:22:23Z",
+    "commit": "3696cf3",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:8077fc33ce1283d67b9d7147e8ca36e5b542a1db83a113296bd035a4bef70954",
-      "updated": "2026-10-16T07:49:59Z",
-      "lines": 14754,
-      "summary": "Owner decision on the open question from the 2026-10-16 daily run: pin Composer `slimfit/formbase@1.3`."
+      "checksum": "sha256:b3effddc08a0dd765c6e4a6cdfdf2f51d0eabd31484d1917f10c1bb27720820e",
+      "updated": "2026-10-16T08:22:15Z",
+      "lines": 14790,
+      "summary": "Threat-intel release on the owner's instruction, cut from `main` at `9eb2c0a`."
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:5e59cd99ccc0fccd03901e41bf03a30e858371755bad337792c28a69fc1f54b7",
-      "updated": "2026-10-14T08:06:46Z",
+      "checksum": "sha256:325056c979a76627623b7db84025912d6932a9b4229fcae8f7a75a092282e68e",
+      "updated": "2026-10-16T08:13:38Z",
       "lines": 231,
       "summary": "Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete."
     },
     "LOG.md": {
-      "checksum": "sha256:3ac65a593dc073d9a0e1cafa5520dc4ff6441919a043d1dce2922bffd0627b6c",
-      "updated": "2026-10-14T08:07:07Z",
+      "checksum": "sha256:9b93d1cba405bf1cabe846a4a08a33ca3adc2512139a11ac265bb9aee8cf2b68",
+      "updated": "2026-10-16T08:14:26Z",
       "lines": 90,
-      "summary": "Latest entry: [2026-10-14] v6.5.7"
+      "summary": "Latest entry: [2026-10-16] v6.5.8"
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
@@ -41,14 +41,14 @@
       "summary": "LOG archive index: 5 entries."
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:5c07c7dadc84776773ad8b449326b553fa1a8f102082d107cc90e4c0af672945",
-      "updated": "2026-10-14T08:07:07Z",
+      "checksum": "sha256:489bc7bc641be534adfcc41d427d7a03ffd80c5c51b10d6c6f4b946018bc4751",
+      "updated": "2026-10-16T08:14:26Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:4d4e0d3aafd7b9208e318cb5bf66473147d6b41ba5b10e96030de4cbd72bc596",
-      "updated": "2026-10-14T08:07:07Z",
+      "checksum": "sha256:7332bcaefb75b87c7d9b2f05b01bb9a9e5189d6de071bcffb24becd2232e12ce",
+      "updated": "2026-10-16T08:14:26Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "Owner decision on the open question from the 2026-10-16 daily run: pin Composer `slimfit/formbase@1.3`. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Threat-intel release on the owner's instruction, cut from `main` at `9eb2c0a`. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 910,
-    "manifest_plus_core": 219902,
-    "full_read": 233630
+    "manifest_only": 898,
+    "manifest_plus_core": 220413,
+    "full_read": 234141
   }
 }

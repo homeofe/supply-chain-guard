@@ -249,6 +249,16 @@ describe("planMigration against the real file", () => {
     const repoRoot = path.resolve(__dirname, "..", "..");
     return fs.readFileSync(path.join(repoRoot, "src", "threat-intel.ts"), "utf8");
   };
+  // Read from the committed config, not hardcoded: every release advances the
+  // cutoff, and a fixed "future" date in the controls below expired at v6.5.8
+  // when the cutoff reached it, turning the control red for the right state.
+  const liveCutoff = (): string => {
+    const repoRoot = path.resolve(__dirname, "..", "..");
+    return JSON.parse(fs.readFileSync(path.join(repoRoot, "feed-partition.config.json"), "utf8"))
+      .bundleCutoffDate;
+  };
+  const daysAfter = (iso: string, days: number) =>
+    new Date(Date.parse(`${iso}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
 
   it("accounts for every entry and never moves a comment-anchored one", () => {
     const repoRoot = path.resolve(__dirname, "..", "..");
@@ -273,7 +283,7 @@ describe("planMigration against the real file", () => {
   it("is idempotent at the committed cutoff", () => {
     const plan = planMigration(realSource(), {
       ...CONFIG,
-      bundleCutoffDate: "2026-08-17",
+      bundleCutoffDate: liveCutoff(),
     });
     expect(plan.move).toEqual([]);
     expect(plan.groups.filter((g) => g.removeHeader)).toEqual([]);
@@ -285,7 +295,7 @@ describe("planMigration against the real file", () => {
   it("still finds work when the cutoff moves forward", () => {
     const plan = planMigration(realSource(), {
       ...CONFIG,
-      bundleCutoffDate: "2026-09-16",
+      bundleCutoffDate: daysAfter(liveCutoff(), 30),
     });
     expect(plan.move.length).toBeGreaterThan(0);
   });
@@ -298,7 +308,7 @@ describe("planMigration against the real file", () => {
   it("never marks a header line for removal that another group still needs", () => {
     const plan = planMigration(realSource(), {
       ...CONFIG,
-      bundleCutoffDate: "2026-09-16",
+      bundleCutoffDate: daysAfter(liveCutoff(), 30),
     });
     const removableIdx = new Set(
       plan.groups.filter((g) => g.removeHeader).flatMap((g) => g.headerIndices),
