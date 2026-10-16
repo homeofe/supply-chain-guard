@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1792041892",
-    "timestamp": "2026-10-15T05:24:52Z",
-    "commit": "5fe992e",
+    "session_id": "cli-1792134571",
+    "timestamp": "2026-10-16T07:09:31Z",
+    "commit": "7da413b",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:b2b90c8bed57a6bc389bd08ad053ff63fdf9e0b2af7837a1cb10ed710923ac2a",
-      "updated": "2026-10-15T05:24:46Z",
-      "lines": 14696,
-      "summary": "Scheduled import on branch `threat-intel/2026-10-15`, cut from `main` at `5fe992e` (v6.5.7)."
+      "checksum": "sha256:f7ac1b3d16ae8c3476ca02b45f3aaaa08ed8e932d9f8028308b6a092ad4bdfd1",
+      "updated": "2026-10-16T07:06:29Z",
+      "lines": 14730,
+      "summary": "Scheduled run. The branch was first cut while PR 412 was still open, so it carried PR 412's 49 importer entries as well."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:5e59cd99ccc0fccd03901e41bf03a30e858371755bad337792c28a69fc1f54b7",
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "Scheduled import on branch `threat-intel/2026-10-15`, cut from `main` at `5fe992e` (v6.5.7). Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Scheduled run. The branch was first cut while PR 412 was still open, so it carried PR 412's 49 importer entries as well. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 905,
-    "manifest_plus_core": 219066,
-    "full_read": 232794
+    "manifest_only": 919,
+    "manifest_plus_core": 219570,
+    "full_read": 233298
   }
 }

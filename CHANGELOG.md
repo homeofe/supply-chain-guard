@@ -9,6 +9,18 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Added
 
+- Threat intel for 2026-10-16: 26 package entries from the GitHub Advisory
+  Database and OpenSSF, all in the offline bundle. Clusters: the PyPI proxy
+  and "worm" packages (`proxyrobika`, `proxyrubika`, `proxy-rubikis`,
+  `getpubip` 0.1.0 to 0.1.2, `py-sock2`, `py-worm` 0.1.0, 2.0.0 and 2.0.1,
+  `py-wormgpt`), PyPI `fromthehotel-poems` 0.1.0, the Baileys and store lures `xmd-baileys`,
+  `asistenyorstore` and `@developmentyora/yorakids`, the Tailwind lookalikes
+  `tailwindcss-form` and `tailwindcss-uniform`, `@flexmr/utils` 1.0.0 and
+  3.0.12, and four dependency-confusion squats pinned by exact version
+  (`buyerdashboard`, `idlive-face-capture-web-development`,
+  `web-pixels-manager`, `xapi-lib`). Every bare name is an npm security
+  holding package.
+
 - Threat intel for 2026-10-15: 49 package entries from the GitHub Advisory
   Database, OpenSSF and the DataDog dataset, 47 in the offline bundle and 2 in
   the catalog. Clusters: PyPI `saeka` (26 versions, GHSA-mg63-mhjw-2w9m), PyPI
