@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "algorithm": "sha256",
   "files": {
-    "feed.json": "9feab2c5c99723a870ae8363c8be262a1e7fed3f9ad276e8e2c78d60ffea17ed",
+    "feed.json": "f909b12cebec943db4af966a9c33fd585e51e439dbf1298b857bd6decba4ad82",
     "src/__tests__/active-validation.test.ts": "ae5d61208caa6fb24ee32218cc2af813ec2516efbaeb7ef87314992d58388b35",
     "src/__tests__/beacon-miner.test.ts": "123372c301f87ca318a7dfcaadb36939d6d090d65e8c69e597f18cc8fe970a72",
     "src/__tests__/campaigns.test.ts": "cac4b72a1baacf6c98530bc8a54eb1f3119dfba7155f44111f22531234dbc9a7",
@@ -46,18 +46,18 @@
     "src/broad-gap-pattern-matchers.ts": "f5b4b73d6a08e7325bd74b0a09b1f7590ab76316732f3919cfaf52d8fa827ad0",
     "src/config-scanner.ts": "51065e3195fab8e2ec07b186528dc879f4b8292c320e8496971281e614c6ee52",
     "src/correlation-engine.ts": "53c44c32d3aa411ba11ad4ffbf5a8552de5f8c2e19d220b1b34d4c8357ccb097",
-    "src/dependency-confusion.ts": "9d82f86f75202a03232379ee982ea166756581d97ec2507b81c8777b9ac72eb5",
+    "src/dependency-confusion.ts": "c147bcb9b70b86b0f72cd97d8b662675fad2c544269c608eb5539846080882ae",
     "src/github-trust-scanner.ts": "b006ceda711a47b3dc3e794a64cbb06bf28c241489406f82b9e8be5b2d9f3585",
     "src/install-hook-scanner.ts": "413b8066dde523ce84dc7c02bfec6f67aceeeedbea63ff11cc943650085794c0",
     "src/ioc-blocklist.ts": "cae7d62e1f83a19556f24781dab99c746c7e6110f8d661132d17c56d87fc22b6",
     "src/patterns.ts": "0605aa3d5a89ab30bc7532ce58cd8f120ecf6448cc8a81819ad81413c3e9aa7f",
     "src/playbooks.ts": "f0f61802cbfd10f314bdc52a28f09e130edee3aee4f9b419a9e6f026d56af735",
     "src/remediation-engine.ts": "5784de7b7193c2ac0630e7ccbae46c3759d0ee90249747e36426527583b9532b",
-    "src/reporter.ts": "0f70d7391d83b61856649c9cb0523b3014e74253bfe7877339013d8e50aed423",
-    "src/scanner.ts": "db9db7ea29897a183006183e26e7bfc09c0ab55c2f373a5e35eac66b5ebcc072",
+    "src/reporter.ts": "b0a9f8dbfdc0a630f4ae3c9c9c7091ac48075040f61b1aa245c2ac2e48c39098",
+    "src/scanner.ts": "61de58b2fbc2e04225fe6b20ea1be619d5b3ded3329307d3bdd878659d2ff8c6",
     "src/secret-simulator.ts": "cd41a74b10a9e08fc0245a7d93e3c8059591c7614dc580599acd5cfe25089693",
     "src/solana-monitor.ts": "7ad41ccea3b6b18d535ec5ef6191cc740bd203be407a83b423d0c79e98699eec",
-    "src/threat-intel.ts": "07bdcde89dfb6187d330cdf87a4495f029efff6ce777973e87a89b02f68196f1",
+    "src/threat-intel.ts": "10bb5d03eb7d1e7a9e8e566ae6ff92fdbdac1a3893813e07f5122119432fdcf4",
     "src/workflow-modeler.ts": "9da285d7f2e19bf800c5c4018b3469c8b66c525d50818973f7726e4d4bdd11be"
   }
 }

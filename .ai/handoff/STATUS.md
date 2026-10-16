@@ -1,3 +1,39 @@
+## Release v6.5.8 (2026-10-16) (claude-opus-5-5)
+
+Threat-intel release on the owner's instruction, cut from `main` at
+`9eb2c0a`. Ships PR 412 (2026-10-15 intel, Apex Accelerator), PR 414
+(2026-10-16 intel), PR 413 (GitHub Actions group, setup-node 7.1.0 in
+`action.yml`) and PR 415 (Composer `slimfit/formbase@1.3`, signing-key
+ignore rule).
+
+Release commit: the 17 version sites (37 occurrences plus `package.json`'s
+own, listed with context first: `threat-intel.ts` held only `bundledVersion`,
+no README CIDR collision) and the lockfile's two fields via
+`npm install --package-lock-only`. `release:prepare` advanced the cutoff
+from 2026-09-14 to 2026-09-16. The first migration plan moved 90 entries,
+12 of them asserted in `campaigns.test.ts` (`n8n-nodes-sysdiag`,
+`pino-ulid`, `@biz44/runtime-utils`). Before migrating, the 16 package
+lines of those three campaigns (including the untested siblings
+`@biz44/process-runtime-utils` and `n8n-nodes-sysdiag2`) were moved unchanged
+from the importer group into the hand-written 2026-09-14 block in the same
+chunk, so they are curated. The plan then moved 74 plain entries (none with
+campaign or family, none referenced in tests, README or docs) into the
+catalog: 7,123 bundled, 264,036 in the catalog. Node schedule re-read
+against `nodejs/Release`: unchanged, milestone 6.5.9.
+
+`feed-migrate.test.ts` went red on the Linux host for this release: its
+"still finds work when the cutoff moves forward" control hardcoded
+2026-09-16 since PR 309, and this release's cutoff reached that date, so the
+control correctly found nothing. The controls now read the cutoff from
+`feed-partition.config.json` and plan 30 days past it, and the idempotence
+test plans at the live cutoff instead of a fixed 2026-08-17. Proven by cut:
+advancing the config cutoff to 2026-09-25 without migrating turns the
+idempotence test red (363 entries); restored, 25 of 25 green.
+
+Upstream: the Linux-host reconcile after PR 415 listed 19 entries published
+after the 2026-10-16 import; they are within the 2-day grace and arrive with
+the next daily run, not in this release.
+
 ## Composer slimfit/formbase pin and signing-key ignore (2026-10-16) (claude-opus-5-5)
 
 Owner decision on the open question from the 2026-10-16 daily run: pin

@@ -7,18 +7,14 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [6.5.8] - 2026-10-16
+
 ### Added
 
 - Composer `slimfit/formbase` 1.3 pinned in the offline bundle. The source is
   a single vendor report (Xygeni malicious code digest 91, confirmed
   2026-10-04) with no OSV record, so confidence is 0.85 and only that exact
   version is flagged.
-
-### Changed
-
-- `.gitignore` excludes `feed-signing-key*.pem`, so feed signing key files
-  kept in a local checkout cannot be committed by accident.
-
 - Threat intel for 2026-10-16: 26 package entries from the GitHub Advisory
   Database and OpenSSF, all in the offline bundle. Clusters: the PyPI proxy
   and "worm" packages (`proxyrobika`, `proxyrubika`, `proxy-rubikis`,
@@ -30,7 +26,6 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   (`buyerdashboard`, `idlive-face-capture-web-development`,
   `web-pixels-manager`, `xapi-lib`). Every bare name is an npm security
   holding package.
-
 - Threat intel for 2026-10-15: 49 package entries from the GitHub Advisory
   Database, OpenSSF and the DataDog dataset, 47 in the offline bundle and 2 in
   the catalog. Clusters: PyPI `saeka` (26 versions, GHSA-mg63-mhjw-2w9m), PyPI
@@ -52,6 +47,21 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   `main.router-apex[.]com`, `update.apex-arena-router[.]com`), 9 SHA-256
   hashes of the Bun, Rust, CloudSyncD and Windows loader stages, and the GitHub
   account `apexaccs`. All kept in the offline bundle under the campaign name.
+
+### Changed
+
+- `.gitignore` excludes `feed-signing-key*.pem`, so feed signing key files
+  kept in a local checkout cannot be committed by accident.
+- CI actions updated: `actions/setup-node` 7.1.0 (also in `action.yml`),
+  `actions/upload-artifact` 7.0.2, `actions/download-artifact` 8.0.2 and
+  `github/codeql-action` 4.38.3, each pinned by commit.
+- The bundle cutoff advances from 2026-09-14 to 2026-09-16, and 74 plain
+  package entries dated 2026-09-14 and 2026-09-15 move from the offline bundle
+  to the catalog. The package entries of the `n8n-nodes-sysdiag`, `pino-ulid`
+  and `biz44` campaigns stay in the bundle.
+- Node support policy: the `nodejs/Release` schedule, re-read on 2026-10-16,
+  is unchanged (Node 24 Active LTS until 2026-10-20, Node 26 from 2026-10-28),
+  so `activeLtsMajor` stays 24 and the review milestone moves to 6.5.9.
 
 ## [6.5.7] - 2026-10-14
 
@@ -7596,7 +7606,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.5.7...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.5.8...HEAD
+[6.5.8]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.8
 [6.5.7]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.7
 [6.5.6]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.6
 [6.5.5]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.5
