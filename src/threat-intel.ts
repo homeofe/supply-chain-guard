@@ -8609,6 +8609,12 @@ const FEED_CHUNK_26: FeedIOC[] = [
 
   // Imported from GitHub Advisory Database (2026-10-16) - see docs/threat-feed-sources.md
   { type: "package", value: "pypi:fromthehotel-poems@0.1.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17897 (kam193)", firstSeen: "2026-10-16" },
+
+  // Packagist slimfit/formbase (October 2026). Single-source: Xygeni malicious
+  // code digest 91, confirmed 2026-10-04. No OSV record; the version is still
+  // served by Packagist, so only that exact version is pinned (owner decision
+  // 2026-10-16). The campaign tag keeps it in the offline bundle.
+  { type: "package", value: "composer:slimfit/formbase@1.3", severity: "critical", confidence: 0.85, campaign: "Packagist slimfit/formbase", source: "Xygeni malicious code digest 91 (single-source)", firstSeen: "2026-10-04" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips

@@ -9,6 +9,16 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Added
 
+- Composer `slimfit/formbase` 1.3 pinned in the offline bundle. The source is
+  a single vendor report (Xygeni malicious code digest 91, confirmed
+  2026-10-04) with no OSV record, so confidence is 0.85 and only that exact
+  version is flagged.
+
+### Changed
+
+- `.gitignore` excludes `feed-signing-key*.pem`, so feed signing key files
+  kept in a local checkout cannot be committed by accident.
+
 - Threat intel for 2026-10-16: 26 package entries from the GitHub Advisory
   Database and OpenSSF, all in the offline bundle. Clusters: the PyPI proxy
   and "worm" packages (`proxyrobika`, `proxyrubika`, `proxy-rubikis`,

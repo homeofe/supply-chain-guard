@@ -11,6 +11,11 @@ coverage/
 .scg-cache/
 .claude/
 
+# Feed signing key material is held locally by the maintainer and never
+# committed. The pattern covers the public and any private variant, so a
+# `git add -A` in the shared checkout cannot sweep it in.
+feed-signing-key*.pem
+
 # Local Claude Code / agent instructions - not project content, kept out of the repo
 CLAUDE.md
 

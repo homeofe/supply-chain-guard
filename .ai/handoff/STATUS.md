@@ -1,3 +1,16 @@
+## Composer slimfit/formbase pin and signing-key ignore (2026-10-16) (claude-opus-5-5)
+
+Owner decision on the open question from the 2026-10-16 daily run: pin
+Composer `slimfit/formbase@1.3`. Single-source (Xygeni digest 91), no OSV
+record, version still served by Packagist, so it is an exact-version pin at
+confidence 0.85 with a `campaign` tag to keep it in the offline bundle.
+Proven through `scan()` on a `composer.lock` fixture: 1.3 flagged, 1.2 not.
+
+Owner instruction: the feed signing key file in the shared checkout must
+never reach GitHub. `.gitignore` now carries `feed-signing-key*.pem` (public
+and any private variant; `other.pem` stays unignored, checked with
+`git check-ignore`). The file itself was not touched.
+
 ## GitHub Actions group bump (2026-10-16) (claude-opus-5-5)
 
 Dependabot PR 413: `actions/setup-node` 7.0.0 to 7.1.0, `upload-artifact`
