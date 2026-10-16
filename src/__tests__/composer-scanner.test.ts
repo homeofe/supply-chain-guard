@@ -116,6 +116,16 @@ describe("Composer Scanner", () => {
       expect(findings.some((f) => f.rule === "COMPOSER_MALICIOUS_PACKAGE")).toBe(true);
     });
 
+    it("flags only the pinned version of a version-pinned composer: IOC", () => {
+      // slimfit/formbase is still on Packagist, so only 1.3 is bundled.
+      const lock = (version: string) =>
+        JSON.stringify({ packages: [{ name: "slimfit/formbase", version }] });
+      const pinned = scanComposerLockContent(lock("1.3"), "composer.lock");
+      expect(pinned.some((f) => f.rule === "COMPOSER_MALICIOUS_PACKAGE")).toBe(true);
+      const other = scanComposerLockContent(lock("1.2"), "composer.lock");
+      expect(other.some((f) => f.rule === "COMPOSER_MALICIOUS_PACKAGE")).toBe(false);
+    });
+
     it("should flag plain-http dist and source URLs", () => {
       const content = JSON.stringify({
         packages: [

@@ -2,7 +2,7 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "6.5.7",
-  "entryCount": 7196,
+  "entryCount": 7197,
   "generatedAt": "2026-10-16T00:00:00.000Z",
   "entries": [
     {
@@ -60309,6 +60309,15 @@
       "confidence": 0.9,
       "source": "MAL-2026-17897 (kam193)",
       "firstSeen": "2026-10-16"
+    },
+    {
+      "type": "package",
+      "value": "composer:slimfit/formbase@1.3",
+      "severity": "critical",
+      "confidence": 0.85,
+      "campaign": "Packagist slimfit/formbase",
+      "source": "Xygeni malicious code digest 91 (single-source)",
+      "firstSeen": "2026-10-04"
     }
   ]
 }
