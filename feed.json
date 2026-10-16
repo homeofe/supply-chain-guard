@@ -2,8 +2,8 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "6.5.7",
-  "entryCount": 7170,
-  "generatedAt": "2026-10-15T00:00:00.000Z",
+  "entryCount": 7196,
+  "generatedAt": "2026-10-16T00:00:00.000Z",
   "entries": [
     {
       "type": "domain",
@@ -60101,6 +60101,214 @@
       "campaign": "Apex Accelerator fake Web3 accelerator",
       "source": "Elastic Security Labs Apex Accelerator write-up (single-source)",
       "firstSeen": "2026-10-12"
+    },
+    {
+      "type": "package",
+      "value": "xapi-lib@88.2.5",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-q29m-w8xx-cvvg, MAL-2026-17896",
+      "firstSeen": "2026-10-15"
+    },
+    {
+      "type": "package",
+      "value": "xapi-lib@88.2.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-q29m-w8xx-cvvg, MAL-2026-17896",
+      "firstSeen": "2026-10-15"
+    },
+    {
+      "type": "package",
+      "value": "xapi-lib@90.2.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-q29m-w8xx-cvvg, MAL-2026-17896",
+      "firstSeen": "2026-10-15"
+    },
+    {
+      "type": "package",
+      "value": "xapi-lib@90.3.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-q29m-w8xx-cvvg, MAL-2026-17896",
+      "firstSeen": "2026-10-15"
+    },
+    {
+      "type": "package",
+      "value": "idlive-face-capture-web-development@78.8.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xvmh-mc7p-r5vj, MAL-2026-17894",
+      "firstSeen": "2026-10-15"
+    },
+    {
+      "type": "package",
+      "value": "web-pixels-manager@76.2.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-g99r-gv24-gqpp, MAL-2026-17895",
+      "firstSeen": "2026-10-15"
+    },
+    {
+      "type": "package",
+      "value": "buyerdashboard@45.3.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gp7c-v9m4-rx6c, MAL-2026-17893",
+      "firstSeen": "2026-10-15"
+    },
+    {
+      "type": "package",
+      "value": "xmd-baileys",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-m3qf-j9rf-pqrh, MAL-2026-17892 (ghsa-malware)",
+      "firstSeen": "2026-10-16"
+    },
+    {
+      "type": "package",
+      "value": "@developmentyora/yorakids",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-xgr5-84p3-qqmf, MAL-2026-17890 (ghsa-malware)",
+      "firstSeen": "2026-10-16"
+    },
+    {
+      "type": "package",
+      "value": "asistenyorstore",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-qgh5-36wr-3vvw, MAL-2026-17891 (ghsa-malware)",
+      "firstSeen": "2026-10-16"
+    },
+    {
+      "type": "package",
+      "value": "@flexmr/utils@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-f8pr-fqvq-vvxv, MAL-2026-17888 (ossf-package-analysis)",
+      "firstSeen": "2026-10-14"
+    },
+    {
+      "type": "package",
+      "value": "@flexmr/utils@3.0.12",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-f8pr-fqvq-vvxv, MAL-2026-17888 (ossf-package-analysis)",
+      "firstSeen": "2026-10-14"
+    },
+    {
+      "type": "package",
+      "value": "pypi:proxyrobika@0.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-ch77-7g6p-3v7x, MAL-2026-17889 (kam193)",
+      "firstSeen": "2026-10-15"
+    },
+    {
+      "type": "package",
+      "value": "pypi:getpubip@0.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7j9m-mhr6-9jj6, MAL-2026-17884 (kam193)",
+      "firstSeen": "2026-10-15"
+    },
+    {
+      "type": "package",
+      "value": "pypi:getpubip@0.1.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7j9m-mhr6-9jj6, MAL-2026-17884 (kam193)",
+      "firstSeen": "2026-10-15"
+    },
+    {
+      "type": "package",
+      "value": "pypi:getpubip@0.1.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7j9m-mhr6-9jj6, MAL-2026-17884 (kam193)",
+      "firstSeen": "2026-10-15"
+    },
+    {
+      "type": "package",
+      "value": "pypi:proxy-rubikis@0.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-j493-92mg-8qj9, MAL-2026-17887 (kam193)",
+      "firstSeen": "2026-10-15"
+    },
+    {
+      "type": "package",
+      "value": "pypi:proxyrubika@0.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rmvf-4vh2-pv34, MAL-2026-17885 (kam193)",
+      "firstSeen": "2026-10-15"
+    },
+    {
+      "type": "package",
+      "value": "pypi:py-wormgpt@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-q9mx-j265-447m, MAL-2026-17886 (kam193)",
+      "firstSeen": "2026-10-15"
+    },
+    {
+      "type": "package",
+      "value": "pypi:py-sock2@0.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mrm7-9jxf-vx65, MAL-2026-17881 (kam193)",
+      "firstSeen": "2026-10-15"
+    },
+    {
+      "type": "package",
+      "value": "pypi:py-worm@0.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-483q-j87r-c97c, MAL-2026-17883 (kam193)",
+      "firstSeen": "2026-10-15"
+    },
+    {
+      "type": "package",
+      "value": "pypi:py-worm@2.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-483q-j87r-c97c, MAL-2026-17883 (kam193)",
+      "firstSeen": "2026-10-15"
+    },
+    {
+      "type": "package",
+      "value": "pypi:py-worm@2.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-483q-j87r-c97c, MAL-2026-17883 (kam193)",
+      "firstSeen": "2026-10-15"
+    },
+    {
+      "type": "package",
+      "value": "tailwindcss-uniform",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-r7f7-6833-rxh9, MAL-2026-17882 (ghsa-malware)",
+      "firstSeen": "2026-10-15"
+    },
+    {
+      "type": "package",
+      "value": "tailwindcss-form",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-c8m9-qwg6-5cv9, MAL-2026-16282 (amazon-inspector+ghsa-malware)",
+      "firstSeen": "2026-09-18"
+    },
+    {
+      "type": "package",
+      "value": "pypi:fromthehotel-poems@0.1.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "MAL-2026-17897 (kam193)",
+      "firstSeen": "2026-10-16"
     }
   ]
 }

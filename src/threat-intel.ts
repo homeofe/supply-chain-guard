@@ -40,7 +40,7 @@ export type FeedIOCInput = Omit<FeedIOC, "confidence"> & {
  * Generation timestamp for the bundled IOC feed (v5.29, issue #208).
  * Pure function of feed updates; preserved across builds.
  */
-export const FEED_GENERATED_AT = "2026-10-15T00:00:00.000Z";
+export const FEED_GENERATED_AT = "2026-10-16T00:00:00.000Z";
 
 // ---------------------------------------------------------------------------
 // Default bundled feed (curated by supply-chain-guard)
@@ -8579,6 +8579,36 @@ const FEED_CHUNK_26: FeedIOC[] = [
   { type: "hash", value: "68f5a00eafa8ecebf5d93328e0fec23b24d6f91808c8384db002946a13656c71", severity: "critical", confidence: 0.85, campaign: "Apex Accelerator fake Web3 accelerator", source: "Elastic Security Labs Apex Accelerator write-up (single-source)", firstSeen: "2026-10-12" },
   { type: "hash", value: "ee8cd9aba420f1b26b5d43e5bcdd6025a277b4946bb5daf76ab45c0e5f7ecd0b", severity: "critical", confidence: 0.85, campaign: "Apex Accelerator fake Web3 accelerator", source: "Elastic Security Labs Apex Accelerator write-up (single-source)", firstSeen: "2026-10-12" },
   { type: "hash", value: "ed5cb4af1d2cb067b8d23783ebf05d70278728462ba4f1bf29da0a3a41efc35e", severity: "critical", confidence: 0.85, campaign: "Apex Accelerator fake Web3 accelerator", source: "Elastic Security Labs Apex Accelerator write-up (single-source)", firstSeen: "2026-10-12" },
+
+  // Imported from GitHub Advisory Database (2026-10-02) - see docs/threat-feed-sources.md
+  { type: "package", value: "xapi-lib@88.2.5", severity: "critical", confidence: 1.0, source: "GHSA-q29m-w8xx-cvvg, MAL-2026-17896", firstSeen: "2026-10-15" },
+  { type: "package", value: "xapi-lib@88.2.3", severity: "critical", confidence: 1.0, source: "GHSA-q29m-w8xx-cvvg, MAL-2026-17896", firstSeen: "2026-10-15" },
+  { type: "package", value: "xapi-lib@90.2.1", severity: "critical", confidence: 1.0, source: "GHSA-q29m-w8xx-cvvg, MAL-2026-17896", firstSeen: "2026-10-15" },
+  { type: "package", value: "xapi-lib@90.3.1", severity: "critical", confidence: 1.0, source: "GHSA-q29m-w8xx-cvvg, MAL-2026-17896", firstSeen: "2026-10-15" },
+  { type: "package", value: "idlive-face-capture-web-development@78.8.1", severity: "critical", confidence: 1.0, source: "GHSA-xvmh-mc7p-r5vj, MAL-2026-17894", firstSeen: "2026-10-15" },
+  { type: "package", value: "web-pixels-manager@76.2.4", severity: "critical", confidence: 1.0, source: "GHSA-g99r-gv24-gqpp, MAL-2026-17895", firstSeen: "2026-10-15" },
+  { type: "package", value: "buyerdashboard@45.3.4", severity: "critical", confidence: 1.0, source: "GHSA-gp7c-v9m4-rx6c, MAL-2026-17893", firstSeen: "2026-10-15" },
+  { type: "package", value: "xmd-baileys", severity: "critical", confidence: 0.9, source: "GHSA-m3qf-j9rf-pqrh, MAL-2026-17892 (ghsa-malware)", firstSeen: "2026-10-16" },
+  { type: "package", value: "@developmentyora/yorakids", severity: "critical", confidence: 0.9, source: "GHSA-xgr5-84p3-qqmf, MAL-2026-17890 (ghsa-malware)", firstSeen: "2026-10-16" },
+  { type: "package", value: "asistenyorstore", severity: "critical", confidence: 0.9, source: "GHSA-qgh5-36wr-3vvw, MAL-2026-17891 (ghsa-malware)", firstSeen: "2026-10-16" },
+  { type: "package", value: "@flexmr/utils@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-f8pr-fqvq-vvxv, MAL-2026-17888 (ossf-package-analysis)", firstSeen: "2026-10-14" },
+  { type: "package", value: "@flexmr/utils@3.0.12", severity: "critical", confidence: 1.0, source: "GHSA-f8pr-fqvq-vvxv, MAL-2026-17888 (ossf-package-analysis)", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:proxyrobika@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-ch77-7g6p-3v7x, MAL-2026-17889 (kam193)", firstSeen: "2026-10-15" },
+  { type: "package", value: "pypi:getpubip@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-7j9m-mhr6-9jj6, MAL-2026-17884 (kam193)", firstSeen: "2026-10-15" },
+  { type: "package", value: "pypi:getpubip@0.1.1", severity: "critical", confidence: 1.0, source: "GHSA-7j9m-mhr6-9jj6, MAL-2026-17884 (kam193)", firstSeen: "2026-10-15" },
+  { type: "package", value: "pypi:getpubip@0.1.2", severity: "critical", confidence: 1.0, source: "GHSA-7j9m-mhr6-9jj6, MAL-2026-17884 (kam193)", firstSeen: "2026-10-15" },
+  { type: "package", value: "pypi:proxy-rubikis@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-j493-92mg-8qj9, MAL-2026-17887 (kam193)", firstSeen: "2026-10-15" },
+  { type: "package", value: "pypi:proxyrubika@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-rmvf-4vh2-pv34, MAL-2026-17885 (kam193)", firstSeen: "2026-10-15" },
+  { type: "package", value: "pypi:py-wormgpt@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-q9mx-j265-447m, MAL-2026-17886 (kam193)", firstSeen: "2026-10-15" },
+  { type: "package", value: "pypi:py-sock2@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-mrm7-9jxf-vx65, MAL-2026-17881 (kam193)", firstSeen: "2026-10-15" },
+  { type: "package", value: "pypi:py-worm@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-483q-j87r-c97c, MAL-2026-17883 (kam193)", firstSeen: "2026-10-15" },
+  { type: "package", value: "pypi:py-worm@2.0.0", severity: "critical", confidence: 1.0, source: "GHSA-483q-j87r-c97c, MAL-2026-17883 (kam193)", firstSeen: "2026-10-15" },
+  { type: "package", value: "pypi:py-worm@2.0.1", severity: "critical", confidence: 1.0, source: "GHSA-483q-j87r-c97c, MAL-2026-17883 (kam193)", firstSeen: "2026-10-15" },
+  { type: "package", value: "tailwindcss-uniform", severity: "critical", confidence: 0.9, source: "GHSA-r7f7-6833-rxh9, MAL-2026-17882 (ghsa-malware)", firstSeen: "2026-10-15" },
+  { type: "package", value: "tailwindcss-form", severity: "critical", confidence: 1.0, source: "GHSA-c8m9-qwg6-5cv9, MAL-2026-16282 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-18" },
+
+  // Imported from GitHub Advisory Database (2026-10-16) - see docs/threat-feed-sources.md
+  { type: "package", value: "pypi:fromthehotel-poems@0.1.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17897 (kam193)", firstSeen: "2026-10-16" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips
