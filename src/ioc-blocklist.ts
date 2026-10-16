@@ -589,6 +589,24 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // amazon-inspector, single-source). storage.googleapis.com is a shared
   // apex, so only the bucket host is listed.
   "ltidi.storage.googleapis.com",
+  // Apex Accelerator fake Web3 accelerator (October 2026): onboarding portal,
+  // LLM proxy, bootstrap verification, script-download, loader and CloudSyncD
+  // C2 hosts behind @apexacc/cli and @apexacc/audit (Elastic Security Labs,
+  // single-source). All operator-owned; listed exactly as published.
+  "apexaccs.org",
+  "arena.apexaccs.org",
+  "token.apexaccs.org",
+  "vrf.apexaccs.org",
+  "arena.apexfdn.xyz",
+  "verify.apexfdn.xyz",
+  "ccmihr.com",
+  "0auth-chromium.com",
+  "ehegisnightmare.icu",
+  "arenapex.cloud",
+  "cloudmain365duo.top",
+  "fdn4apex.com",
+  "main.router-apex.com",
+  "update.apex-arena-router.com",
 ];
 
 // ---------------------------------------------------------------------------
@@ -1645,6 +1663,16 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   "8f7ed69fb5505b57f06e673826779d459f7735739756de73a6d3347a9c8ea0cc": "MALFEX: cdn-img-fetch 1.0.3 banner.jpg payload (SHA256)",
   "d54853d6be467567d9f22d7f22ac48214df52c1f9c7a503930e901286423044a": "MALFEX: function-flag 1.7.3 index.js (SHA256)",
   "886b84f83a0f760e664046ba40d8c800b7d0cf72190e13ca031ee5cf50f45bee": "MALFEX: function-flag 1.7.3 example.js postinstall (SHA256)",
+  // Apex Accelerator fake Web3 accelerator (October 2026, Elastic Security Labs, single-source)
+  "985829083f3937df6c82419216f7697afae0caac8efca6257a756066fe2c0abb": "Apex Accelerator: apex-windows-x64.exe Bun coding agent with verification bootstrap (SHA256)",
+  "5ee7145061f05779f7f6f9b72e216713d17d53e183a92f408bfbbc44f2bfb95d": "Apex Accelerator: apex-audit-windows-x64.exe Bun audit app with verification bootstrap (SHA256)",
+  "42a760b15fea7c9af718ee45386c1c3ea1bec9e30c95d16c287bcc8b2efdc72e": "Apex Accelerator: apex-darwin-arm64 Bun executable (SHA256)",
+  "127ae4cad80b6605157ca2a1feada8a235e16aacc5d2119337a98115a4e13274": "Apex Accelerator: apex-verify-darwin Rust verification-command launcher (SHA256)",
+  "20f0a401676292d4ae34932e61f34afa97bcfc47ee517cda2afeb7222264a193": "Apex Accelerator: apex-audit-darwin-arm64 Bun executable (SHA256)",
+  "a50cdb508d13884630945a98eea0615b866d938eb0a16c5d958e6c8c181a6df8": "Apex Accelerator: apex-audit-verify-darwin Rust verification-command launcher (SHA256)",
+  "68f5a00eafa8ecebf5d93328e0fec23b24d6f91808c8384db002946a13656c71": "Apex Accelerator: CloudSyncD macOS backdoor installer (SHA256)",
+  "ee8cd9aba420f1b26b5d43e5bcdd6025a277b4946bb5daf76ab45c0e5f7ecd0b": "Apex Accelerator: exegis.exe Python second-stage loader (SHA256)",
+  "ed5cb4af1d2cb067b8d23783ebf05d70278728462ba4f1bf29da0a3a41efc35e": "Apex Accelerator: enc_loader.exe encrypted third stage (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
@@ -1860,6 +1888,10 @@ export const KNOWN_MALICIOUS_GITHUB_ACCOUNTS: string[] = [
   // 2026-10-05 whose only repo is the loader payload (OSV MAL-2026-17865,
   // single-source)
   "lunexindonesia",
+  // Apex Accelerator fake Web3 accelerator (October 2026): operator account
+  // hosting the copilot and audit-mcp repositories behind @apexacc/cli and
+  // @apexacc/audit (Elastic Security Labs, single-source)
+  "apexaccs",
 ];
 
 // ---------------------------------------------------------------------------

@@ -7601,6 +7601,84 @@ describe("Campaign Signatures", () => {
   });
 
   // =================================================================
+  // Apex Accelerator fake Web3 accelerator
+  // (Elastic Security Labs, October 12, 2026)
+  // =================================================================
+
+  describe("Apex Accelerator fake Web3 accelerator (October 2026)", () => {
+    it("should match both @apexacc package names against the malicious-name patterns", () => {
+      for (const name of ["@apexacc/cli", "@apexacc/audit"]) {
+        const matches = MALICIOUS_PACKAGE_PATTERNS.some((pattern) =>
+          new RegExp(pattern).test(name),
+        );
+        expect(matches, name).toBe(true);
+      }
+    });
+
+    it("should flag @apexacc/cli listed in a package.json (any version)", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { "@apexacc/cli": "1.6.2" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "MALICIOUS_DEPENDENCY"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("anchors the Apex rule to the exact names", () => {
+      const rule = MALICIOUS_PACKAGE_PATTERNS.find((p) => p.includes("@apexacc"));
+      expect(rule).toBeDefined();
+      for (const name of ["@apexacc/cli-docs", "@apexacc/clix", "x@apexacc/cli"]) {
+        expect(new RegExp(rule as string).test(name), name).toBe(false);
+      }
+    });
+
+    it("should detect the CloudSyncD C2 domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "c2.js"),
+        'const c2 = "https://ccmihr.com/macos/jquery.js";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the CloudSyncD installer SHA256 as text", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hash.js"),
+        'const sha = "68f5a00eafa8ecebf5d93328e0fec23b24d6f91808c8384db002946a13656c71";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALWARE_HASH"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("keeps every Apex Accelerator indicator in the bundle", () => {
+      const set = getBundledFeed().filter(
+        (i) => i.campaign === "Apex Accelerator fake Web3 accelerator",
+      );
+      expect(set.length, "2 names, 14 domains and 9 hashes must be bundled").toBe(25);
+      expect(set.every((i) => !i.value.startsWith("pypi:"))).toBe(true);
+    });
+  });
+
+  // =================================================================
   // GlassWorm-linked theme extensions (October 2026)
   // =================================================================
 

@@ -2378,7 +2378,10 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   // 8h - so block by name, not version. Both are fully malicious with no legitimate history.
   // Anchored explicitly: although the scoped catch-all below would also match, the directory
   // scan's exact-name path relies on pinned names (same rationale as the ViteVenom block).
-  "^(@apexfdn\\/apex|@copilot-mcp\\/apex)$",
+  // Extended October 2026 with the same operator's Apex Accelerator packages
+  // @apexacc/cli and @apexacc/audit (Elastic Security Labs, October 12, 2026):
+  // malicious from first publish, published only by the operator's own account.
+  "^(@apexfdn\\/apex|@copilot-mcp\\/apex|@apexacc\\/(?:cli|audit))$",
 
   // NeoShadow (Aikido, detected 2025-12-30, published 2026-01-05; packages corroborated by
   // o3.security MAL-2026-334). Four Windows-targeting typosquats published by npm account
