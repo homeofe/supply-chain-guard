@@ -40,7 +40,7 @@ export type FeedIOCInput = Omit<FeedIOC, "confidence"> & {
  * Generation timestamp for the bundled IOC feed (v5.29, issue #208).
  * Pure function of feed updates; preserved across builds.
  */
-export const FEED_GENERATED_AT = "2026-10-14T00:00:00.000Z";
+export const FEED_GENERATED_AT = "2026-10-16T00:00:00.000Z";
 
 // ---------------------------------------------------------------------------
 // Default bundled feed (curated by supply-chain-guard)
@@ -8494,6 +8494,121 @@ const FEED_CHUNK_26: FeedIOC[] = [
   { type: "package", value: "@mntv-analysis/ui-components@50.1.1", severity: "critical", confidence: 1.0, source: "GHSA-82g4-6666-2x5v, MAL-2026-17870", firstSeen: "2026-10-13" },
   { type: "package", value: "@mntv-analysis/workspaces-components@65.11.3", severity: "critical", confidence: 1.0, source: "GHSA-8qv9-76f6-8h3c, MAL-2026-17871", firstSeen: "2026-10-13" },
   { type: "package", value: "@mntv-analysis/ui@99.1.1", severity: "critical", confidence: 1.0, source: "GHSA-xrv8-6w5h-xhhf, MAL-2026-17869", firstSeen: "2026-10-13" },
+
+  // Imported from GitHub Advisory Database (2026-10-01) - see docs/threat-feed-sources.md
+  { type: "package", value: "pypi:saeka@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-mg63-mhjw-2w9m, MAL-2026-17877 (kam193)", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:saeka@1.2.0", severity: "critical", confidence: 1.0, source: "GHSA-mg63-mhjw-2w9m, MAL-2026-17877 (kam193)", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:saeka@1.2.1", severity: "critical", confidence: 1.0, source: "GHSA-mg63-mhjw-2w9m, MAL-2026-17877 (kam193)", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:saeka@1.2.2", severity: "critical", confidence: 1.0, source: "GHSA-mg63-mhjw-2w9m, MAL-2026-17877 (kam193)", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:saeka@1.2.3", severity: "critical", confidence: 1.0, source: "GHSA-mg63-mhjw-2w9m, MAL-2026-17877 (kam193)", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:saeka@1.3.0", severity: "critical", confidence: 1.0, source: "GHSA-mg63-mhjw-2w9m, MAL-2026-17877 (kam193)", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:saeka@1.4.0", severity: "critical", confidence: 1.0, source: "GHSA-mg63-mhjw-2w9m, MAL-2026-17877 (kam193)", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:saeka@1.5.0", severity: "critical", confidence: 1.0, source: "GHSA-mg63-mhjw-2w9m, MAL-2026-17877 (kam193)", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:saeka@1.6.0", severity: "critical", confidence: 1.0, source: "GHSA-mg63-mhjw-2w9m, MAL-2026-17877 (kam193)", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:saeka@1.7.0", severity: "critical", confidence: 1.0, source: "GHSA-mg63-mhjw-2w9m, MAL-2026-17877 (kam193)", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:saeka@1.8.0", severity: "critical", confidence: 1.0, source: "GHSA-mg63-mhjw-2w9m, MAL-2026-17877 (kam193)", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:saeka@1.8.1", severity: "critical", confidence: 1.0, source: "GHSA-mg63-mhjw-2w9m, MAL-2026-17877 (kam193)", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:saeka@1.8.2", severity: "critical", confidence: 1.0, source: "GHSA-mg63-mhjw-2w9m, MAL-2026-17877 (kam193)", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:saeka@2.0", severity: "critical", confidence: 1.0, source: "GHSA-mg63-mhjw-2w9m, MAL-2026-17877 (kam193)", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:saeka@4.0", severity: "critical", confidence: 1.0, source: "GHSA-mg63-mhjw-2w9m, MAL-2026-17877 (kam193)", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:saeka@5.0", severity: "critical", confidence: 1.0, source: "GHSA-mg63-mhjw-2w9m, MAL-2026-17877 (kam193)", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:saeka@6.0", severity: "critical", confidence: 1.0, source: "GHSA-mg63-mhjw-2w9m, MAL-2026-17877 (kam193)", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:saeka@7.0", severity: "critical", confidence: 1.0, source: "GHSA-mg63-mhjw-2w9m, MAL-2026-17877 (kam193)", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:saeka@8.0", severity: "critical", confidence: 1.0, source: "GHSA-mg63-mhjw-2w9m, MAL-2026-17877 (kam193)", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:saeka@9.0", severity: "critical", confidence: 1.0, source: "GHSA-mg63-mhjw-2w9m, MAL-2026-17877 (kam193)", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:saeka@9.5", severity: "critical", confidence: 1.0, source: "GHSA-mg63-mhjw-2w9m, MAL-2026-17877 (kam193)", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:saeka@10.0", severity: "critical", confidence: 1.0, source: "GHSA-mg63-mhjw-2w9m, MAL-2026-17877 (kam193)", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:saeka@11.1", severity: "critical", confidence: 1.0, source: "GHSA-mg63-mhjw-2w9m, MAL-2026-17877 (kam193)", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:saeka@11.2", severity: "critical", confidence: 1.0, source: "GHSA-mg63-mhjw-2w9m, MAL-2026-17877 (kam193)", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:saeka@11.9", severity: "critical", confidence: 1.0, source: "GHSA-mg63-mhjw-2w9m, MAL-2026-17877 (kam193)", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:saeka@15.0", severity: "critical", confidence: 1.0, source: "GHSA-mg63-mhjw-2w9m, MAL-2026-17877 (kam193)", firstSeen: "2026-10-14" },
+  { type: "package", value: "@xxxfnbs21/hello-demo@0.0.0-stage", severity: "critical", confidence: 0.9, source: "GHSA-hf57-6wg3-343x, MAL-2026-17876 (ghsa-malware)", firstSeen: "2026-10-14" },
+  { type: "package", value: "@xxxfnbs21/hello-demo@0.1.0", severity: "critical", confidence: 0.9, source: "GHSA-hf57-6wg3-343x, MAL-2026-17876 (ghsa-malware)", firstSeen: "2026-10-14" },
+  { type: "package", value: "@xxxfnbs21/hello-demo@0.1.1", severity: "critical", confidence: 0.9, source: "GHSA-hf57-6wg3-343x, MAL-2026-17876 (ghsa-malware)", firstSeen: "2026-10-14" },
+  { type: "package", value: "@xxxfnbs21/hello-demo@0.1.2", severity: "critical", confidence: 0.9, source: "GHSA-hf57-6wg3-343x, MAL-2026-17876 (ghsa-malware)", firstSeen: "2026-10-14" },
+  { type: "package", value: "@xxxfnbs21/hello-demo@0.1.3", severity: "critical", confidence: 0.9, source: "GHSA-hf57-6wg3-343x, MAL-2026-17876 (ghsa-malware)", firstSeen: "2026-10-14" },
+  { type: "package", value: "@xxxfnbs21/hello-demo@0.1.5", severity: "critical", confidence: 0.9, source: "GHSA-hf57-6wg3-343x, MAL-2026-17876 (ghsa-malware)", firstSeen: "2026-10-14" },
+  { type: "package", value: "@xxxfnbs21/hello-demo@0.1.6", severity: "critical", confidence: 0.9, source: "GHSA-hf57-6wg3-343x, MAL-2026-17876 (ghsa-malware)", firstSeen: "2026-10-14" },
+  { type: "package", value: "@xxxfnbs21/hello-demo@0.1.8", severity: "critical", confidence: 0.9, source: "GHSA-hf57-6wg3-343x, MAL-2026-17876 (ghsa-malware)", firstSeen: "2026-10-14" },
+  { type: "package", value: "@flexmr/ui@99.99.99", severity: "critical", confidence: 0.9, source: "MAL-2026-17879", firstSeen: "2026-10-13" },
+  { type: "package", value: "pxnpm@7.0.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17710 (amazon-inspector)", firstSeen: "2026-10-09" },
+  { type: "package", value: "pxnpm@7.0.2", severity: "critical", confidence: 0.9, source: "MAL-2026-17710 (amazon-inspector)", firstSeen: "2026-10-09" },
+  { type: "package", value: "util-foriepft@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17878", firstSeen: "2026-10-11" },
+  { type: "package", value: "pypi:seapy-ops@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17880", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:seapy-ops@1.0.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17880", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:seapy-ops@1.0.2", severity: "critical", confidence: 0.9, source: "MAL-2026-17880", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:seapy-ops@1.1.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17880", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:seapy-ops@1.1.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17880", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:seapy-ops@1.1.2", severity: "critical", confidence: 0.9, source: "MAL-2026-17880", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:seapy-ops@1.2.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17880", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:seapy-ops@1.2.2", severity: "critical", confidence: 0.9, source: "MAL-2026-17880", firstSeen: "2026-10-14" },
+  { type: "package", value: "truffle-kit", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-09" },
+
+  // Hand-added enrichment (2026-10-15): Apex Accelerator fake Web3 accelerator
+  // (Elastic Security Labs, October 12, 2026, single-source, so confidence 0.85).
+  // Same operator lineage as the July "Apex macOS infostealer" block. A fake
+  // accelerator lures crypto founders into @apexacc/cli (an AI copilot) and
+  // @apexacc/audit (an MCP audit tool, all 18 tools return fabricated findings);
+  // both bootstrap a "verification" step that fetches the CloudSyncD macOS
+  // backdoor or a Windows stealer exfiltrating through Telegram. Malicious from
+  // first publish, sole maintainer is the operator's own npm account, so bare
+  // names. @apexacc/audit is already 404 on npm; @apexacc/cli was still live on
+  // 2026-10-15. Domains and hashes exactly as listed in Elastic's IOC table.
+  { type: "package", value: "@apexacc/cli", severity: "critical", confidence: 0.85, campaign: "Apex Accelerator fake Web3 accelerator", source: "Elastic Security Labs Apex Accelerator write-up (single-source)", firstSeen: "2026-10-12" },
+  { type: "package", value: "@apexacc/audit", severity: "critical", confidence: 0.85, campaign: "Apex Accelerator fake Web3 accelerator", source: "Elastic Security Labs Apex Accelerator write-up (single-source)", firstSeen: "2026-10-12" },
+  { type: "domain", value: "apexaccs.org", severity: "critical", confidence: 0.85, campaign: "Apex Accelerator fake Web3 accelerator", source: "Elastic Security Labs Apex Accelerator write-up (single-source)", firstSeen: "2026-10-12" },
+  { type: "domain", value: "arena.apexaccs.org", severity: "critical", confidence: 0.85, campaign: "Apex Accelerator fake Web3 accelerator", source: "Elastic Security Labs Apex Accelerator write-up (single-source)", firstSeen: "2026-10-12" },
+  { type: "domain", value: "token.apexaccs.org", severity: "critical", confidence: 0.85, campaign: "Apex Accelerator fake Web3 accelerator", source: "Elastic Security Labs Apex Accelerator write-up (single-source)", firstSeen: "2026-10-12" },
+  { type: "domain", value: "vrf.apexaccs.org", severity: "critical", confidence: 0.85, campaign: "Apex Accelerator fake Web3 accelerator", source: "Elastic Security Labs Apex Accelerator write-up (single-source)", firstSeen: "2026-10-12" },
+  { type: "domain", value: "arena.apexfdn.xyz", severity: "critical", confidence: 0.85, campaign: "Apex Accelerator fake Web3 accelerator", source: "Elastic Security Labs Apex Accelerator write-up (single-source)", firstSeen: "2026-10-12" },
+  { type: "domain", value: "verify.apexfdn.xyz", severity: "critical", confidence: 0.85, campaign: "Apex Accelerator fake Web3 accelerator", source: "Elastic Security Labs Apex Accelerator write-up (single-source)", firstSeen: "2026-10-12" },
+  { type: "domain", value: "ccmihr.com", severity: "critical", confidence: 0.85, campaign: "Apex Accelerator fake Web3 accelerator", source: "Elastic Security Labs Apex Accelerator write-up (single-source)", firstSeen: "2026-10-12" },
+  { type: "domain", value: "0auth-chromium.com", severity: "critical", confidence: 0.85, campaign: "Apex Accelerator fake Web3 accelerator", source: "Elastic Security Labs Apex Accelerator write-up (single-source)", firstSeen: "2026-10-12" },
+  { type: "domain", value: "ehegisnightmare.icu", severity: "critical", confidence: 0.85, campaign: "Apex Accelerator fake Web3 accelerator", source: "Elastic Security Labs Apex Accelerator write-up (single-source)", firstSeen: "2026-10-12" },
+  { type: "domain", value: "arenapex.cloud", severity: "critical", confidence: 0.85, campaign: "Apex Accelerator fake Web3 accelerator", source: "Elastic Security Labs Apex Accelerator write-up (single-source)", firstSeen: "2026-10-12" },
+  { type: "domain", value: "cloudmain365duo.top", severity: "critical", confidence: 0.85, campaign: "Apex Accelerator fake Web3 accelerator", source: "Elastic Security Labs Apex Accelerator write-up (single-source)", firstSeen: "2026-10-12" },
+  { type: "domain", value: "fdn4apex.com", severity: "critical", confidence: 0.85, campaign: "Apex Accelerator fake Web3 accelerator", source: "Elastic Security Labs Apex Accelerator write-up (single-source)", firstSeen: "2026-10-12" },
+  { type: "domain", value: "main.router-apex.com", severity: "critical", confidence: 0.85, campaign: "Apex Accelerator fake Web3 accelerator", source: "Elastic Security Labs Apex Accelerator write-up (single-source)", firstSeen: "2026-10-12" },
+  { type: "domain", value: "update.apex-arena-router.com", severity: "critical", confidence: 0.85, campaign: "Apex Accelerator fake Web3 accelerator", source: "Elastic Security Labs Apex Accelerator write-up (single-source)", firstSeen: "2026-10-12" },
+  { type: "hash", value: "985829083f3937df6c82419216f7697afae0caac8efca6257a756066fe2c0abb", severity: "critical", confidence: 0.85, campaign: "Apex Accelerator fake Web3 accelerator", source: "Elastic Security Labs Apex Accelerator write-up (single-source)", firstSeen: "2026-10-12" },
+  { type: "hash", value: "5ee7145061f05779f7f6f9b72e216713d17d53e183a92f408bfbbc44f2bfb95d", severity: "critical", confidence: 0.85, campaign: "Apex Accelerator fake Web3 accelerator", source: "Elastic Security Labs Apex Accelerator write-up (single-source)", firstSeen: "2026-10-12" },
+  { type: "hash", value: "42a760b15fea7c9af718ee45386c1c3ea1bec9e30c95d16c287bcc8b2efdc72e", severity: "critical", confidence: 0.85, campaign: "Apex Accelerator fake Web3 accelerator", source: "Elastic Security Labs Apex Accelerator write-up (single-source)", firstSeen: "2026-10-12" },
+  { type: "hash", value: "127ae4cad80b6605157ca2a1feada8a235e16aacc5d2119337a98115a4e13274", severity: "critical", confidence: 0.85, campaign: "Apex Accelerator fake Web3 accelerator", source: "Elastic Security Labs Apex Accelerator write-up (single-source)", firstSeen: "2026-10-12" },
+  { type: "hash", value: "20f0a401676292d4ae34932e61f34afa97bcfc47ee517cda2afeb7222264a193", severity: "critical", confidence: 0.85, campaign: "Apex Accelerator fake Web3 accelerator", source: "Elastic Security Labs Apex Accelerator write-up (single-source)", firstSeen: "2026-10-12" },
+  { type: "hash", value: "a50cdb508d13884630945a98eea0615b866d938eb0a16c5d958e6c8c181a6df8", severity: "critical", confidence: 0.85, campaign: "Apex Accelerator fake Web3 accelerator", source: "Elastic Security Labs Apex Accelerator write-up (single-source)", firstSeen: "2026-10-12" },
+  { type: "hash", value: "68f5a00eafa8ecebf5d93328e0fec23b24d6f91808c8384db002946a13656c71", severity: "critical", confidence: 0.85, campaign: "Apex Accelerator fake Web3 accelerator", source: "Elastic Security Labs Apex Accelerator write-up (single-source)", firstSeen: "2026-10-12" },
+  { type: "hash", value: "ee8cd9aba420f1b26b5d43e5bcdd6025a277b4946bb5daf76ab45c0e5f7ecd0b", severity: "critical", confidence: 0.85, campaign: "Apex Accelerator fake Web3 accelerator", source: "Elastic Security Labs Apex Accelerator write-up (single-source)", firstSeen: "2026-10-12" },
+  { type: "hash", value: "ed5cb4af1d2cb067b8d23783ebf05d70278728462ba4f1bf29da0a3a41efc35e", severity: "critical", confidence: 0.85, campaign: "Apex Accelerator fake Web3 accelerator", source: "Elastic Security Labs Apex Accelerator write-up (single-source)", firstSeen: "2026-10-12" },
+
+  // Imported from GitHub Advisory Database (2026-10-02) - see docs/threat-feed-sources.md
+  { type: "package", value: "xapi-lib@88.2.5", severity: "critical", confidence: 1.0, source: "GHSA-q29m-w8xx-cvvg, MAL-2026-17896", firstSeen: "2026-10-15" },
+  { type: "package", value: "xapi-lib@88.2.3", severity: "critical", confidence: 1.0, source: "GHSA-q29m-w8xx-cvvg, MAL-2026-17896", firstSeen: "2026-10-15" },
+  { type: "package", value: "xapi-lib@90.2.1", severity: "critical", confidence: 1.0, source: "GHSA-q29m-w8xx-cvvg, MAL-2026-17896", firstSeen: "2026-10-15" },
+  { type: "package", value: "xapi-lib@90.3.1", severity: "critical", confidence: 1.0, source: "GHSA-q29m-w8xx-cvvg, MAL-2026-17896", firstSeen: "2026-10-15" },
+  { type: "package", value: "idlive-face-capture-web-development@78.8.1", severity: "critical", confidence: 1.0, source: "GHSA-xvmh-mc7p-r5vj, MAL-2026-17894", firstSeen: "2026-10-15" },
+  { type: "package", value: "web-pixels-manager@76.2.4", severity: "critical", confidence: 1.0, source: "GHSA-g99r-gv24-gqpp, MAL-2026-17895", firstSeen: "2026-10-15" },
+  { type: "package", value: "buyerdashboard@45.3.4", severity: "critical", confidence: 1.0, source: "GHSA-gp7c-v9m4-rx6c, MAL-2026-17893", firstSeen: "2026-10-15" },
+  { type: "package", value: "xmd-baileys", severity: "critical", confidence: 0.9, source: "GHSA-m3qf-j9rf-pqrh, MAL-2026-17892 (ghsa-malware)", firstSeen: "2026-10-16" },
+  { type: "package", value: "@developmentyora/yorakids", severity: "critical", confidence: 0.9, source: "GHSA-xgr5-84p3-qqmf, MAL-2026-17890 (ghsa-malware)", firstSeen: "2026-10-16" },
+  { type: "package", value: "asistenyorstore", severity: "critical", confidence: 0.9, source: "GHSA-qgh5-36wr-3vvw, MAL-2026-17891 (ghsa-malware)", firstSeen: "2026-10-16" },
+  { type: "package", value: "@flexmr/utils@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-f8pr-fqvq-vvxv, MAL-2026-17888 (ossf-package-analysis)", firstSeen: "2026-10-14" },
+  { type: "package", value: "@flexmr/utils@3.0.12", severity: "critical", confidence: 1.0, source: "GHSA-f8pr-fqvq-vvxv, MAL-2026-17888 (ossf-package-analysis)", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:proxyrobika@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-ch77-7g6p-3v7x, MAL-2026-17889 (kam193)", firstSeen: "2026-10-15" },
+  { type: "package", value: "pypi:getpubip@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-7j9m-mhr6-9jj6, MAL-2026-17884 (kam193)", firstSeen: "2026-10-15" },
+  { type: "package", value: "pypi:getpubip@0.1.1", severity: "critical", confidence: 1.0, source: "GHSA-7j9m-mhr6-9jj6, MAL-2026-17884 (kam193)", firstSeen: "2026-10-15" },
+  { type: "package", value: "pypi:getpubip@0.1.2", severity: "critical", confidence: 1.0, source: "GHSA-7j9m-mhr6-9jj6, MAL-2026-17884 (kam193)", firstSeen: "2026-10-15" },
+  { type: "package", value: "pypi:proxy-rubikis@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-j493-92mg-8qj9, MAL-2026-17887 (kam193)", firstSeen: "2026-10-15" },
+  { type: "package", value: "pypi:proxyrubika@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-rmvf-4vh2-pv34, MAL-2026-17885 (kam193)", firstSeen: "2026-10-15" },
+  { type: "package", value: "pypi:py-wormgpt@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-q9mx-j265-447m, MAL-2026-17886 (kam193)", firstSeen: "2026-10-15" },
+  { type: "package", value: "pypi:py-sock2@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-mrm7-9jxf-vx65, MAL-2026-17881 (kam193)", firstSeen: "2026-10-15" },
+  { type: "package", value: "pypi:py-worm@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-483q-j87r-c97c, MAL-2026-17883 (kam193)", firstSeen: "2026-10-15" },
+  { type: "package", value: "pypi:py-worm@2.0.0", severity: "critical", confidence: 1.0, source: "GHSA-483q-j87r-c97c, MAL-2026-17883 (kam193)", firstSeen: "2026-10-15" },
+  { type: "package", value: "pypi:py-worm@2.0.1", severity: "critical", confidence: 1.0, source: "GHSA-483q-j87r-c97c, MAL-2026-17883 (kam193)", firstSeen: "2026-10-15" },
+  { type: "package", value: "tailwindcss-uniform", severity: "critical", confidence: 0.9, source: "GHSA-r7f7-6833-rxh9, MAL-2026-17882 (ghsa-malware)", firstSeen: "2026-10-15" },
+  { type: "package", value: "tailwindcss-form", severity: "critical", confidence: 1.0, source: "GHSA-c8m9-qwg6-5cv9, MAL-2026-16282 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-18" },
+
+  // Imported from GitHub Advisory Database (2026-10-16) - see docs/threat-feed-sources.md
+  { type: "package", value: "pypi:fromthehotel-poems@0.1.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17897 (kam193)", firstSeen: "2026-10-16" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips

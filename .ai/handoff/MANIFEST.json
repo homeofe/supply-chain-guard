@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1791965228",
-    "timestamp": "2026-10-14T08:07:08Z",
-    "commit": "de57fce",
+    "session_id": "cli-1792134571",
+    "timestamp": "2026-10-16T07:09:31Z",
+    "commit": "7da413b",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:2ecd94192a39d1f4c07aedc429d3cfadf043817f5f7cf38bf8208372d9ebd4d1",
-      "updated": "2026-10-14T08:06:57Z",
-      "lines": 14668,
-      "summary": "Security and threat-intel release, cut from `main` at `de57fce` on the owner's instruction, after the owner merged the advisory fix for..."
+      "checksum": "sha256:f7ac1b3d16ae8c3476ca02b45f3aaaa08ed8e932d9f8028308b6a092ad4bdfd1",
+      "updated": "2026-10-16T07:06:29Z",
+      "lines": 14730,
+      "summary": "Scheduled run. The branch was first cut while PR 412 was still open, so it carried PR 412's 49 importer entries as well."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:5e59cd99ccc0fccd03901e41bf03a30e858371755bad337792c28a69fc1f54b7",
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "Security and threat-intel release, cut from `main` at `de57fce` on the owner's instruction, after the owner merged the advisory fix for... Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Scheduled run. The branch was first cut while PR 412 was still open, so it carried PR 412's 49 importer entries as well. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 928,
-    "manifest_plus_core": 218645,
-    "full_read": 232373
+    "manifest_only": 919,
+    "manifest_plus_core": 219570,
+    "full_read": 233298
   }
 }

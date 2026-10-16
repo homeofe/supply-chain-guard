@@ -1,3 +1,65 @@
+## Daily threat intel (2026-10-16) (claude-opus-5-5)
+
+Scheduled run. The branch was first cut while PR 412 was still open, so it
+carried PR 412's 49 importer entries as well. On the owner's instruction to
+merge everything, PR 412 was merged first and this branch was rebuilt on the
+new `main` (`7da413b`) by re-running the importer rather than hand-resolving
+conflicts in generated files.
+
+`feed:import` on the rebuilt branch: 25 new, all to the bundle, 0 to the
+catalog. Every bare name (`xmd-baileys`, `asistenyorstore`,
+`@developmentyora/yorakids`, `tailwindcss-form`, `tailwindcss-uniform`) is
+an npm security holding package (registry probe). Unmapped 0 (+3
+acknowledged), declined 0, no `--limit`, no page cap, no `catalogWindows`
+entry, no pin-only or unresolvable additions. One dry run also proposed
+PyPI `fromthehotel-poems@0.1.0` (MAL-2026-17897, published today, the PyPI
+project already removed), but the OpenSSF window feed dropped the record
+between runs (591 then 590 records), so the windowed apply did not write it.
+The windowed import is not deterministic for a record modified on the same
+day.
+
+OSV snapshot: 1 entry, exactly that record, written by the importer (not by
+hand). Total 26 to the bundle. `--check` exit 0, 0 unmapped (+35
+acknowledged), no stale. DataDog: 304 DataDog-only pins of a still-published version held
+back (369 on 2026-10-14), the 6 known still-published IDE extensions and no
+new one.
+
+Hand enrichment: none added. Tensorlake, MALFEX, NEBULA and MemTensor were
+already covered, and everything in Xygeni digest 91 was already in the bundle
+except Composer `slimfit/formbase@1.3`. That one is NOT added: Xygeni is
+the only source, OSV has no record, the version is still served by Packagist,
+and the vendor issue body was not readable. That is the same evidence bar the
+DataDog-only pin rule holds back. Open for an interactive session: decide
+whether a single-vendor Composer pin of a live version is acceptable.
+
+## Daily threat intel 2026-10-15 (claude-opus-5-5)
+
+Scheduled import on branch `threat-intel/2026-10-15`, cut from `main` at
+`5fe992e` (v6.5.7). No version bump; the owner cuts the release.
+
+- `feed:import` (window 2026-10-01 onward): 49 new entries, 47 to the bundle
+  and 2 to the catalog (`babel-polyfill-plugin-corejs2`, `eth-react-provider`,
+  first seen in August). Main clusters: PyPI `saeka` (26 versions), PyPI
+  `seapy-ops` (8), `@xxxfnbs21/hello-demo` (8), `@flexmr/ui` 99.99.99,
+  `pxnpm`, `util-foriepft`, `truffle-kit`. The three bare names were probed
+  against npm: two security holding packages and one unpublished. Unmapped 0
+  (+3 acknowledged), declined 0, no `--limit`, no page cap, no window.
+- OSV snapshot reconcile: dry run proposed 0, so nothing was written;
+  `--check` exit 0, unmapped 0 (+35 acknowledged), no stale acknowledgements.
+- DataDog: 304 DataDog-only pins of a still-published version held back (369
+  on 2026-10-14, so down, not up); the `still published` IDE list is the
+  known six, nothing new.
+- Hand enrichment: Apex Accelerator fake Web3 accelerator (Elastic Security
+  Labs, 2026-10-12, single-source, confidence 0.85). `@apexacc/cli` (still
+  live, sole maintainer is the operator account) and `@apexacc/audit` (404)
+  added to the existing anchored Apex name rule and the bundle; 14 operator
+  domains (for example `ccmihr[.]com`, `apexaccs[.]org`), 9 SHA-256 hashes
+  (each matched once against the raw report page, not just the fetch
+  summary), GitHub account `apexaccs`. All 25 feed entries carry the campaign
+  name so they stay bundled; `campaigns.test.ts` asserts the count. The
+  Dropbox link Elastic lists is a shared host and was not added.
+- Not a new item: the tensorlake Shai-Hulud variant was already covered.
+
 ## Release v6.5.7 (2026-10-14) (claude-opus-5-5)
 
 Security and threat-intel release, cut from `main` at `de57fce` on the owner's
