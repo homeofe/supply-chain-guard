@@ -1,3 +1,36 @@
+## Removed 58 reserved names from the feed (2026-10-17) (claude-opus-5-5)
+
+On the owner's instruction, the 58 DataDog bare names that the PR 419 audit
+classed as reserved, not taken down by npm, are removed: 57 from the bundle,
+1 (`mcp-secure-server`) from the catalog, through `writeCatalogText`. The
+classification was recomputed on `main` at `7de87e3` before the removal
+(still 67 names, 9 with a live release and 58 reserved) and every removed line
+was checked to be a DataDog entry.
+
+Control after the removal: a dry run of the corrected importer
+(`--osv-snapshot`, which settles the DataDog claims too) proposes none of the
+58 names again, as pin or as name; 57 appear in its "live without a sampled
+version" list, so the dataset holds no malware sample for any of them.
+`mcp-secure-server` is not in that list either; it is a live package (24
+releases since 2026-01-02, every one named `-security` by its author), OSV
+has no record of it, and DataDog claims it whole without a sample. No test
+references any of the 58 names (control: a name a test does reference was
+found).
+
+The 9 names with a live release (`agentlocks-win32-x64`,
+`foremerge-win32-x64`, `raster-bin-win32-x64`, `coderabbit`,
+`@itsmee_aizat.id/baileys2` and four `kartykgithub` packages) stay; they
+need a look one by one.
+
+Removed, by publishing account:
+
+- `monkeydluffy1961` (22): `baoyu-url-to-markdown`, `code-analysis-mcp`, `drawio-skills`, `feature-x-package`, `flutter-skill-electron`, `helpful-tool-totally-not-malware`, `interviewready-mcp-server`, `k-skill`, `migrate-check`, `mimir-scan`, `neondb-cli`, `newly-required`, `oasdiff`, `openclaw-cost-governor`, `openclaw-personal-cfo`, `opencode-ecc`, `pact-broker`, `puya-ts`, `re-resolves`, `reppo-agent-publisher`, `scip-typescript`, `tool-name`
+- `flutteruki` (18): `cdk-decommission-tool-uki`, `cdk-deployer-tool-ppb`, `cdktool`, `confluence-mcp`, `flutter-uki-skills`, `get-sc`, `grt-ui`, `grt-ui-mcp`, `iap-dev-server`, `intel-runner`, `ivory-ai-ingest`, `ivory-ai-mcp`, `ivory-ai-mcp-code`, `ivory-ai-mcp-figma`, `rewrite-imports-v2`, `synthetic-testing`, `target-process-test-case-exporter`, `vault-template-secrets-builder`
+- `infosec-npm` (9): `paysafe-gbp-virtual-terminal-fe`, `paysafe-ph-mobile-sdk-react-native`, `paysafe-psp-woocommerce`, `paysafe-ui-form-builder-lib-fe`, `paysafe-ui-utilities`, `paysafe-wac-web-customer-experience-lib-fe`, `paysafe-wac-web-error-monitoring-lib-fe`, `paysafe-wac-web-loyalty-lib-fe`, `paysafe-wallet-feature-management-lib-fe`
+- `mangwana` (8): `code-baseline-win32-x64`, `convec`, `mcp-secure-server`, `stelo-darwin-x64`, `stelo-linux-arm64-gnu`, `stelo-linux-arm64-musl`, `stelo-linux-x64-musl`, `stelo-win32-arm64-msvc`
+- `pwntgambit` (1): `@tekionai/mcp-client`
+- `aself101` (1): `mcp-secure-server`
+
 ## Daily threat intel (2026-10-17) (claude-opus-5-5)
 
 Scheduled run, worktree cut from `main` at `078c2dc`, later brought up to
