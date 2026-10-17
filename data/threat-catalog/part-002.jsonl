@@ -62164,7 +62164,6 @@
 {"type":"package","value":"mayfly-risk@10.0.0","severity":"critical","confidence":0.9,"source":"datadog-malicious-packages","firstSeen":"2025-08-17"}
 {"type":"package","value":"mcp-iso8859-writer@0.1.1","severity":"critical","confidence":0.9,"source":"datadog-malicious-packages","firstSeen":"2026-01-25"}
 {"type":"package","value":"mcp-iso8859-writer@0.2.0","severity":"critical","confidence":0.9,"source":"datadog-malicious-packages","firstSeen":"2026-01-25"}
-{"type":"package","value":"mcp-secure-server","severity":"critical","confidence":0.9,"source":"datadog-malicious-packages","firstSeen":"2026-03-04"}
 {"type":"package","value":"mda-localise@9000.0.0","severity":"critical","confidence":0.9,"source":"datadog-malicious-packages","firstSeen":"2025-08-12"}
 {"type":"package","value":"me5123","severity":"critical","confidence":0.9,"source":"datadog-malicious-packages","firstSeen":"2025-07-28"}
 {"type":"package","value":"me5war","severity":"critical","confidence":0.9,"source":"datadog-malicious-packages","firstSeen":"2025-07-28"}

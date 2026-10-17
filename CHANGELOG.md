@@ -18,6 +18,18 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   `itsa-react-focuscontainer@16.0.10`; PyPI `marocolor@1.0.0` and
   `pyyi` 2.4 / 2.4.2.
 
+### Removed
+
+- 58 bare npm names from the DataDog dataset (57 in the bundle, 1 in the
+  catalog) that blocked names reserved by their owners or by researchers, not
+  taken down by npm: their only versions are `-security` releases published by
+  the name's own account ("Reserved for Paysafe Group", "Reserved for security
+  reasons", a researcher's hold on `@tekionai/mcp-client`, and
+  `mcp-secure-server`, a live package whose author names every release
+  `-security`). A name block flagged the owner of the name. The dataset holds
+  no malware sample for any of them, and the corrected importer proposes
+  nothing for them. Listed in `.ai/handoff/STATUS.md`.
+
 ### Fixed
 
 - The feed importer no longer turns a whole-package claim into a name block

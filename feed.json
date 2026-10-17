@@ -2,7 +2,7 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "6.5.8",
-  "entryCount": 7156,
+  "entryCount": 7099,
   "generatedAt": "2026-10-17T00:00:00.000Z",
   "entries": [
     {
@@ -28826,14 +28826,6 @@
     },
     {
       "type": "package",
-      "value": "@tekionai/mcp-client",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
       "value": "@tenet-tools/lint-config",
       "severity": "critical",
       "confidence": 0.9,
@@ -30290,14 +30282,6 @@
     },
     {
       "type": "package",
-      "value": "baoyu-url-to-markdown",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
       "value": "bata",
       "severity": "critical",
       "confidence": 0.9,
@@ -30994,30 +30978,6 @@
     },
     {
       "type": "package",
-      "value": "cdk-decommission-tool-uki",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "cdk-deployer-tool-ppb",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "cdktool",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
       "value": "cerebras",
       "severity": "critical",
       "confidence": 0.9,
@@ -31682,22 +31642,6 @@
     },
     {
       "type": "package",
-      "value": "code-analysis-mcp",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "code-baseline-win32-x64",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
       "value": "code-buddy-win32-x64",
       "severity": "critical",
       "confidence": 0.9,
@@ -31890,14 +31834,6 @@
     },
     {
       "type": "package",
-      "value": "confluence-mcp",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
       "value": "confused_caterpillar_z3n",
       "severity": "critical",
       "confidence": 0.9,
@@ -31963,14 +31899,6 @@
     {
       "type": "package",
       "value": "continuous_crawdad_z3n",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "convec",
       "severity": "critical",
       "confidence": 0.9,
       "source": "datadog-malicious-packages",
@@ -33027,14 +32955,6 @@
     {
       "type": "package",
       "value": "doxing-ktp-indonesia",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "drawio-skills",
       "severity": "critical",
       "confidence": 0.9,
       "source": "datadog-malicious-packages",
@@ -34522,14 +34442,6 @@
     },
     {
       "type": "package",
-      "value": "feature-x-package",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
       "value": "felicis-vc",
       "severity": "critical",
       "confidence": 0.9,
@@ -34739,22 +34651,6 @@
     {
       "type": "package",
       "value": "fluffy_gecko_z3n",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "flutter-skill-electron",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "flutter-uki-skills",
       "severity": "critical",
       "confidence": 0.9,
       "source": "datadog-malicious-packages",
@@ -35019,14 +34915,6 @@
     {
       "type": "package",
       "value": "generous_tarantula_z3n",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "get-sc",
       "severity": "critical",
       "confidence": 0.9,
       "source": "datadog-malicious-packages",
@@ -35626,22 +35514,6 @@
     },
     {
       "type": "package",
-      "value": "grt-ui",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "grt-ui-mcp",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
       "value": "grubby_goat_z3n",
       "severity": "critical",
       "confidence": 0.9,
@@ -36098,14 +35970,6 @@
     },
     {
       "type": "package",
-      "value": "helpful-tool-totally-not-malware",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
       "value": "helpless_galliform_z3n",
       "severity": "critical",
       "confidence": 0.9,
@@ -36411,14 +36275,6 @@
     {
       "type": "package",
       "value": "hushed_gazelle_z3n",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "iap-dev-server",
       "severity": "critical",
       "confidence": 0.9,
       "source": "datadog-malicious-packages",
@@ -36826,14 +36682,6 @@
     },
     {
       "type": "package",
-      "value": "intel-runner",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
       "value": "intelligent_toad_z3n",
       "severity": "critical",
       "confidence": 0.9,
@@ -36851,14 +36699,6 @@
     {
       "type": "package",
       "value": "interior_bobolink_z3n",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "interviewready-mcp-server",
       "severity": "critical",
       "confidence": 0.9,
       "source": "datadog-malicious-packages",
@@ -36971,38 +36811,6 @@
     {
       "type": "package",
       "value": "itchy_jay_z3n",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "ivory-ai-ingest",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "ivory-ai-mcp",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "ivory-ai-mcp-code",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "ivory-ai-mcp-figma",
       "severity": "critical",
       "confidence": 0.9,
       "source": "datadog-malicious-packages",
@@ -37827,14 +37635,6 @@
     {
       "type": "package",
       "value": "juicy_reptile_z3n",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "k-skill",
       "severity": "critical",
       "confidence": 0.9,
       "source": "datadog-malicious-packages",
@@ -39970,23 +39770,7 @@
     },
     {
       "type": "package",
-      "value": "migrate-check",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
       "value": "military_lion_z3n",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "mimir-scan",
       "severity": "critical",
       "confidence": 0.9,
       "source": "datadog-malicious-packages",
@@ -40514,14 +40298,6 @@
     },
     {
       "type": "package",
-      "value": "neondb-cli",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
       "value": "neutral_bobcat_z3n",
       "severity": "critical",
       "confidence": 0.9,
@@ -40531,14 +40307,6 @@
     {
       "type": "package",
       "value": "neutral_toad_z3n",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "newly-required",
       "severity": "critical",
       "confidence": 0.9,
       "source": "datadog-malicious-packages",
@@ -41011,14 +40779,6 @@
     {
       "type": "package",
       "value": "o0o",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "oasdiff",
       "severity": "critical",
       "confidence": 0.9,
       "source": "datadog-malicious-packages",
@@ -41730,30 +41490,6 @@
     },
     {
       "type": "package",
-      "value": "openclaw-cost-governor",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "openclaw-personal-cfo",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "opencode-ecc",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
       "value": "openproject-frontend",
       "severity": "critical",
       "confidence": 0.9,
@@ -41851,14 +41587,6 @@
     {
       "type": "package",
       "value": "pabu",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "pact-broker",
       "severity": "critical",
       "confidence": 0.9,
       "source": "datadog-malicious-packages",
@@ -42115,78 +41843,6 @@
     {
       "type": "package",
       "value": "payable_ferret_z3n",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "paysafe-gbp-virtual-terminal-fe",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "paysafe-ph-mobile-sdk-react-native",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "paysafe-psp-woocommerce",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "paysafe-ui-form-builder-lib-fe",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "paysafe-ui-utilities",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "paysafe-wac-web-customer-experience-lib-fe",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "paysafe-wac-web-error-monitoring-lib-fe",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "paysafe-wac-web-loyalty-lib-fe",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "paysafe-wallet-feature-management-lib-fe",
       "severity": "critical",
       "confidence": 0.9,
       "source": "datadog-malicious-packages",
@@ -43034,14 +42690,6 @@
     },
     {
       "type": "package",
-      "value": "puya-ts",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
       "value": "qian",
       "severity": "critical",
       "confidence": 0.9,
@@ -43259,14 +42907,6 @@
     {
       "type": "package",
       "value": "raw_slug_z3n",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "re-resolves",
       "severity": "critical",
       "confidence": 0.9,
       "source": "datadog-malicious-packages",
@@ -43770,14 +43410,6 @@
     },
     {
       "type": "package",
-      "value": "reppo-agent-publisher",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
       "value": "representative_panther_z3n",
       "severity": "critical",
       "confidence": 0.9,
@@ -43843,14 +43475,6 @@
     {
       "type": "package",
       "value": "reuse-plugin",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "rewrite-imports-v2",
       "severity": "critical",
       "confidence": 0.9,
       "source": "datadog-malicious-packages",
@@ -44578,14 +44202,6 @@
     },
     {
       "type": "package",
-      "value": "scip-typescript",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
       "value": "scrawny_damselfly_z3n",
       "severity": "critical",
       "confidence": 0.9,
@@ -45290,46 +44906,6 @@
     },
     {
       "type": "package",
-      "value": "stelo-darwin-x64",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "stelo-linux-arm64-gnu",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "stelo-linux-arm64-musl",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "stelo-linux-x64-musl",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "stelo-win32-arm64-msvc",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
       "value": "sticky_roundworm_z3n",
       "severity": "critical",
       "confidence": 0.9,
@@ -45674,14 +45250,6 @@
     },
     {
       "type": "package",
-      "value": "synthetic-testing",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
       "value": "systematic_quelea_z3n",
       "severity": "critical",
       "confidence": 0.9,
@@ -45883,14 +45451,6 @@
     {
       "type": "package",
       "value": "tania-ubi25-ruro",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "target-process-test-case-exporter",
       "severity": "critical",
       "confidence": 0.9,
       "source": "datadog-malicious-packages",
@@ -46259,14 +45819,6 @@
     {
       "type": "package",
       "value": "tomi-toge5-ruro",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "tool-name",
       "severity": "critical",
       "confidence": 0.9,
       "source": "datadog-malicious-packages",
@@ -47323,14 +46875,6 @@
     {
       "type": "package",
       "value": "varsg",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "vault-template-secrets-builder",
       "severity": "critical",
       "confidence": 0.9,
       "source": "datadog-malicious-packages",
