@@ -7,6 +7,18 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat intel for 2026-10-17: 34 package entries from the GitHub Advisory
+  Database, OpenSSF and the DataDog dataset, all in the offline bundle.
+  Clusters: seven `@beloved-lenora/opencode-*` plugin packages, `parxleys`
+  and `@xatancchii/natabaileys` (all now npm security holding packages);
+  dependency-confusion pins in `@flexmr/` (13), `@newspage/` (5) and
+  `@accenturecodefoundry/` (1); `itsa-react-maskedinput@16.1.2` and
+  `itsa-react-focuscontainer@16.0.10`; PyPI `marocolor@1.0.0` and
+  `pyyi` 2.4 / 2.4.2; and `repoise-win32-x64` (DataDog only, no legitimate
+  release history).
+
 ## [6.5.8] - 2026-10-16
 
 ### Added

@@ -1,3 +1,38 @@
+## Daily threat intel (2026-10-17) (claude-opus-5-5)
+
+Scheduled run, worktree cut from `main` at `078c2dc`. Windowed import
+(14 days from 2026-10-03, 6 GHSA pages, 580 OpenSSF records): 34 new
+entries, 34 to the bundle and 0 to the catalog; 33 from GHSA plus OpenSSF,
+1 DataDog only. No `--limit`, no page cap, no window slicing, no
+`catalogWindows` entry, nothing declined, nothing added to the pin-only or
+unresolvable lists. Every bare name was probed against the registry: nine
+are npm security holding packages published by npm itself.
+
+`repoise-win32-x64` (DataDog only, bare) is worth a second look in an
+interactive session. Its `latest` 0.0.1-security reads "security holding
+package" with repository `npm/security-holder`, but it was published by the
+package's own maintainer, not by npm, and a native binary 0.1.0-alpha.1 is
+still live under the `next` tag (published 2026-10-15). It was accepted
+because the name has no legitimate history (created 2026-10-13, only
+placeholders and that binary). The point for the importer: its removed-package
+reading appears to trust the holding-package description without checking
+who published it, and a maintainer can publish that description themselves.
+
+OSV snapshot reconcile: 0 new (262,301 duplicates as the control).
+`--check` exit 0: 0 missing, 0 unmapped, 33 acknowledged in
+`threat-feed-unresolvable.json`, and 2 STALE there: MAL-2026-17872 and
+MAL-2026-17873 (the `@newspage/` records of 2026-10-14) now list versions
+and were imported as pins today, so their unresolvable entries can be
+removed. Left for the owner, as this routine only reports stale entries.
+
+DataDog: 4,245 whole-package claims probed, 1 bare name, 8,248 pins,
+304 DataDog-only pins of a still-published version held back (baseline
+369 on 2026-10-14), 454 without a sampled version, 1,334 manifest lines
+without a sample, 103 IDE extensions checked; the 6 still-published
+extensions are the 6 known since 2026-10-05, no new id. Vendor enrichment:
+no new non-package indicators for 2026-10-15 to 2026-10-17 (the October
+Tensorlake compromise is already covered).
+
 ## Release v6.5.8 (2026-10-16) (claude-opus-5-5)
 
 Threat-intel release on the owner's instruction, cut from `main` at

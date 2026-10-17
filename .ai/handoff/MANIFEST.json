@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1792138943",
-    "timestamp": "2026-10-16T08:22:23Z",
-    "commit": "3696cf3",
+    "session_id": "cli-1792214786",
+    "timestamp": "2026-10-17T05:26:26Z",
+    "commit": "078c2dc",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:b3effddc08a0dd765c6e4a6cdfdf2f51d0eabd31484d1917f10c1bb27720820e",
-      "updated": "2026-10-16T08:22:15Z",
-      "lines": 14790,
-      "summary": "Threat-intel release on the owner's instruction, cut from `main` at `9eb2c0a`."
+      "checksum": "sha256:9c0d393d62a6f71b960cbb83e1fcb40b2ed158ef34e817aa655332d9dcde3154",
+      "updated": "2026-10-17T05:26:14Z",
+      "lines": 14825,
+      "summary": "Scheduled run, worktree cut from `main` at `078c2dc`."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:325056c979a76627623b7db84025912d6932a9b4229fcae8f7a75a092282e68e",
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "Threat-intel release on the owner's instruction, cut from `main` at `9eb2c0a`. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Scheduled run, worktree cut from `main` at `078c2dc`. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 898,
-    "manifest_plus_core": 220413,
-    "full_read": 234141
+    "manifest_only": 885,
+    "manifest_plus_core": 220924,
+    "full_read": 234652
   }
 }
