@@ -61185,7 +61185,6 @@
 {"type":"package","value":"codecoverage-tools@1.0.3","severity":"critical","confidence":0.9,"source":"datadog-malicious-packages","firstSeen":"2026-02-27"}
 {"type":"package","value":"codeium","severity":"critical","confidence":0.9,"source":"datadog-malicious-packages","firstSeen":"2026-03-28"}
 {"type":"package","value":"codeium-ai","severity":"critical","confidence":0.9,"source":"datadog-malicious-packages","firstSeen":"2026-03-28"}
-{"type":"package","value":"coderabbit","severity":"critical","confidence":0.9,"source":"datadog-malicious-packages","firstSeen":"2026-03-28"}
 {"type":"package","value":"coderabbit-ai","severity":"critical","confidence":0.9,"source":"datadog-malicious-packages","firstSeen":"2026-03-28"}
 {"type":"package","value":"codewhisperer-streaming@1.0.10","severity":"critical","confidence":0.9,"source":"datadog-malicious-packages","firstSeen":"2026-05-01"}
 {"type":"package","value":"codewhisperer-streaming@1.0.14","severity":"critical","confidence":0.9,"source":"datadog-malicious-packages","firstSeen":"2026-05-01"}

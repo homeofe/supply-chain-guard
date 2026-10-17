@@ -29,6 +29,14 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   `-security`). A name block flagged the owner of the name. The dataset holds
   no malware sample for any of them, and the corrected importer proposes
   nothing for them. Listed in `.ai/handoff/STATUS.md`.
+- Eight more DataDog name blocks, each reviewed by hand: the Windows binary
+  packages `agentlocks-win32-x64`, `foremerge-win32-x64` and
+  `raster-bin-win32-x64` of three open-source projects (npm placed its holding
+  release within seconds of the first upload, then the authors published
+  again), `coderabbit` (CodeRabbit's own npm installer; the dataset's sample
+  is only the deleted `0.0.0-dev-202603280606`, which the importer pins), and
+  four takedown test packages of `kartykgithub`. `@itsmee_aizat.id/baileys2`
+  stays blocked: every release is the malware actor's and npm holds the name.
 
 ### Fixed
 
