@@ -1,3 +1,42 @@
+## The nine live DataDog names, reviewed one by one (2026-10-17) (claude-opus-5-5)
+
+The nine DataDog bare names with a live release, left over from the PR 419
+audit, were reviewed from registry metadata, the DataDog manifest and samples,
+OSV, and (for `coderabbit`) the package's install code read as text.
+
+Removed (8):
+
+- `agentlocks-win32-x64`, `foremerge-win32-x64`, `raster-bin-win32-x64`:
+  Windows binary packages of open-source projects (`agentlocks` by
+  simke9445, `foremerge` with 541 GitHub stars and its own site, Ray-D-Song's
+  `raster`). npm placed `0.0.1-security` within seconds to a minute of the
+  first upload, then the author published the binary again (`0.7.1-bootstrap.0`,
+  `0.5.1`, `0.1.0-alpha.9` to `alpha.14`). DataDog claims them whole with no
+  sample. The same shape as `repoise-win32-x64` in PR 417.
+- `coderabbit` (catalog): `0.9.0` (2026-10-12) is CodeRabbit's npm installer.
+  Its postinstall downloads from `https://cli.coderabbit.ai/releases/`, the host
+  CodeRabbit's own `install.sh` uses (same `CODERABBIT_DOWNLOAD_URL` override,
+  same 0.9.0), and checks a pinned SHA-256; the pinned sum for the Linux x64
+  archive matched the file that host serves. The homepage repository answers
+  404, consistent with a private repository. The DataDog sample is
+  `0.0.0-dev-202603280606`, one of four dev versions of 2026-03-28 that are all
+  unpublished, before npm held the name on 2026-04-09. A dry run of the
+  corrected importer proposes exactly `coderabbit@0.0.0-dev-202603280606`; the
+  next run imports it, and the version cannot be installed meanwhile.
+- `@kartykgithub/susp-new-2`, `kartykgithub-ph-d`, `kartykgithub-susp-1`,
+  `kartykgithub-susp-pkg-1`: test packages of 139 to 222 bytes with no
+  install script, described as "Publish suspension validation (github/npm#15942)"
+  and "npm internal test package for malware takedown/rollback validation".
+
+Kept (1): `@itsmee_aizat.id/baileys2`. Every release (`1.6.0` to `2.0.2`,
+all with the same `preinstall` script) is the publishing account's, OSV
+MAL-2026-17670 names `2.0.0` to `2.0.2`, and npm took the name over
+(`npm-support`, holding `latest`). The name has no legitimate history, so
+the block cannot hit a legitimate install.
+
+After the removal the dry run proposes none of the other seven and lists them
+as live without a sampled version.
+
 ## Removed 58 reserved names from the feed (2026-10-17) (claude-opus-5-5)
 
 On the owner's instruction, the 58 DataDog bare names that the PR 419 audit

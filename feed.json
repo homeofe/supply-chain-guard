@@ -2,7 +2,7 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "6.5.8",
-  "entryCount": 7099,
+  "entryCount": 7092,
   "generatedAt": "2026-10-17T00:00:00.000Z",
   "entries": [
     {
@@ -29338,14 +29338,6 @@
     },
     {
       "type": "package",
-      "value": "agentlocks-win32-x64",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
       "value": "aggularjs",
       "severity": "critical",
       "confidence": 0.9,
@@ -42883,14 +42875,6 @@
     {
       "type": "package",
       "value": "raster-bin-win32-arm64",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-05"
-    },
-    {
-      "type": "package",
-      "value": "raster-bin-win32-x64",
       "severity": "critical",
       "confidence": 0.9,
       "source": "datadog-malicious-packages",
@@ -58359,51 +58343,11 @@
     },
     {
       "type": "package",
-      "value": "@kartykgithub/susp-new-2",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-14"
-    },
-    {
-      "type": "package",
       "value": "cowork-os@0.5.53",
       "severity": "critical",
       "confidence": 0.9,
       "source": "datadog-malicious-packages",
       "firstSeen": "2026-09-20"
-    },
-    {
-      "type": "package",
-      "value": "foremerge-win32-x64",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-14"
-    },
-    {
-      "type": "package",
-      "value": "kartykgithub-ph-d",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-14"
-    },
-    {
-      "type": "package",
-      "value": "kartykgithub-susp-1",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-14"
-    },
-    {
-      "type": "package",
-      "value": "kartykgithub-susp-pkg-1",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-14"
     },
     {
       "type": "package",

@@ -4652,7 +4652,6 @@ const FEED_CHUNK_22: FeedIOC[] = [
   { type: "package", value: "agan", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-05" },
   { type: "package", value: "agent-store-sync", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-05" },
   { type: "package", value: "agent-tags-win32-x64", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-05" },
-  { type: "package", value: "agentlocks-win32-x64", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-05" },
   { type: "package", value: "aggularjs", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-05" },
   { type: "package", value: "agoraio-cli-win32-arm64", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-05" },
   { type: "package", value: "agus-empal13-ruro", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-05" },
@@ -6354,7 +6353,6 @@ const FEED_CHUNK_24: FeedIOC[] = [
   { type: "package", value: "rajkot", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-05" },
   { type: "package", value: "random_porcupine_z3n", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-05" },
   { type: "package", value: "raster-bin-win32-arm64", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-05" },
-  { type: "package", value: "raster-bin-win32-x64", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-05" },
   { type: "package", value: "raw_aphid_z3n", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-05" },
   { type: "package", value: "raw_slug_z3n", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-05" },
   { type: "package", value: "reacatjs", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-05" },
@@ -8352,12 +8350,7 @@ const FEED_CHUNK_26: FeedIOC[] = [
 
   // Imported from GitHub Advisory Database (2026-09-30) - see docs/threat-feed-sources.md
   { type: "package", value: "@inpeek/odata@0.0.0-stage", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-04" },
-  { type: "package", value: "@kartykgithub/susp-new-2", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-14" },
   { type: "package", value: "cowork-os@0.5.53", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-09-20" },
-  { type: "package", value: "foremerge-win32-x64", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-14" },
-  { type: "package", value: "kartykgithub-ph-d", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-14" },
-  { type: "package", value: "kartykgithub-susp-1", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-14" },
-  { type: "package", value: "kartykgithub-susp-pkg-1", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-14" },
   { type: "package", value: "storymesh-win32-x64", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-14" },
 
   // Imported from GitHub Advisory Database (2026-09-30) - see docs/threat-feed-sources.md
