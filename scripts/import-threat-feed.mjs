@@ -2748,7 +2748,8 @@ export function mapDatadogDataset(
 
 /**
  * What the registry says about a package: `removed` (404, npm security
- * holding package, or every version unpublished) or the versions it publishes.
+ * holding package with nothing else installable, or every version
+ * unpublished) or the versions it publishes.
  */
 export async function probeRegistry(
   prefix,
@@ -2785,9 +2786,23 @@ export async function probeRegistry(
   }
   const versions = Object.keys(doc?.time ?? {}).filter((k) => !["created", "modified", "unpublished"].includes(k));
   const live = Object.keys(doc?.versions ?? {});
-  const holding =
-    doc?.description === "security holding package" ||
-    (live.length > 0 && live.every((v) => /-security$/.test(v)));
+  // npm takes a name down by leaving only its own placeholders: the
+  // 0.0.1-security holding release (also numbered 0.0.1-security.N; measured
+  // 2026-10-17 on 2,704 of 3,419 bundled and catalogued DataDog names), often
+  // after the 0.0.0-stage placeholder
+  // its staged publishing writes. The name counts as removed only when EVERY
+  // version an install can still fetch is such a placeholder published by npm.
+  // The description is not enough: it comes from `latest`, and the owner can
+  // publish a live release under another dist-tag after the takedown
+  // (repoise-win32-x64, 2026-10-17: holding `latest`, live `next`).
+  // Published by npm: the `npm` account, or an npm staff account with an
+  // @npmjs.com address (code-buddy-win32-x64). A -security release by anyone
+  // else is a name someone reserved, not a takedown (@tekionai/mcp-client,
+  // reserved by a security researcher; "Reserved for security reasons" names).
+  const byNpm = (user) => user === undefined || user?.name === "npm" || /@npmjs\.com$/i.test(String(user?.email ?? ""));
+  const holdingRelease = (v) => /-security(?:\.\d+)?$/.test(v);
+  const npmPlaceholder = (v) => (holdingRelease(v) || v === "0.0.0-stage") && byNpm(doc.versions[v]?._npmUser);
+  const holding = live.length > 0 && live.every(npmPlaceholder) && live.some(holdingRelease);
   if (holding || live.length === 0) return { removed: true, versions, live: holding ? [] : live };
   return { removed: false, versions, live };
 }

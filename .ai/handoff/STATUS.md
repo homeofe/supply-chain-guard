@@ -1,37 +1,104 @@
 ## Daily threat intel (2026-10-17) (claude-opus-5-5)
 
-Scheduled run, worktree cut from `main` at `078c2dc`. Windowed import
-(14 days from 2026-10-03, 6 GHSA pages, 580 OpenSSF records): 34 new
-entries, 34 to the bundle and 0 to the catalog; 33 from GHSA plus OpenSSF,
-1 DataDog only. No `--limit`, no page cap, no window slicing, no
+Scheduled run, worktree cut from `main` at `078c2dc`, later brought up to
+`main` with PR 418 and PR 419 merged in. Windowed import (14 days from
+2026-10-03, 6 GHSA pages, 580 OpenSSF records): 33 entries, all to the bundle,
+all from GHSA plus OpenSSF. The run first wrote 34; the 34th,
+`repoise-win32-x64`, is removed (below). No `--limit`, no page cap, no window slicing, no
 `catalogWindows` entry, nothing declined, nothing added to the pin-only or
 unresolvable lists. Every bare name was probed against the registry: nine
 are npm security holding packages published by npm itself.
 
-`repoise-win32-x64` (DataDog only, bare) is worth a second look in an
-interactive session. Its `latest` 0.0.1-security reads "security holding
-package" with repository `npm/security-holder`, but it was published by the
-package's own maintainer, not by npm, and a native binary 0.1.0-alpha.1 is
-still live under the `next` tag (published 2026-10-15). It was accepted
-because the name has no legitimate history (created 2026-10-13, only
-placeholders and that binary). The point for the importer: its removed-package
-reading appears to trust the holding-package description without checking
-who published it, and a maintainer can publish that description themselves.
+`repoise-win32-x64` came from a DataDog whole-package claim without a sample
+and was written as a bare name. It is removed: the package is live. npm
+replaced it with its own placeholders on 2026-10-13 (`0.0.0-stage` and
+`0.0.1-security`, both published by `npm`; an earlier version of this note
+said the owner published them, which the registry contradicts), but the owner
+is still a maintainer and published `0.1.0-alpha.1` under `next` on
+2026-10-15, next to `repoise` and `repoise-darwin-arm64` of the same project.
+The importer read the holding description on `latest` as "removed"; PR 419
+fixes that, and with it the DataDog line reports the claim as live without a
+sample instead of a bare name.
 
 OSV snapshot reconcile: 0 new (262,301 duplicates as the control).
 `--check` exit 0: 0 missing, 0 unmapped, 33 acknowledged in
 `threat-feed-unresolvable.json`, and 2 STALE there: MAL-2026-17872 and
 MAL-2026-17873 (the `@newspage/` records of 2026-10-14) now list versions
-and were imported as pins today, so their unresolvable entries can be
-removed. Left for the owner, as this routine only reports stale entries.
+and were imported as pins today; their two entries are removed from
+`threat-feed-unresolvable.json`, on the owner's instruction.
 
-DataDog: 4,245 whole-package claims probed, 1 bare name, 8,248 pins,
+DataDog (as first run, before PR 419): 4,245 whole-package claims probed, 1 bare name, 8,248 pins,
 304 DataDog-only pins of a still-published version held back (baseline
 369 on 2026-10-14), 454 without a sampled version, 1,334 manifest lines
 without a sample, 103 IDE extensions checked; the 6 still-published
 extensions are the 6 known since 2026-10-05, no new id. Vendor enrichment:
 no new non-package indicators for 2026-10-15 to 2026-10-17 (the October
 Tensorlake compromise is already covered).
+## Importer: a live name after an npm takedown is not a removed package (2026-10-17) (claude-opus-5-5)
+
+PR 417 (2026-10-17 intel) carried a bare `repoise-win32-x64` from a DataDog
+whole-package claim. The DataDog npm manifest lists it as `null` (every
+version) with no sample under `samples/npm/`. npm replaced the package with its
+own placeholders on 2026-10-13 (`0.0.0-stage` and `0.0.1-security`, both
+published by `npm`), but the owner is still a maintainer and published
+`0.1.0-alpha.1` under `next` on 2026-10-15, next to the sibling packages
+`repoise` and `repoise-darwin-arm64` of the same project. `probeRegistry`
+read the holding description on `latest` as "removed", so the claim became a
+name block over a live release.
+
+`probeRegistry` now calls a package removed only when every installable version
+is an npm placeholder (`-security`, `-security.N` or `0.0.0-stage`,
+published by `npm` or an `@npmjs.com` staff account) and at least one is the
+holding release. A `-security` release published by anyone else is a name
+someone reserved, not a takedown. Tests in
+`feed-datadog-source.test.ts`: both takedown shapes stay removed; a live
+release under another dist-tag, the description over an ordinary release, and a
+`-security` version not published by npm stay live (reported, not imported).
+The old description-alone signal is removed with its test case.
+
+Checked against every DataDog bare npm name in both stores (3,419 on
+2026-10-17) with the fixed check: a first version that matched only
+`-security` at the end called 2,704 of them live, because npm also numbers
+the holding release `0.0.1-security.N`. npm staff also publish holding
+releases under their own accounts with an `@npmjs.com` address, which the check
+accepts. The final check calls 67 of the 3,419 names live:
+
+- 9 have an installable release besides npm's placeholders, or never had one:
+  `agentlocks-win32-x64`, `foremerge-win32-x64`, `raster-bin-win32-x64` and
+  (catalog) `coderabbit` carry npm's placeholders and a later release by the
+  owner; `@itsmee_aizat.id/baileys2`, `@kartykgithub/susp-new-2`,
+  `kartykgithub-ph-d`, `kartykgithub-susp-1` and `kartykgithub-susp-pkg-1` are
+  live packages of their publishers.
+- 58 carry a `0.0.1-security` release that npm did not publish: names reserved
+  by their owners or by researchers ("Reserved for Paysafe Group" by
+  `infosec-npm`, "Reserved for security reasons" by `flutteruki`, a researcher's
+  hold on `@tekionai/mcp-client`, "Reserved name placeholder" by
+  `monkeydluffy1961`, and others).
+
+None carries a campaign or family. They stay in the stores as they are: the
+importer fix changes only what later runs import, and removing them is a
+decision for the owner, recorded here with the list. A name block on a
+reserved name flags the owner of that name, the shape the 2026-10-09 pin-only
+decision was about.
+
+## Publish npm pin 11.19.1 -> 11.21.1 (2026-10-17) (claude-opus-5-5)
+
+OpenSSF Scorecard (code-scanning alert 75, Vulnerabilities, score 0) listed
+twelve advisories. All twelve are the open Dependabot alerts against
+`.github/publish-toolchain/package-lock.json`, the npm that publishes the
+package: `brace-expansion` (3), `ip-address` (4), `undici` (3),
+`http-cache-semantics` (1), `postcss-selector-parser` (1). Nothing in the
+package's own dependencies.
+
+npm 11.21.1 and 12.2.1 (both 2026-10-15) bundle `undici` 6.29.0,
+`brace-expansion` 5.0.12, `ip-address` 10.7.2, `http-cache-semantics` 4.3.0
+and `postcss-selector-parser` 7.1.6, each outside every one of the twelve
+ranges. Read from the published `npm@11.21.1` tarball (one copy of each), with
+11.19.1 read the same way as the control. Per the owner's 2026-09-30 decision
+(wait for npm, then bump the pin and drop the exceptions in the same change),
+the pin moves to 11.21.1, staying on the npm 11 line, and
+`audit-exceptions.json` is empty. No upstream contribution was needed: npm
+shipped the fixes itself.
 
 ## Release v6.5.8 (2026-10-16) (claude-opus-5-5)
 

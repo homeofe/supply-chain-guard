@@ -132,14 +132,6 @@
     {
       "id": "MAL-2025-49110",
       "reason": "Dependency-confusion record naming every version of com.apple.unityplugin.spatialcontroller, a package name of Apple's official Unity plugins or of their Apple Arcade internal counterparts, with no versions list. The name is pin-only (threat-feed-pin-only.json) and the registry holds only npm's security holding package, so no attacker version is known. A bare-name block would flag every Unity project using Apple's real plugin."
-    },
-    {
-      "id": "MAL-2026-17872",
-      "reason": "Dependency-confusion record naming every version of @newspage/lib-ng-async-routes-ui (2026-10-14 wave, same actor as the @mntv-analysis/ squats). The npm registry has deleted the package (404) and the record lists no version, so no exact version is known. The scope is pin-only; a bare-name block would flag the victim organization's own internal package."
-    },
-    {
-      "id": "MAL-2026-17873",
-      "reason": "Dependency-confusion record naming every version of @newspage/libx-amount, same wave and same situation as MAL-2026-17872: package deleted from npm (404), no version listed, pin-only scope, so no pin and never a bare name."
     }
   ]
 }

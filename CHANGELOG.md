@@ -9,15 +9,37 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Added
 
-- Threat intel for 2026-10-17: 34 package entries from the GitHub Advisory
-  Database, OpenSSF and the DataDog dataset, all in the offline bundle.
+- Threat intel for 2026-10-17: 33 package entries from the GitHub Advisory
+  Database and OpenSSF, all in the offline bundle.
   Clusters: seven `@beloved-lenora/opencode-*` plugin packages, `parxleys`
   and `@xatancchii/natabaileys` (all now npm security holding packages);
   dependency-confusion pins in `@flexmr/` (13), `@newspage/` (5) and
   `@accenturecodefoundry/` (1); `itsa-react-maskedinput@16.1.2` and
   `itsa-react-focuscontainer@16.0.10`; PyPI `marocolor@1.0.0` and
-  `pyyi` 2.4 / 2.4.2; and `repoise-win32-x64` (DataDog only, no legitimate
-  release history).
+  `pyyi` 2.4 / 2.4.2.
+
+### Fixed
+
+- The feed importer no longer turns a whole-package claim into a name block
+  when the package is live again after an npm takedown. It read the "security
+  holding package" description, which comes from `latest`, as proof that the
+  name was removed, so a release published later under another dist-tag was
+  blocked with the name (`repoise-win32-x64`: holding `latest`, live
+  `next` since 2026-10-15). A name now counts as removed only when every
+  installable version is an npm placeholder (`-security`, `-security.N` or
+  `0.0.0-stage`) published by npm or an npm staff account
+  (`@npmjs.com`). Without a sampled version such a claim is reported, not
+  imported.
+
+### Security
+
+- The npm that publishes this package (`.github/publish-toolchain`) moves
+  from 11.19.1 to 11.21.1, the first npm release whose bundled
+  `brace-expansion` (5.0.12), `ip-address` (10.7.2), `undici` (6.29.0),
+  `postcss-selector-parser` (7.1.6) and `http-cache-semantics` (4.3.0) are
+  outside all twelve advisories reported against the pinned lockfile. The
+  dated audit exceptions for them are removed. This affects only the publish
+  job, not the installed package.
 
 ## [6.5.8] - 2026-10-16
 

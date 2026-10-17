@@ -8579,7 +8579,6 @@ const FEED_CHUNK_26: FeedIOC[] = [
   { type: "package", value: "@accenturecodefoundry/mfe-pot-shared-ui-scds-core@99.99.43", severity: "critical", confidence: 1.0, source: "GHSA-36v8-chg8-q674, MAL-2026-17867 (amazon-inspector)", firstSeen: "2026-10-13" },
   { type: "package", value: "pypi:pyyi@2.4.2", severity: "critical", confidence: 1.0, source: "GHSA-4vr9-vg98-9xpf, MAL-2026-17866 (amazon-inspector)", firstSeen: "2026-10-14" },
   { type: "package", value: "pypi:pyyi@2.4", severity: "critical", confidence: 1.0, source: "GHSA-4vr9-vg98-9xpf, MAL-2026-17866 (amazon-inspector)", firstSeen: "2026-10-14" },
-  { type: "package", value: "repoise-win32-x64", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-17" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips

@@ -521,7 +521,8 @@ jobs:
       # .github/publish-toolchain/audit-exceptions.json names it, with a reason
       # and an expiry date; an expired or no longer reported exception fails, as
       # does every unlisted advisory at the threshold (2026-09-30: no npm release
-      # carried the fixed brace-expansion and undici).
+      # carried the fixed brace-expansion and undici; 2026-10-17: 11.21.1 carries
+      # every fix, the pin moved there and the list is empty again).
       - name: Audit the pinned npm
         run: node scripts/audit-publish-toolchain.mjs --audit-level=high
 
@@ -698,7 +699,7 @@ jobs:
       # write is granted. Node 24 bundles 11.19.x today, but the version it bundles
       # moves with every Node patch release, and a publish lane that resolves a
       # floating version changes behaviour without a commit. So the npm stays an
-      # exact pin: 11.19.1.
+      # exact pin: 11.21.1.
       #
       # The pin is a lockfile (.github/publish-toolchain/package-lock.json), so npm
       # ci checks the tarball against a recorded integrity hash. It used to be

@@ -319,7 +319,7 @@ the publish major for every pull request, with the publish job's registry setup,
 fails a pull request instead of a tag. It also runs `npm audit` over the pinned
 npm's bundled packages.
 
-The pin is **11.19.1**. Once the lockfile was committed, OSV (Scorecard
+The pin is **11.21.1** (moved from 11.19.1 on 2026-10-17, see below). Once the lockfile was committed, OSV (Scorecard
 Vulnerabilities) could see what 11.18.0 bundles: `brace-expansion`, `ip-address`,
 `tar` and `undici` versions with nine published advisories, four of them high.
 11.19.0, the npm Node 24 bundles, carries the same versions; 11.19.1 is the first
@@ -339,6 +339,15 @@ expired exception fails, and an exception the report no longer contains fails, s
 the list is emptied in the same change that bumps the pin. An advisory reviewed on
 2026-10-02 against the bundled `http-cache-semantics` joined the list the same way:
 it has no patched version at all, so no npm release can carry a fix yet.
+
+npm 11.21.1 (2026-10-15) is the first release that bundles a fixed version of
+every one of them: `brace-expansion` 5.0.12, `ip-address` 10.7.2, `undici` 6.29.0,
+`postcss-selector-parser` 7.1.6 and `http-cache-semantics` 4.3.0, which is outside the
+range of its advisory. That was read from the published tarball, not from the npm
+repository. The pin moved to 11.21.1 on 2026-10-17 and the exception list is empty;
+the twelve Dependabot alerts and the Scorecard Vulnerabilities finding came from
+the pinned lockfile and close with it. The pin stays on the npm 11 line, so only
+the patch release changes.
 
 ## What is deliberately not governed here
 

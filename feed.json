@@ -2,7 +2,7 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "6.5.8",
-  "entryCount": 7157,
+  "entryCount": 7156,
   "generatedAt": "2026-10-17T00:00:00.000Z",
   "entries": [
     {
@@ -59990,14 +59990,6 @@
       "confidence": 1,
       "source": "GHSA-4vr9-vg98-9xpf, MAL-2026-17866 (amazon-inspector)",
       "firstSeen": "2026-10-14"
-    },
-    {
-      "type": "package",
-      "value": "repoise-win32-x64",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-10-17"
     }
   ]
 }
