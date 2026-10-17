@@ -7,6 +7,16 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Security
+
+- The npm that publishes this package (`.github/publish-toolchain`) moves
+  from 11.19.1 to 11.21.1, the first npm release whose bundled
+  `brace-expansion` (5.0.12), `ip-address` (10.7.2), `undici` (6.29.0),
+  `postcss-selector-parser` (7.1.6) and `http-cache-semantics` (4.3.0) are
+  outside all twelve advisories reported against the pinned lockfile. The
+  dated audit exceptions for them are removed. This affects only the publish
+  job, not the installed package.
+
 ## [6.5.8] - 2026-10-16
 
 ### Added
