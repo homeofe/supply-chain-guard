@@ -191,15 +191,63 @@ describe("settleDatadogWholePackages", () => {
     expect(calls).toEqual([]);
   });
 
-  // Each holding signal on its own: a fixture carrying both would let either
-  // check be deleted unnoticed.
+  // The shapes npm leaves when it takes a name down. The description is not
+  // one of the signals: the next test shows why.
+  const byNpm = { _npmUser: { name: "npm" } };
   it.each([
-    ["the holding description alone", { description: "security holding package", versions: { "0.0.1": {} }, time: { "0.0.1": "x" } }],
     ["a -security placeholder version alone", { description: "", versions: { "0.0.1-security": {} }, time: { "0.0.1-security": "x" } }],
+    ["a numbered -security.N holding release", { description: "security holding package", versions: { "0.0.1-security.1": byNpm }, time: { "0.0.1-security.1": "x" } }],
+    ["a holding release by an npm staff account", {
+      description: "security holding package",
+      versions: { "0.0.1-security": { _npmUser: { name: "scg-staff", email: "scg-staff@npmjs.com" } } },
+      time: { "0.0.1-security": "x" },
+    }],
+    ["npm's staged placeholder followed by its holding release", {
+      description: "security holding package",
+      versions: { "0.0.0-stage": byNpm, "0.0.1-security": byNpm },
+      time: { "0.0.0-stage": "x", "0.0.1-security": "x" },
+    }],
   ])("treats %s as removed", async (_label, doc) => {
     const { settleDatadogWholePackages } = await load();
     const result = await settleDatadogWholePackages([claim("scg-held-one")], { fetchImpl: network({ "/scg-held-one": doc }) });
     expect(result.entries.map((e: { value: string }) => e.value)).toEqual(["scg-held-one"]);
+  });
+
+  // Regression of 2026-10-17 (repoise-win32-x64): npm's takedown
+  // left the holding description on `latest`, then the owner published a live
+  // release under `next`. That name is live again; without a sample nothing
+  // of it is evidenced, so nothing is imported and the name is reported.
+  it.each([
+    ["a live release under another dist-tag after npm's takedown", {
+      description: "security holding package",
+      "dist-tags": { latest: "0.0.1-security", next: "0.1.0-alpha.1" },
+      versions: { "0.0.0-stage": byNpm, "0.0.1-security": byNpm, "0.1.0-alpha.1": { _npmUser: { name: "scg-owner" } } },
+      time: { "0.0.0-stage": "x", "0.0.1-security": "x", "0.1.0-alpha.1": "x" },
+    }],
+    ["the holding description over an ordinary release", {
+      description: "security holding package",
+      versions: { "0.0.1": {} },
+      time: { "0.0.1": "x" },
+    }],
+    ["a -security version that npm did not publish", {
+      description: "security holding package",
+      versions: { "1.0.0-security": { _npmUser: { name: "scg-owner" } } },
+      time: { "1.0.0-security": "x" },
+    }],
+    ["a name a researcher reserved with its own -security release", {
+      description: "Reserved for security reasons. The package is empty; do not install.",
+      versions: { "0.0.1-security": { _npmUser: { name: "scg-researcher", email: "lab@example.invalid" } } },
+      time: { "0.0.1-security": "x" },
+    }],
+  ])("keeps %s live: no name block", async (_label, doc) => {
+    const { settleDatadogWholePackages } = await load();
+    const result = await settleDatadogWholePackages(
+      [{ ...claim("scg-republished"), _sampledVersions: [] }],
+      { fetchImpl: network({ "/scg-republished": doc }) },
+    );
+    expect(result.entries).toEqual([]);
+    expect(result.bare).toBe(0);
+    expect(result.liveWithoutSamples).toEqual(["scg-republished"]);
   });
 
   // The @postman-cse shape: another source pins the name by version, which is

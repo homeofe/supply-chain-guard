@@ -1,3 +1,50 @@
+## Importer: a live name after an npm takedown is not a removed package (2026-10-17) (claude-opus-5-5)
+
+PR 417 (2026-10-17 intel) carried a bare `repoise-win32-x64` from a DataDog
+whole-package claim. The DataDog npm manifest lists it as `null` (every
+version) with no sample under `samples/npm/`. npm replaced the package with its
+own placeholders on 2026-10-13 (`0.0.0-stage` and `0.0.1-security`, both
+published by `npm`), but the owner is still a maintainer and published
+`0.1.0-alpha.1` under `next` on 2026-10-15, next to the sibling packages
+`repoise` and `repoise-darwin-arm64` of the same project. `probeRegistry`
+read the holding description on `latest` as "removed", so the claim became a
+name block over a live release.
+
+`probeRegistry` now calls a package removed only when every installable version
+is an npm placeholder (`-security`, `-security.N` or `0.0.0-stage`,
+published by `npm` or an `@npmjs.com` staff account) and at least one is the
+holding release. A `-security` release published by anyone else is a name
+someone reserved, not a takedown. Tests in
+`feed-datadog-source.test.ts`: both takedown shapes stay removed; a live
+release under another dist-tag, the description over an ordinary release, and a
+`-security` version not published by npm stay live (reported, not imported).
+The old description-alone signal is removed with its test case.
+
+Checked against every DataDog bare npm name in both stores (3,419 on
+2026-10-17) with the fixed check: a first version that matched only
+`-security` at the end called 2,704 of them live, because npm also numbers
+the holding release `0.0.1-security.N`. npm staff also publish holding
+releases under their own accounts with an `@npmjs.com` address, which the check
+accepts. The final check calls 67 of the 3,419 names live:
+
+- 9 have an installable release besides npm's placeholders, or never had one:
+  `agentlocks-win32-x64`, `foremerge-win32-x64`, `raster-bin-win32-x64` and
+  (catalog) `coderabbit` carry npm's placeholders and a later release by the
+  owner; `@itsmee_aizat.id/baileys2`, `@kartykgithub/susp-new-2`,
+  `kartykgithub-ph-d`, `kartykgithub-susp-1` and `kartykgithub-susp-pkg-1` are
+  live packages of their publishers.
+- 58 carry a `0.0.1-security` release that npm did not publish: names reserved
+  by their owners or by researchers ("Reserved for Paysafe Group" by
+  `infosec-npm`, "Reserved for security reasons" by `flutteruki`, a researcher's
+  hold on `@tekionai/mcp-client`, "Reserved name placeholder" by
+  `monkeydluffy1961`, and others).
+
+None carries a campaign or family. They stay in the stores as they are: the
+importer fix changes only what later runs import, and removing them is a
+decision for the owner, recorded here with the list. A name block on a
+reserved name flags the owner of that name, the shape the 2026-10-09 pin-only
+decision was about.
+
 ## Publish npm pin 11.19.1 -> 11.21.1 (2026-10-17) (claude-opus-5-5)
 
 OpenSSF Scorecard (code-scanning alert 75, Vulnerabilities, score 0) listed

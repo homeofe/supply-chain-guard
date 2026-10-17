@@ -7,6 +7,19 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Fixed
+
+- The feed importer no longer turns a whole-package claim into a name block
+  when the package is live again after an npm takedown. It read the "security
+  holding package" description, which comes from `latest`, as proof that the
+  name was removed, so a release published later under another dist-tag was
+  blocked with the name (`repoise-win32-x64`: holding `latest`, live
+  `next` since 2026-10-15). A name now counts as removed only when every
+  installable version is an npm placeholder (`-security`, `-security.N` or
+  `0.0.0-stage`) published by npm or an npm staff account
+  (`@npmjs.com`). Without a sampled version such a claim is reported, not
+  imported.
+
 ### Security
 
 - The npm that publishes this package (`.github/publish-toolchain`) moves
