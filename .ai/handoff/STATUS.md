@@ -1,3 +1,22 @@
+## Publish npm pin 11.19.1 -> 11.21.1 (2026-10-17) (claude-opus-5-5)
+
+OpenSSF Scorecard (code-scanning alert 75, Vulnerabilities, score 0) listed
+twelve advisories. All twelve are the open Dependabot alerts against
+`.github/publish-toolchain/package-lock.json`, the npm that publishes the
+package: `brace-expansion` (3), `ip-address` (4), `undici` (3),
+`http-cache-semantics` (1), `postcss-selector-parser` (1). Nothing in the
+package's own dependencies.
+
+npm 11.21.1 and 12.2.1 (both 2026-10-15) bundle `undici` 6.29.0,
+`brace-expansion` 5.0.12, `ip-address` 10.7.2, `http-cache-semantics` 4.3.0
+and `postcss-selector-parser` 7.1.6, each outside every one of the twelve
+ranges. Read from the published `npm@11.21.1` tarball (one copy of each), with
+11.19.1 read the same way as the control. Per the owner's 2026-09-30 decision
+(wait for npm, then bump the pin and drop the exceptions in the same change),
+the pin moves to 11.21.1, staying on the npm 11 line, and
+`audit-exceptions.json` is empty. No upstream contribution was needed: npm
+shipped the fixes itself.
+
 ## Release v6.5.8 (2026-10-16) (claude-opus-5-5)
 
 Threat-intel release on the owner's instruction, cut from `main` at
