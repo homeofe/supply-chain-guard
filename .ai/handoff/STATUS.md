@@ -1,3 +1,39 @@
+## Daily threat intel (2026-10-17) (claude-opus-5-5)
+
+Scheduled run, worktree cut from `main` at `078c2dc`, later brought up to
+`main` with PR 418 and PR 419 merged in. Windowed import (14 days from
+2026-10-03, 6 GHSA pages, 580 OpenSSF records): 33 entries, all to the bundle,
+all from GHSA plus OpenSSF. The run first wrote 34; the 34th,
+`repoise-win32-x64`, is removed (below). No `--limit`, no page cap, no window slicing, no
+`catalogWindows` entry, nothing declined, nothing added to the pin-only or
+unresolvable lists. Every bare name was probed against the registry: nine
+are npm security holding packages published by npm itself.
+
+`repoise-win32-x64` came from a DataDog whole-package claim without a sample
+and was written as a bare name. It is removed: the package is live. npm
+replaced it with its own placeholders on 2026-10-13 (`0.0.0-stage` and
+`0.0.1-security`, both published by `npm`; an earlier version of this note
+said the owner published them, which the registry contradicts), but the owner
+is still a maintainer and published `0.1.0-alpha.1` under `next` on
+2026-10-15, next to `repoise` and `repoise-darwin-arm64` of the same project.
+The importer read the holding description on `latest` as "removed"; PR 419
+fixes that, and with it the DataDog line reports the claim as live without a
+sample instead of a bare name.
+
+OSV snapshot reconcile: 0 new (262,301 duplicates as the control).
+`--check` exit 0: 0 missing, 0 unmapped, 33 acknowledged in
+`threat-feed-unresolvable.json`, and 2 STALE there: MAL-2026-17872 and
+MAL-2026-17873 (the `@newspage/` records of 2026-10-14) now list versions
+and were imported as pins today; their two entries are removed from
+`threat-feed-unresolvable.json`, on the owner's instruction.
+
+DataDog (as first run, before PR 419): 4,245 whole-package claims probed, 1 bare name, 8,248 pins,
+304 DataDog-only pins of a still-published version held back (baseline
+369 on 2026-10-14), 454 without a sampled version, 1,334 manifest lines
+without a sample, 103 IDE extensions checked; the 6 still-published
+extensions are the 6 known since 2026-10-05, no new id. Vendor enrichment:
+no new non-package indicators for 2026-10-15 to 2026-10-17 (the October
+Tensorlake compromise is already covered).
 ## Importer: a live name after an npm takedown is not a removed package (2026-10-17) (claude-opus-5-5)
 
 PR 417 (2026-10-17 intel) carried a bare `repoise-win32-x64` from a DataDog

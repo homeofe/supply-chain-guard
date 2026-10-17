@@ -40,7 +40,7 @@ export type FeedIOCInput = Omit<FeedIOC, "confidence"> & {
  * Generation timestamp for the bundled IOC feed (v5.29, issue #208).
  * Pure function of feed updates; preserved across builds.
  */
-export const FEED_GENERATED_AT = "2026-10-16T00:00:00.000Z";
+export const FEED_GENERATED_AT = "2026-10-17T00:00:00.000Z";
 
 // ---------------------------------------------------------------------------
 // Default bundled feed (curated by supply-chain-guard)
@@ -8544,6 +8544,41 @@ const FEED_CHUNK_26: FeedIOC[] = [
   // served by Packagist, so only that exact version is pinned (owner decision
   // 2026-10-16). The campaign tag keeps it in the offline bundle.
   { type: "package", value: "composer:slimfit/formbase@1.3", severity: "critical", confidence: 0.85, campaign: "Packagist slimfit/formbase", source: "Xygeni malicious code digest 91 (single-source)", firstSeen: "2026-10-04" },
+
+  // Imported from GitHub Advisory Database (2026-10-03) - see docs/threat-feed-sources.md
+  { type: "package", value: "itsa-react-maskedinput@16.1.2", severity: "critical", confidence: 0.9, source: "GHSA-hhr5-rjw6-9hr5, MAL-2026-17911 (ghsa-malware)", firstSeen: "2026-10-16" },
+  { type: "package", value: "itsa-react-focuscontainer@16.0.10", severity: "critical", confidence: 0.9, source: "GHSA-8c34-p746-v5rq, MAL-2026-17910 (ghsa-malware)", firstSeen: "2026-10-16" },
+  { type: "package", value: "@beloved-lenora/opencode-shared-rpc", severity: "critical", confidence: 0.9, source: "GHSA-8c9g-fwgq-rqq5, MAL-2026-17906 (ghsa-malware)", firstSeen: "2026-10-16" },
+  { type: "package", value: "@beloved-lenora/opencode-shell-guard", severity: "critical", confidence: 0.9, source: "GHSA-pm76-w63j-7j29, MAL-2026-17907 (ghsa-malware)", firstSeen: "2026-10-16" },
+  { type: "package", value: "@beloved-lenora/opencode-btw", severity: "critical", confidence: 0.9, source: "GHSA-xv54-6gmc-3xph, MAL-2026-17903 (ghsa-malware)", firstSeen: "2026-10-16" },
+  { type: "package", value: "@beloved-lenora/opencode-stats", severity: "critical", confidence: 0.9, source: "GHSA-f4h2-68pg-ffhj, MAL-2026-17908 (ghsa-malware)", firstSeen: "2026-10-16" },
+  { type: "package", value: "@beloved-lenora/opencode-goal", severity: "critical", confidence: 0.9, source: "GHSA-c78h-wwhq-g6j8, MAL-2026-17904 (ghsa-malware)", firstSeen: "2026-10-16" },
+  { type: "package", value: "@beloved-lenora/opencode-todo", severity: "critical", confidence: 0.9, source: "GHSA-9rjq-6mhc-46c5, MAL-2026-17909 (ghsa-malware)", firstSeen: "2026-10-16" },
+  { type: "package", value: "@beloved-lenora/opencode-orchestrator", severity: "critical", confidence: 0.9, source: "GHSA-7wq2-8pc2-wm26, MAL-2026-17905 (ghsa-malware)", firstSeen: "2026-10-16" },
+  { type: "package", value: "@xatancchii/natabaileys", severity: "critical", confidence: 0.9, source: "GHSA-cgq9-cff6-pf33, MAL-2026-17901 (ghsa-malware)", firstSeen: "2026-10-16" },
+  { type: "package", value: "parxleys", severity: "critical", confidence: 0.9, source: "GHSA-rg3c-8x72-6pmc, MAL-2026-17902 (ghsa-malware)", firstSeen: "2026-10-16" },
+  { type: "package", value: "pypi:marocolor@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-m6jr-rmfr-29w4, MAL-2026-17900 (amazon-inspector+kam193)", firstSeen: "2026-10-16" },
+  { type: "package", value: "@flexmr/survey-client@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-w9wx-pxhr-p9g4, MAL-2026-17898 (amazon-inspector)", firstSeen: "2026-10-16" },
+  { type: "package", value: "@flexmr/survey-client@1.0.12", severity: "critical", confidence: 1.0, source: "GHSA-w9wx-pxhr-p9g4, MAL-2026-17898 (amazon-inspector)", firstSeen: "2026-10-16" },
+  { type: "package", value: "@flexmr/survey-client@3.0.12", severity: "critical", confidence: 1.0, source: "GHSA-w9wx-pxhr-p9g4, MAL-2026-17898 (amazon-inspector)", firstSeen: "2026-10-16" },
+  { type: "package", value: "@flexmr/survey-client@10.0.12", severity: "critical", confidence: 1.0, source: "GHSA-w9wx-pxhr-p9g4, MAL-2026-17898 (amazon-inspector)", firstSeen: "2026-10-16" },
+  { type: "package", value: "@flexmr/survey-client@2.0.12", severity: "critical", confidence: 1.0, source: "GHSA-w9wx-pxhr-p9g4, MAL-2026-17898 (amazon-inspector)", firstSeen: "2026-10-16" },
+  { type: "package", value: "@flexmr/survey-conversation@1.0.12", severity: "critical", confidence: 1.0, source: "GHSA-3h5x-5663-jx9x, MAL-2026-17899 (amazon-inspector)", firstSeen: "2026-10-16" },
+  { type: "package", value: "@flexmr/survey-conversation@10.0.12", severity: "critical", confidence: 1.0, source: "GHSA-3h5x-5663-jx9x, MAL-2026-17899 (amazon-inspector)", firstSeen: "2026-10-16" },
+  { type: "package", value: "@flexmr/survey-conversation@2.0.12", severity: "critical", confidence: 1.0, source: "GHSA-3h5x-5663-jx9x, MAL-2026-17899 (amazon-inspector)", firstSeen: "2026-10-16" },
+  { type: "package", value: "@flexmr/survey-conversation@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-3h5x-5663-jx9x, MAL-2026-17899 (amazon-inspector)", firstSeen: "2026-10-16" },
+  { type: "package", value: "@flexmr/survey-conversation@3.0.12", severity: "critical", confidence: 1.0, source: "GHSA-3h5x-5663-jx9x, MAL-2026-17899 (amazon-inspector)", firstSeen: "2026-10-16" },
+  { type: "package", value: "@flexmr/utils@1.0.12", severity: "critical", confidence: 1.0, source: "GHSA-f8pr-fqvq-vvxv, MAL-2026-17888 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-10-14" },
+  { type: "package", value: "@flexmr/utils@10.0.12", severity: "critical", confidence: 1.0, source: "GHSA-f8pr-fqvq-vvxv, MAL-2026-17888 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-10-14" },
+  { type: "package", value: "@flexmr/utils@2.0.12", severity: "critical", confidence: 1.0, source: "GHSA-f8pr-fqvq-vvxv, MAL-2026-17888 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-10-14" },
+  { type: "package", value: "@newspage/libx-amount@99.99.41", severity: "critical", confidence: 1.0, source: "GHSA-49j3-qrv4-xgwv, MAL-2026-17873 (amazon-inspector)", firstSeen: "2026-10-13" },
+  { type: "package", value: "@newspage/libx-amount@99.99.4", severity: "critical", confidence: 1.0, source: "GHSA-49j3-qrv4-xgwv, MAL-2026-17873 (amazon-inspector)", firstSeen: "2026-10-13" },
+  { type: "package", value: "@newspage/libx-amount@99.99.42", severity: "critical", confidence: 1.0, source: "GHSA-49j3-qrv4-xgwv, MAL-2026-17873 (amazon-inspector)", firstSeen: "2026-10-13" },
+  { type: "package", value: "@newspage/lib-ng-async-routes-ui@99.99.42", severity: "critical", confidence: 1.0, source: "GHSA-5m6v-q7rf-gh3x, MAL-2026-17872 (amazon-inspector)", firstSeen: "2026-10-13" },
+  { type: "package", value: "@newspage/lib-ng-async-routes-ui@99.99.4", severity: "critical", confidence: 1.0, source: "GHSA-5m6v-q7rf-gh3x, MAL-2026-17872 (amazon-inspector)", firstSeen: "2026-10-13" },
+  { type: "package", value: "@accenturecodefoundry/mfe-pot-shared-ui-scds-core@99.99.43", severity: "critical", confidence: 1.0, source: "GHSA-36v8-chg8-q674, MAL-2026-17867 (amazon-inspector)", firstSeen: "2026-10-13" },
+  { type: "package", value: "pypi:pyyi@2.4.2", severity: "critical", confidence: 1.0, source: "GHSA-4vr9-vg98-9xpf, MAL-2026-17866 (amazon-inspector)", firstSeen: "2026-10-14" },
+  { type: "package", value: "pypi:pyyi@2.4", severity: "critical", confidence: 1.0, source: "GHSA-4vr9-vg98-9xpf, MAL-2026-17866 (amazon-inspector)", firstSeen: "2026-10-14" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips

@@ -7,6 +7,17 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat intel for 2026-10-17: 33 package entries from the GitHub Advisory
+  Database and OpenSSF, all in the offline bundle.
+  Clusters: seven `@beloved-lenora/opencode-*` plugin packages, `parxleys`
+  and `@xatancchii/natabaileys` (all now npm security holding packages);
+  dependency-confusion pins in `@flexmr/` (13), `@newspage/` (5) and
+  `@accenturecodefoundry/` (1); `itsa-react-maskedinput@16.1.2` and
+  `itsa-react-focuscontainer@16.0.10`; PyPI `marocolor@1.0.0` and
+  `pyyi` 2.4 / 2.4.2.
+
 ### Fixed
 
 - The feed importer no longer turns a whole-package claim into a name block

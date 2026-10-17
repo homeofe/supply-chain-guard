@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1792260792",
-    "timestamp": "2026-10-17T18:13:12Z",
-    "commit": "b15c77a",
+    "session_id": "cli-1792261405",
+    "timestamp": "2026-10-17T18:23:25Z",
+    "commit": "7c2e7f4",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:523a1474d5471ef40997add3ca99ba278834dfb50e40beac22a052ea1c61e0bf",
-      "updated": "2026-10-17T18:13:11Z",
-      "lines": 14856,
-      "summary": "PR 417 (2026-10-17 intel) carried a bare `repoise-win32-x64` from a DataDog whole-package claim."
+      "checksum": "sha256:d414d5a0c771686c94377bb8b30e2858b1bf39ae81efec15a36ed1311357847b",
+      "updated": "2026-10-17T18:23:24Z",
+      "lines": 14892,
+      "summary": "Scheduled run, worktree cut from `main` at `078c2dc`, later brought up to `main` with PR 418 and PR 419 merged in."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:325056c979a76627623b7db84025912d6932a9b4229fcae8f7a75a092282e68e",
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "PR 417 (2026-10-17 intel) carried a bare `repoise-win32-x64` from a DataDog whole-package claim. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Scheduled run, worktree cut from `main` at `078c2dc`, later brought up to `main` with PR 418 and PR 419 merged in. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 907,
-    "manifest_plus_core": 221402,
-    "full_read": 235130
+    "manifest_only": 916,
+    "manifest_plus_core": 221972,
+    "full_read": 235700
   }
 }
