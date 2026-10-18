@@ -1,4 +1,24 @@
-## The nine live DataDog names, reviewed one by one (2026-10-17) (claude-opus-5-5)
+## Daily threat-intel import (2026-10-18) (claude-opus-5-5)
+
+Windowed import (GHSA + OpenSSF + DataDog, since 2026-10-04): 22 new entries,
+21 to the bundle, 1 to the catalog. PyPI `leakdeep` 2.5.0/2.5.2/2.6.0/2.6.4/2.6.6
+(GHSA-4pw5-gqh4-v2pj, MAL-2026-17921), `ukraine69` 1.2.0 to 1.2.8 without 1.2.4
+(GHSA-j83x-9pxh-rrgp, MAL-2026-17919), and eight `@0.1.0` TTS/ASR-themed names
+from kam193 (MAL-2026-17912 to MAL-2026-17918, MAL-2026-17920). DataDog-only:
+`coderabbit@0.0.0-dev-202603280606` to the catalog, as forecast in the
+2026-10-17 note; `coderabbit` 0.9.0 is not blocked.
+
+Unmapped gaps 0 (+1 acknowledged). Skipped 30 (29 pin-only without a version,
+1 unmappable range). DataDog: 314 DataDog-only pins of a still-published
+version held back (304 on 2026-10-17); the still-published IDE extension list
+is the six known ids, no new one.
+
+OSV snapshot reconcile: 0 proposed; `--check` exit 0, unmapped 0
+(+33 acknowledged), no stale acknowledgements. No vendor write-up of the
+window carried new atomic indicators (domains, IPs, hashes), so nothing was
+added by hand. No catalogWindows entry, no decline, pin-only or unresolvable
+change.
+
 
 The nine DataDog bare names with a live release, left over from the PR 419
 audit, were reviewed from registry metadata, the DataDog manifest and samples,

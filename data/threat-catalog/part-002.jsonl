@@ -64032,3 +64032,4 @@
 {"type":"package","value":"sql-limit-enforcer@10.0.2","severity":"critical","confidence":1,"source":"GHSA-vjjr-9qv2-mh33, MAL-2026-16151 (amazon-inspector)","firstSeen":"2026-09-14"}
 {"type":"package","value":"ultra-ws","severity":"critical","confidence":1,"source":"GHSA-rwhp-v7w5-c6cc, MAL-2026-16155 (amazon-inspector+ghsa-malware)","firstSeen":"2026-09-14"}
 {"type":"package","value":"get-power","severity":"critical","confidence":1,"source":"GHSA-3g9w-hfq8-vr7p, MAL-2026-16156 (amazon-inspector+ghsa-malware)","firstSeen":"2026-09-14"}
+{"type":"package","value":"coderabbit@0.0.0-dev-202603280606","severity":"critical","confidence":0.9,"source":"datadog-malicious-packages","firstSeen":"2026-03-28"}
