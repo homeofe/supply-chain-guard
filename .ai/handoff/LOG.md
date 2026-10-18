@@ -11,6 +11,14 @@
 
 ---
 
+## [2026-10-18] v6.5.9
+
+Threat intel for 2026-10-18: 22 package entries from the GitHub Advisory Database, OpenSSF and the DataDog dataset (21 in the offline bundle, 1 in the catalog). PyPI: leakdeep (5 versions),...
+
+Full notes: CHANGELOG.md, section [6.5.9].
+
+---
+
 ## [2026-10-16] v6.5.8
 
 Composer slimfit/formbase 1.3 pinned in the offline bundle. The source is a single vendor report (Xygeni malicious code digest 91, confirmed 2026-10-04) with no OSV record, so confidence is 0.85...
@@ -80,11 +88,3 @@ Full notes: CHANGELOG.md, section [6.5.1].
 IDE extensions from the DataDog dataset: 116 extension versions that both the VS Code Marketplace and Open VSX have since removed, pinned under both prefixes (232 entries), among them the Amazon Q...
 
 Full notes: CHANGELOG.md, section [6.5.0].
-
----
-
-## [2026-10-04] v6.4.3
-
-Threat intel (2026-10-04): 15 package IOCs from the GitHub Advisory Database and OpenSSF, all 15 in the offline bundle and none in the catalog. All are PyPI versions published on 2026-10-03:...
-
-Full notes: CHANGELOG.md, section [6.4.3].

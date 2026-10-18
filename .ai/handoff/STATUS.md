@@ -1,3 +1,20 @@
+## Release v6.5.9 (2026-10-18) (claude-opus-5-5)
+
+Threat-intel release on the owner's instruction, cut from `main` at
+`8d6271e`. Ships PR 417 (2026-10-17 intel), PR 419 (importer holding-package
+fix), PR 420 and PR 421 (66 DataDog name blocks removed), PR 418 (publish
+toolchain npm 11.21.1) and PR 422 (2026-10-18 intel).
+
+Release commit: the 17 version sites (39 occurrences including
+`package.json`, listed with context first: `threat-intel.ts` held only
+`bundledVersion` plus one historical comment left unchanged, no README CIDR
+collision) and the lockfile's two fields via `npm install --package-lock-only`.
+`release:prepare` advanced the cutoff from 2026-09-16 to 2026-09-18. The
+migration moved 61 plain entries, all `firstSeen` 2026-09-16, none with
+campaign or family and none named in tests, README or docs, into the catalog
+(7,052 bundled, 264,096 in the catalog). Node schedule re-read against
+`nodejs/Release`: unchanged, milestone 6.5.10.
+
 ## Daily threat-intel import (2026-10-18) (claude-opus-5-5)
 
 Windowed import (GHSA + OpenSSF + DataDog, since 2026-10-04): 22 new entries,

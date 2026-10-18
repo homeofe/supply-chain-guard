@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [6.5.9] - 2026-10-18
+
 ### Added
 
 - Threat intel for 2026-10-18: 22 package entries from the GitHub Advisory
@@ -25,6 +27,16 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   `@accenturecodefoundry/` (1); `itsa-react-maskedinput@16.1.2` and
   `itsa-react-focuscontainer@16.0.10`; PyPI `marocolor@1.0.0` and
   `pyyi` 2.4 / 2.4.2.
+
+### Changed
+
+- The bundle cutoff advances from 2026-09-16 to 2026-09-18, and 61 plain
+  package entries dated 2026-09-16 move from the offline bundle to the
+  catalog. None carries a campaign or family, and no test or document names
+  any of them.
+- Node support policy: the `nodejs/Release` schedule, re-read on 2026-10-18,
+  is unchanged (Node 24 Active LTS until 2026-10-20, Node 26 from 2026-10-28),
+  so `activeLtsMajor` stays 24 and the review milestone moves to 6.5.10.
 
 ### Removed
 
@@ -7668,7 +7680,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.5.8...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.5.9...HEAD
+[6.5.9]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.9
 [6.5.8]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.8
 [6.5.7]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.7
 [6.5.6]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.6
