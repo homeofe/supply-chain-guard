@@ -9,6 +9,14 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Added
 
+- Threat intel for 2026-10-18: 22 package entries from the GitHub Advisory
+  Database, OpenSSF and the DataDog dataset (21 in the offline bundle, 1 in
+  the catalog). PyPI: `leakdeep` (5 versions), `ukraine69` (8 versions) and
+  eight single-release TTS/ASR-themed names (`voltswannts`, `tonemaptts`,
+  `quasitonnts`, `pyrechoasr`, `novalithtts`, `glassbeakasr`, `driftwavets`,
+  `emberlytts`). npm: `coderabbit@0.0.0-dev-202603280606`, the unpublished dev
+  version DataDog holds a sample of (catalog); `coderabbit` 0.9.0 stays
+  unblocked.
 - Threat intel for 2026-10-17: 33 package entries from the GitHub Advisory
   Database and OpenSSF, all in the offline bundle.
   Clusters: seven `@beloved-lenora/opencode-*` plugin packages, `parxleys`

@@ -40,7 +40,7 @@ export type FeedIOCInput = Omit<FeedIOC, "confidence"> & {
  * Generation timestamp for the bundled IOC feed (v5.29, issue #208).
  * Pure function of feed updates; preserved across builds.
  */
-export const FEED_GENERATED_AT = "2026-10-17T00:00:00.000Z";
+export const FEED_GENERATED_AT = "2026-10-18T00:00:00.000Z";
 
 // ---------------------------------------------------------------------------
 // Default bundled feed (curated by supply-chain-guard)
@@ -8515,6 +8515,29 @@ const FEED_CHUNK_26: FeedIOC[] = [
   { type: "package", value: "@accenturecodefoundry/mfe-pot-shared-ui-scds-core@99.99.43", severity: "critical", confidence: 1.0, source: "GHSA-36v8-chg8-q674, MAL-2026-17867 (amazon-inspector)", firstSeen: "2026-10-13" },
   { type: "package", value: "pypi:pyyi@2.4.2", severity: "critical", confidence: 1.0, source: "GHSA-4vr9-vg98-9xpf, MAL-2026-17866 (amazon-inspector)", firstSeen: "2026-10-14" },
   { type: "package", value: "pypi:pyyi@2.4", severity: "critical", confidence: 1.0, source: "GHSA-4vr9-vg98-9xpf, MAL-2026-17866 (amazon-inspector)", firstSeen: "2026-10-14" },
+
+  // Imported from GitHub Advisory Database (2026-10-04) - see docs/threat-feed-sources.md
+  { type: "package", value: "pypi:leakdeep@2.6.4", severity: "critical", confidence: 1.0, source: "GHSA-4pw5-gqh4-v2pj, MAL-2026-17921 (amazon-inspector)", firstSeen: "2026-10-18" },
+  { type: "package", value: "pypi:leakdeep@2.5.0", severity: "critical", confidence: 1.0, source: "GHSA-4pw5-gqh4-v2pj, MAL-2026-17921 (amazon-inspector)", firstSeen: "2026-10-18" },
+  { type: "package", value: "pypi:leakdeep@2.6.6", severity: "critical", confidence: 1.0, source: "GHSA-4pw5-gqh4-v2pj, MAL-2026-17921 (amazon-inspector)", firstSeen: "2026-10-18" },
+  { type: "package", value: "pypi:leakdeep@2.5.2", severity: "critical", confidence: 1.0, source: "GHSA-4pw5-gqh4-v2pj, MAL-2026-17921 (amazon-inspector)", firstSeen: "2026-10-18" },
+  { type: "package", value: "pypi:leakdeep@2.6.0", severity: "critical", confidence: 1.0, source: "GHSA-4pw5-gqh4-v2pj, MAL-2026-17921 (amazon-inspector)", firstSeen: "2026-10-18" },
+  { type: "package", value: "pypi:voltswannts@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-r8cm-478x-h626, MAL-2026-17920 (kam193)", firstSeen: "2026-10-17" },
+  { type: "package", value: "pypi:ukraine69@1.2.0", severity: "critical", confidence: 1.0, source: "GHSA-j83x-9pxh-rrgp, MAL-2026-17919 (amazon-inspector+kam193)", firstSeen: "2026-10-17" },
+  { type: "package", value: "pypi:ukraine69@1.2.1", severity: "critical", confidence: 1.0, source: "GHSA-j83x-9pxh-rrgp, MAL-2026-17919 (amazon-inspector+kam193)", firstSeen: "2026-10-17" },
+  { type: "package", value: "pypi:ukraine69@1.2.2", severity: "critical", confidence: 1.0, source: "GHSA-j83x-9pxh-rrgp, MAL-2026-17919 (amazon-inspector+kam193)", firstSeen: "2026-10-17" },
+  { type: "package", value: "pypi:ukraine69@1.2.3", severity: "critical", confidence: 1.0, source: "GHSA-j83x-9pxh-rrgp, MAL-2026-17919 (amazon-inspector+kam193)", firstSeen: "2026-10-17" },
+  { type: "package", value: "pypi:ukraine69@1.2.5", severity: "critical", confidence: 1.0, source: "GHSA-j83x-9pxh-rrgp, MAL-2026-17919 (amazon-inspector+kam193)", firstSeen: "2026-10-17" },
+  { type: "package", value: "pypi:ukraine69@1.2.6", severity: "critical", confidence: 1.0, source: "GHSA-j83x-9pxh-rrgp, MAL-2026-17919 (amazon-inspector+kam193)", firstSeen: "2026-10-17" },
+  { type: "package", value: "pypi:ukraine69@1.2.7", severity: "critical", confidence: 1.0, source: "GHSA-j83x-9pxh-rrgp, MAL-2026-17919 (amazon-inspector+kam193)", firstSeen: "2026-10-17" },
+  { type: "package", value: "pypi:ukraine69@1.2.8", severity: "critical", confidence: 1.0, source: "GHSA-j83x-9pxh-rrgp, MAL-2026-17919 (amazon-inspector+kam193)", firstSeen: "2026-10-17" },
+  { type: "package", value: "pypi:tonemaptts@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-22rf-pvvq-mghv, MAL-2026-17918 (kam193)", firstSeen: "2026-10-17" },
+  { type: "package", value: "pypi:quasitonnts@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-ghmx-wq8v-9683, MAL-2026-17917 (kam193)", firstSeen: "2026-10-17" },
+  { type: "package", value: "pypi:pyrechoasr@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-xvjf-fj8r-fjcf, MAL-2026-17916 (kam193)", firstSeen: "2026-10-17" },
+  { type: "package", value: "pypi:novalithtts@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-xf3f-g2fj-wr92, MAL-2026-17915 (kam193)", firstSeen: "2026-10-17" },
+  { type: "package", value: "pypi:glassbeakasr@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-8g3x-4h23-v3xp, MAL-2026-17914 (kam193)", firstSeen: "2026-10-17" },
+  { type: "package", value: "pypi:driftwavets@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-fm3q-3w2v-hcmf, MAL-2026-17912 (kam193)", firstSeen: "2026-10-17" },
+  { type: "package", value: "pypi:emberlytts@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-h24x-x3hv-v34p, MAL-2026-17913 (kam193)", firstSeen: "2026-10-17" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips

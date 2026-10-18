@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1792265361",
-    "timestamp": "2026-10-17T19:29:21Z",
-    "commit": "d154fbf",
+    "session_id": "cli-1792307757",
+    "timestamp": "2026-10-18T07:15:57Z",
+    "commit": "86414e2",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:7eaa2d861578534634468aaf3e32c64719059ff16ee0f0af4bb94781504206b7",
-      "updated": "2026-10-17T19:29:18Z",
-      "lines": 14964,
-      "summary": "The nine DataDog bare names with a live release, left over from the PR 419 audit, were reviewed from registry metadata, the DataDog manifest and..."
+      "checksum": "sha256:a9b89657b3c6518099256b959ed89869e2d47ccb553f45e725a9f79fdedb8240",
+      "updated": "2026-10-18T07:15:39Z",
+      "lines": 14984,
+      "summary": "Windowed import (GHSA + OpenSSF + DataDog, since 2026-10-04): 22 new entries, 21 to the bundle, 1 to the catalog."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:325056c979a76627623b7db84025912d6932a9b4229fcae8f7a75a092282e68e",
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "The nine DataDog bare names with a live release, left over from the PR 419 audit, were reviewed from registry metadata, the DataDog manifest and... Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Windowed import (GHSA + OpenSSF + DataDog, since 2026-10-04): 22 new entries, 21 to the bundle, 1 to the catalog. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 932,
-    "manifest_plus_core": 223272,
-    "full_read": 237000
+    "manifest_only": 915,
+    "manifest_plus_core": 223520,
+    "full_read": 237248
   }
 }
