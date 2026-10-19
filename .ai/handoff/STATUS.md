@@ -1,3 +1,44 @@
+## Daily threat-intel import (2026-10-19) (claude-opus-5-5)
+
+Windowed import (GHSA + OpenSSF + DataDog, since 2026-10-05): 13 new entries,
+13 to the bundle, 0 to the catalog. PyPI `fabtoolkit` 0.1.0/0.1.1/0.1.2
+(GHSA-2j5q-cfcm-6vgm, MAL-2026-17927), `fabdeploycheck@0.1.1`
+(GHSA-8g2w-p5px-2pjr), `leakdeep` 2.4.1/2.4.5/2.6.2/3.0.0 (MAL-2026-17921);
+npm `@fluxionii/baileys` bare (MAL-2026-17925; probed: every remaining version
+is an npm placeholder published by `npm`, maintainer npm-support, 1.0.0
+removed), `@pkgship/frpc-linux-arm64@0.71.0`, `gemini-computer-use@0.4.5`
+(MAL-2026-16355) and two 99.9.1 dependency-confusion pins
+(`@fmr-ap149494/`, `@fcsmc/`), which arrived as exact pins without a
+pin-only change.
+
+Unmapped gaps 0 (+1 acknowledged). Skipped 30 (29 pin-only without a version,
+1 unmappable range). DataDog: 314 DataDog-only pins of a still-published
+version held back (unchanged from 2026-10-18); still-published IDE extensions
+are the six known ids.
+
+OSV snapshot reconcile: 0 proposed; `--check` exit 0, unmapped 0
+(+33 acknowledged), no stale acknowledgements.
+
+Weekly full GitHub malware history (Monday, `--since 2017-01-01`, GitHub
+only, run against unmodified main): 124,716 advisories, 1,248 pages,
+truncated false, unmapped 0, duplicates 143,057, added 16. Thirteen were
+today's windowed entries; three were missed by the windowed runs:
+`kartyk-github-token-pkg` 1.0.3/1.0.4 (GHSA-4rmp-vchm-9gvg) and
+`kartyk-github-oidc-test-pkg@1.0.4` (GHSA-4vxh-7998-9h4g), both published
+2026-09-16. Applied through the importer with a GitHub-only slice
+`--since 2026-09-16 --until 2026-09-17`, which proposed exactly those three,
+all to the catalog (`firstSeen` before the 2026-09-18 cutoff).
+
+Vendor enrichment: SafeDep's MALFEX write-up of 2026-10-13 on `imgdecode`
+(Windows native addon loader). Added the bare name `imgdecode` (live on npm,
+all four versions 1.0.0 to 1.0.3 by the campaign account `malfexteste8`, name
+created 2026-09-30, no other history) and four SHA-256 hashes (three
+`imgdecode.node` builds, stage 3 Windows installer), all with the MALFEX family and
+campaign, confidence 0.85 single-source. The C2 IP and the cavecrew payload
+paths it names were already bundled. Hashes were checked against the raw page,
+not only the fetch summary. No catalogWindows entry, no decline, pin-only or
+unresolvable change.
+
 ## Release v6.5.9 (2026-10-18) (claude-opus-5-5)
 
 Threat-intel release on the owner's instruction, cut from `main` at

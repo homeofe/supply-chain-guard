@@ -40,7 +40,7 @@ export type FeedIOCInput = Omit<FeedIOC, "confidence"> & {
  * Generation timestamp for the bundled IOC feed (v5.29, issue #208).
  * Pure function of feed updates; preserved across builds.
  */
-export const FEED_GENERATED_AT = "2026-10-18T00:00:00.000Z";
+export const FEED_GENERATED_AT = "2026-10-19T00:00:00.000Z";
 
 // ---------------------------------------------------------------------------
 // Default bundled feed (curated by supply-chain-guard)
@@ -8476,6 +8476,32 @@ const FEED_CHUNK_26: FeedIOC[] = [
   { type: "package", value: "pypi:glassbeakasr@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-8g3x-4h23-v3xp, MAL-2026-17914 (kam193)", firstSeen: "2026-10-17" },
   { type: "package", value: "pypi:driftwavets@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-fm3q-3w2v-hcmf, MAL-2026-17912 (kam193)", firstSeen: "2026-10-17" },
   { type: "package", value: "pypi:emberlytts@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-h24x-x3hv-v34p, MAL-2026-17913 (kam193)", firstSeen: "2026-10-17" },
+
+  // Imported from GitHub Advisory Database (2026-10-05) - see docs/threat-feed-sources.md
+  { type: "package", value: "pypi:fabtoolkit@0.1.2", severity: "critical", confidence: 1.0, source: "GHSA-2j5q-cfcm-6vgm, MAL-2026-17927 (amazon-inspector)", firstSeen: "2026-10-19" },
+  { type: "package", value: "pypi:fabtoolkit@0.1.1", severity: "critical", confidence: 1.0, source: "GHSA-2j5q-cfcm-6vgm, MAL-2026-17927 (amazon-inspector)", firstSeen: "2026-10-19" },
+  { type: "package", value: "pypi:fabtoolkit@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-2j5q-cfcm-6vgm, MAL-2026-17927 (amazon-inspector)", firstSeen: "2026-10-19" },
+  { type: "package", value: "pypi:fabdeploycheck@0.1.1", severity: "critical", confidence: 1.0, source: "GHSA-8g2w-p5px-2pjr, MAL-2026-17926 (amazon-inspector)", firstSeen: "2026-10-19" },
+  { type: "package", value: "@fmr-ap149494/apex-base-component@99.9.1", severity: "critical", confidence: 1.0, source: "GHSA-8rp9-qj7v-w22c, MAL-2026-17929 (ossf-package-analysis)", firstSeen: "2026-10-19" },
+  { type: "package", value: "@fcsmc/commercial-analytics@99.9.1", severity: "critical", confidence: 1.0, source: "GHSA-9w66-f3mv-43f7, MAL-2026-17928 (ossf-package-analysis)", firstSeen: "2026-10-19" },
+  { type: "package", value: "@fluxionii/baileys", severity: "critical", confidence: 0.9, source: "GHSA-98x4-5hvc-62qx, MAL-2026-17925 (ghsa-malware)", firstSeen: "2026-10-19" },
+  { type: "package", value: "@pkgship/frpc-linux-arm64@0.71.0", severity: "critical", confidence: 0.9, source: "GHSA-753f-gx8g-q88w, MAL-2026-17922 (ghsa-malware)", firstSeen: "2026-10-18" },
+  { type: "package", value: "pypi:leakdeep@2.4.1", severity: "critical", confidence: 1.0, source: "GHSA-4pw5-gqh4-v2pj, MAL-2026-17921 (amazon-inspector+kam193)", firstSeen: "2026-10-18" },
+  { type: "package", value: "pypi:leakdeep@2.4.5", severity: "critical", confidence: 1.0, source: "GHSA-4pw5-gqh4-v2pj, MAL-2026-17921 (amazon-inspector+kam193)", firstSeen: "2026-10-18" },
+  { type: "package", value: "pypi:leakdeep@2.6.2", severity: "critical", confidence: 1.0, source: "GHSA-4pw5-gqh4-v2pj, MAL-2026-17921 (amazon-inspector+kam193)", firstSeen: "2026-10-18" },
+  { type: "package", value: "pypi:leakdeep@3.0.0", severity: "critical", confidence: 1.0, source: "GHSA-4pw5-gqh4-v2pj, MAL-2026-17921 (amazon-inspector+kam193)", firstSeen: "2026-10-18" },
+  { type: "package", value: "gemini-computer-use@0.4.5", severity: "critical", confidence: 1.0, source: "MAL-2026-16355 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-09-21" },
+
+  // MALFEX npm campaign, imgdecode wave (SafeDep, 2026-10-13). imgdecode hides
+  // the loader in a compiled Windows addon (imgdecode.node). All four versions
+  // were published by the campaign account malfexteste8 and the name has no
+  // other history (created 2026-09-30), so the name is blocked whole. The C2 IP
+  // and the cavecrew payload paths are already bundled above. Single-source, 0.85.
+  { type: "package", value: "imgdecode", severity: "critical", confidence: 0.85, family: "MALFEX", campaign: "MALFEX npm campaign", source: "SafeDep MALFEX imgdecode write-up (single-source)", firstSeen: "2026-10-13" },
+  { type: "hash", value: "d7b2f6d7da81301e7f76d6812d78f4a453439141d419831522ebf7cf5bf1c714", severity: "critical", confidence: 0.85, family: "MALFEX", campaign: "MALFEX npm campaign", source: "SafeDep MALFEX imgdecode write-up (single-source)", firstSeen: "2026-10-13" },
+  { type: "hash", value: "54d995c5be97408e96db72ecc27af1dd65716f96371df085c4ce681dca623d85", severity: "critical", confidence: 0.85, family: "MALFEX", campaign: "MALFEX npm campaign", source: "SafeDep MALFEX imgdecode write-up (single-source)", firstSeen: "2026-10-13" },
+  { type: "hash", value: "a53946269ffcd25c7fe1fad358c189f144dcca4d736f2b5a8ebc517a8d929dd1", severity: "critical", confidence: 0.85, family: "MALFEX", campaign: "MALFEX npm campaign", source: "SafeDep MALFEX imgdecode write-up (single-source)", firstSeen: "2026-10-13" },
+  { type: "hash", value: "8d50cb1ba0c2a16a673a2d08a8fb5c45bd8755c95c30ded98a84c74bfe52c9e6", severity: "critical", confidence: 0.85, family: "MALFEX", campaign: "MALFEX npm campaign", source: "SafeDep MALFEX imgdecode write-up (single-source)", firstSeen: "2026-10-13" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips

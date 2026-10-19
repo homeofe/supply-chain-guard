@@ -7,6 +7,23 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat intel for 2026-10-19: 13 package entries from the GitHub Advisory
+  Database and OpenSSF, all in the offline bundle. PyPI: `fabtoolkit`
+  (3 versions), `fabdeploycheck@0.1.1` and four more `leakdeep` versions.
+  npm: `@fluxionii/baileys` (now an npm security holding package),
+  `@pkgship/frpc-linux-arm64@0.71.0`, `gemini-computer-use@0.4.5` and
+  dependency-confusion pins `@fmr-ap149494/apex-base-component@99.9.1` and
+  `@fcsmc/commercial-analytics@99.9.1`.
+- MALFEX npm campaign: the `imgdecode` package, which hides the loader in a
+  compiled Windows addon, plus four file hashes (three `imgdecode.node`
+  builds and the stage 3 Windows installer). Single-source, kept in the offline
+  bundle.
+- Weekly reconcile of the complete GitHub malware history: 3 exact pins the
+  windowed runs had missed, all in the catalog (`kartyk-github-token-pkg`
+  1.0.3 and 1.0.4, `kartyk-github-oidc-test-pkg@1.0.4`).
+
 ## [6.5.9] - 2026-10-18
 
 ### Added
