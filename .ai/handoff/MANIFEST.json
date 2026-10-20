@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1792309669",
-    "timestamp": "2026-10-18T07:47:49Z",
-    "commit": "8d6271e",
+    "session_id": "cli-1792474042",
+    "timestamp": "2026-10-20T05:27:22Z",
+    "commit": "26ee014",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:d3e5a0275c4f045de2c8859d904112994c9766c85bd45179580aea519bf1fc2d",
-      "updated": "2026-10-18T07:47:36Z",
-      "lines": 15001,
-      "summary": "Threat-intel release on the owner's instruction, cut from `main` at `8d6271e`."
+      "checksum": "sha256:c3f45523245608fb57aa2b5f7acc43402a020708dbf63b6ec5a89dd041b697b5",
+      "updated": "2026-10-20T05:27:08Z",
+      "lines": 15032,
+      "summary": "Windowed import (GHSA + OpenSSF + DataDog, since 2026-10-06): 156 new entries, 149 to the bundle, 7 to the catalog (`base58x64`..."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:cedf2e47e0f1feb9911b2f036601891fb220d53a54d6110f1ec9a7bec32151ea",
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "Threat-intel release on the owner's instruction, cut from `main` at `8d6271e`. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Windowed import (GHSA + OpenSSF + DataDog, since 2026-10-06): 156 new entries, 149 to the bundle, 7 to the catalog (`base58x64`... Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 898,
-    "manifest_plus_core": 223742,
-    "full_read": 237470
+    "manifest_only": 924,
+    "manifest_plus_core": 224212,
+    "full_read": 237940
   }
 }

@@ -1,3 +1,34 @@
+## Daily threat-intel import (2026-10-20) (claude-opus-5-5)
+
+Windowed import (GHSA + OpenSSF + DataDog, since 2026-10-06): 156 new entries,
+149 to the bundle, 7 to the catalog (`base58x64`, `sc-geeksquad-core@99.9.1`,
+`sc-font-icons@99.9.1`, `ing-feat-itsme-oidc-authentication@99.9.1` and
+`html-to-gutenberg` 4.2.24 to 4.2.26, all `firstSeen` before the cutoff).
+All 132 bare names were probed against the npm registry: every one is an npm
+takedown (only `0.0.0-stage` / `0.0.1-security` versions published by `npm`,
+maintainer `npm` or `npm-support`); probe controlled with `lodash` and
+`coderabbit` (both reported live) and a 404 name. Dependency-confusion squats
+arrived as exact pins; no pin-only change needed.
+
+Overlap: PR 424 (2026-10-19 intel) was still open when this branch was cut
+from `main`, so its 13 windowed package entries are imported here again.
+Its MALFEX hand-added indicators and its three catalog entries from the
+weekly GitHub history run are NOT in this branch. Whichever merges second
+needs a rebase onto the other.
+
+Unmapped gaps 0 (+1 acknowledged). Skipped 30 (29 pin-only without a
+version, 1 unmappable range). Declined 0, no `--limit`, no page cap.
+DataDog: 4310 whole-package claims probed, 0 bare names, 8253 pins, 314
+DataDog-only pins of a still-published version held back (unchanged); the
+still-published IDE extension list is the six known ids.
+
+OSV snapshot reconcile: 0 proposed; `--check` exit 0, unmapped 0
+(+33 acknowledged), no stale acknowledgements. Not a Monday, so no full
+GitHub history run. Vendor write-ups of the window (tensorlake, SubQuery,
+Xygeni digest 92) carried no atomic indicators that are not already
+bundled, so nothing was added by hand. No catalogWindows entry, no decline,
+pin-only or unresolvable change.
+
 ## Release v6.5.9 (2026-10-18) (claude-opus-5-5)
 
 Threat-intel release on the owner's instruction, cut from `main` at

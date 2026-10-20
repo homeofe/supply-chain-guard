@@ -7,6 +7,28 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat intel for 2026-10-20: 156 package entries from the GitHub Advisory
+  Database, OpenSSF and the DataDog dataset (149 in the offline bundle, 7 in
+  the catalog). Bare names, each an npm security holding package now: eight
+  AI-tool installer lures (`chatgpt-pro-setup-tool`, `chatgpt-pro-activator`,
+  `chatgpt-desktop-setup`, `claude-desktop-setup`, `codex-setup`,
+  `api-anthropic`, `@decoopus/chatgpt-setup`, `@decoopus/claude-setup`), seven
+  `@an1mshnpmb9c84920/` packages, Baileys forks (`aldi02-baileys`,
+  `aemath-baileys`, `zero-baileys`, `zeroz-baileys`, `@fluxionii/baileys`),
+  `bs58x64`, `bs58x64.js`, `base58x64`, `array-inline`,
+  `array-inline-transform`, `items-validator`, `item-validator`, 33 random
+  six-character names, 65 album-download spam names and seven more
+  single-release names. Dependency-confusion pins at 99.9.1 (`sc-geeksquad-core`,
+  `sc-font-icons`, `sc-announcer`, `sc-wizard`, `fanarena-common`,
+  `ccl-global-shopping`, `ing-feat-itsme-oidc-authentication`,
+  `@fmr-ap149494/apex-base-component`, `@fcsmc/commercial-analytics`) and PyPI
+  `asurion@99.0.0` and `vinted-mocked-apis@99.0.0`. Version pins:
+  `html-to-gutenberg` 4.2.24 to 4.2.26, `gemini-computer-use@0.4.5`,
+  `@pkgship/frpc-linux-arm64@0.71.0`, PyPI `fabtoolkit` 0.1.0 to 0.1.2,
+  `fabdeploycheck@0.1.1` and `leakdeep` 2.4.1/2.4.5/2.6.2/3.0.0.
+
 ## [6.5.9] - 2026-10-18
 
 ### Added
