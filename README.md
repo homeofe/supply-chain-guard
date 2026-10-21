@@ -995,7 +995,7 @@ The commands that reach the network do so deliberately for their specific functi
 - `supply-chain-guard confusion <dir>`: inspects project dependency manifests and **transmits every declared dependency and devDependency package name to the public npm and PyPI registries** to determine whether private or internal packages are registered publicly.
 - `supply-chain-guard repo <url>` and `supply-chain-guard org <name>`: inspect remote GitHub repositories and organizations by invoking the `gh` CLI as a child process, using the caller's ambient GitHub credentials.
 - `supply-chain-guard monitor <wallet>`: polls public Solana RPC nodes for C2 wallet transaction activity.
-- `supply-chain-guard feed refresh`: downloads updated threat intelligence from the upstream repository into the local cache.
+- `supply-chain-guard feed refresh`: downloads updated threat intelligence from the project's daily channel on GitHub Pages (falling back to the latest GitHub Release) into the local cache.
 - `supply-chain-guard scan <github-url>`: clones a remote repository via Git for analysis.
 - `supply-chain-guard scan . --check-registry`: opt-in flag that queries the public npm registry for the package's latest published version to detect version drift, and **transmits each Python dependency name** from `requirements.txt` / `pyproject.toml` to the public PyPI registry for dependency-confusion signals. Up to v6.2.5 the PyPI lookups ran on every scan of a Python project, contrary to the offline guarantee above; they now need this flag.
 - `supply-chain-guard scan . --external-intel`: opt-in flag for the two-tier score. It **sends each dependency's name, ecosystem and version to the OSV API**, the CVE ids found to FIRST's EPSS API, and the project's GitHub `owner/repo` to the OpenSSF Scorecard API, and downloads the public CISA KEV catalog.
@@ -1353,9 +1353,9 @@ Client config snippets for Claude Code, Claude Desktop, and Cursor: [docs/mcp.md
 
 ## Live Threat Feed
 
-The bundled IOC feed ships with every release, and the same data is published as
-[feed.json](feed.json) on every push to main - so protection lands the day a campaign
-is ingested, not at the next release:
+The bundled IOC feed ships with every release. A signed feed is also published
+every day, without a release, on the project's GitHub Pages channel, so new
+indicators reach `feed refresh` the day the advisory sources publish them:
 
 ```bash
 supply-chain-guard feed stats     # entry counts by type and severity, plus rule-set age
@@ -1365,9 +1365,18 @@ supply-chain-guard feed osv       # export malicious-package IOCs as OSV records
 
 A refreshed feed is merged into every scan for the next 24 hours automatically.
 
-**Feed integrity:** the default source is the `feed.json` attached to the latest
-GitHub Release, with `feed.json.sig` beside it, an Ed25519 signature over the
-exact bytes of the feed that the release job makes. `feed refresh` verifies it
+**Daily channel and fallback:** the default source is the daily channel,
+`https://homeofe.github.io/supply-chain-guard/feed/feed.json`. When it cannot be
+installed for any reason, `feed refresh` falls back to the `feed.json` attached
+to the latest GitHub Release, with the same checks, and says which source it
+installed. The daily channel adds to the reviewed feed only exact-version pins
+whose version an advisory source names, and file hashes; everything else
+(package names, version ranges, domains, removals) arrives with a release
+([design](docs/daily-feed-channel-design.md)). When the cache is already newer
+than both sources, `feed refresh` keeps it and reports it current.
+
+**Feed integrity:** both sources publish `feed.json.sig` beside the feed, an
+Ed25519 signature over its exact bytes, made by the same key. `feed refresh` verifies it
 against the public key compiled into the installed package (fingerprint in
 [SECURITY.md](SECURITY.md#feed-integrity)) before parsing anything, and refuses
 a missing, malformed or wrong signature with a non-zero exit, leaving the
@@ -1379,9 +1388,8 @@ A self-hosted mirror passed with `--url` must serve `feed.json.sig` next to the
 feed, signed by the same key. A mirror that cannot be signed can be accepted
 explicitly with `feed refresh --url <url> --allow-unsigned-feed`; that prints a
 warning, records in the cache that the feed was not verified, and trusts the
-feed as downloaded. There is no environment variable for it. The feed is
-published with each release, so a refresh picks up the indicators of the latest
-release rather than of the latest commit.
+feed as downloaded. There is no environment variable for it. A mirror never falls back to the
+built-in sources, and the catalog is read from the mirror too.
 
 **Rule-set age:** `feed stats` reports two ages, the one bundled with the
 installed version and the effective one at scan time, and marks either `[STALE]`

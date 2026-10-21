@@ -1,3 +1,44 @@
+## Client reads the daily feed channel, release as fallback (2026-10-21) (claude-opus-5-5)
+
+Third of four pull requests implementing `docs/daily-feed-channel-design.md`.
+
+- `src/feed.ts`: `DEFAULT_FEED_URL` is the Pages channel; `RELEASE_FEED_URL`
+  is the old default. `refreshFeed` installs the channel and, on ANY failure
+  of that attempt, runs the release path (latest, then newest signed release)
+  with the same checks. `installFeedBytes` holds the shared
+  verify-parse-guard-write sequence (PR D reuses it). `assertFeedMayReplace`
+  throws `FeedNotNewerError` when a feed is older than the cache or the
+  bundle; when both sources fail only that way the cache is kept and
+  `keptCurrentCache` returned. `RefreshResult.source` says
+  channel/release/custom/file. `catalogTemplateForFeedUrl` keeps the release
+  assets for both built-in sources. A custom URL is unchanged.
+- `src/cli.ts`: `feed refresh` prints the source or "cache is current"
+  (`refreshSummaryLines`).
+- README "Live Threat Feed" section and the networked-commands list.
+
+Tests: eight channel cases and two summary cases, seen failing first; the
+release-path cases now address `RELEASE_FEED_URL` explicitly, so they still
+pin the release behaviour. Four cuts each red on their own test: no release
+fallback, catalog following the channel, the cache refusal as a plain error,
+keeping the cache on a real failure.
+
+Until the owner enables Pages the channel answers 404 and every refresh falls
+back to the release feed, as before.
+
+Independent review before merge, fixed here: the cache was reported current
+even when missing (both sources older than the bundle) or older than a day,
+against the spec, which keeps it only when it exists and is fresh; a channel
+feed that is still newer than the cache but older than 30 hours (publisher
+stalled) would hide a newer release, so the release is now consulted too and
+the newer kept; the channel's failure reason was dropped on a successful
+fallback and is now `channelError`, printed by the CLI; `--allow-unsigned-feed`
+applied to the built-in sources and now needs `--url`
+(`unsignedFeedRefusal`); the mixed failure (one source only older, the other
+forged) had no test; the package entry did not export the new names the
+CHANGELOG named; SECURITY.md described only the release signature. Five cuts,
+each red on its own test. Deferred: the release label does not name the tag
+after a resolver fallback.
+
 ## Daily feed channel: builder, workflow, freshness check (2026-10-21) (claude-opus-5-5)
 
 Second of four pull requests implementing `docs/daily-feed-channel-design.md`.

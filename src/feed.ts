@@ -52,10 +52,19 @@ import {
 } from "./threat-intel.js";
 
 /**
- * Published feed location: the feed.json attached to the latest GitHub Release,
- * next to feed.json.sig, the detached Ed25519 signature the release job makes.
+ * The default feed source: the daily signed channel on GitHub Pages
+ * (docs/daily-feed-channel-design.md), published every day without a release,
+ * next to feed.json.sig. refreshFeed falls back to RELEASE_FEED_URL whenever
+ * the channel cannot be installed.
  */
-export const DEFAULT_FEED_URL =
+export const DEFAULT_FEED_URL = "https://homeofe.github.io/supply-chain-guard/feed/feed.json";
+
+/**
+ * The feed.json attached to the latest GitHub Release, next to feed.json.sig,
+ * the detached Ed25519 signature the release job makes. The default source up
+ * to 6.5.10, and the fallback since.
+ */
+export const RELEASE_FEED_URL =
   "https://github.com/homeofe/supply-chain-guard/releases/latest/download/feed.json";
 
 /** Releases API, read only when `latest` carries no signed feed. */
@@ -133,7 +142,10 @@ export function catalogUrlFor(
  * here would have every one of those tests make a real outbound request.
  */
 export function catalogTemplateForFeedUrl(feedUrl: string): string {
-  if (feedUrl === DEFAULT_FEED_URL) return DEFAULT_CATALOG_URL_TEMPLATE;
+  // The daily channel publishes no catalog: the catalog is per release and
+  // pinned by this package's digest, so both built-in sources read it from the
+  // release assets.
+  if (feedUrl === DEFAULT_FEED_URL || feedUrl === RELEASE_FEED_URL) return DEFAULT_CATALOG_URL_TEMPLATE;
   // Built by string surgery rather than through URL, whose serializer
   // percent-encodes the braces the template is made of.
   const withoutQuery = feedUrl.split(/[?#]/)[0];
@@ -561,6 +573,43 @@ export interface RefreshResult {
    * and the CLI prints a warning.
    */
   unsigned?: boolean;
+  /**
+   * Where the feed came from: the daily `channel`, the `release` path (directly
+   * or as the channel's fallback), a `custom` URL, or a local directory
+   * (`file`, importFeedFromDirectory).
+   */
+  source: RefreshSource;
+  /**
+   * Set when nothing newer than the cache on this machine was offered, so the
+   * cache was kept. Not a failure: the cache is current.
+   */
+  keptCurrentCache?: { generatedAt: string };
+  /** The installed feed's own `generatedAt`, when it declares one. */
+  generatedAt?: string;
+  /**
+   * Why the daily channel was not used, when the release path stood in for it.
+   * A 404 is an outage; a signature or parse failure on the channel means a
+   * broken or tampered deploy, and the caller should see it.
+   */
+  channelError?: string;
+}
+
+export type RefreshSource = "channel" | "release" | "custom" | "file";
+
+/**
+ * A feed that is older than what this machine already has: the cached feed or
+ * the one bundled with this release. Lets refreshFeed tell "nothing newer was
+ * offered" apart from a real failure.
+ */
+export class FeedNotNewerError extends Error {
+  constructor(
+    message: string,
+    /** The `generatedAt` this machine already has. */
+    readonly currentGeneratedAt: string,
+  ) {
+    super(message);
+    this.name = "FeedNotNewerError";
+  }
 }
 
 /** Options for refreshFeed beyond the URL, cache directory and limits. */
@@ -747,16 +796,18 @@ function assertFeedMayReplace(
   }
   const bundledMs = Date.parse(FEED_GENERATED_AT);
   if (Number.isFinite(bundledMs) && generatedMs < bundledMs) {
-    throw new Error(
+    throw new FeedNotNewerError(
       `refusing the feed: generatedAt ${generatedAt} is older than the feed bundled with this ` +
         `release (${FEED_GENERATED_AT}). The previous cache stays in effect.`,
+      cachedGeneratedAt !== undefined && Date.parse(cachedGeneratedAt) > bundledMs ? cachedGeneratedAt : FEED_GENERATED_AT,
     );
   }
   const cachedMs = cachedGeneratedAt === undefined ? NaN : Date.parse(cachedGeneratedAt);
   if (Number.isFinite(cachedMs) && generatedMs < cachedMs) {
-    throw new Error(
+    throw new FeedNotNewerError(
       `refusing the feed: generatedAt ${generatedAt} is older than the cached feed (${cachedGeneratedAt}). ` +
         `The previous cache stays in effect.`,
+      cachedGeneratedAt as string,
     );
   }
 }
@@ -824,19 +875,6 @@ export function decodeCatalogBody(body: Buffer): string {
   }
 }
 
-/**
- * Download the published threat-intel feed and cache it locally in the
- * `{ timestamp, entries }` shape loadThreatIntel() reads. Entries stay live
- * for 24h (CACHE_TTL_MS in threat-intel.ts); re-run daily for same-day
- * protection between npm releases. Never crashes the process on network
- * failure - callers get a rejected promise with a clear message.
- *
- * The download is bounded by FEED_REMOTE_LIMITS. `limitOverrides` relaxes or
- * tightens a single dimension per call (a slow link may want a longer deadline)
- * and leaves the rest at the package defaults. Every bound fails closed: the
- * download is abandoned, nothing is written, and the previous cache stays in
- * effect.
- */
 /** sha256 of a string, as lowercase hex. */
 function sha256Hex(text: string): string {
   return createHash("sha256").update(text, "utf8").digest("hex");
@@ -950,6 +988,208 @@ async function installCatalog(
   return { entryCount: entries.length, cachePath };
 }
 
+/** Download a feed and, unless the caller opted out, its detached signature. */
+async function fetchFeedAndSignature(
+  url: string,
+  limits: RemoteRequestLimits,
+  options: RefreshOptions,
+): Promise<{ raw: Buffer; signatureText?: string }> {
+  const raw = (await fetchHttpsBuffer(url, limits)).body;
+  if (options.allowUnsigned) return { raw };
+  let signatureText: string;
+  try {
+    signatureText = (await fetchHttpsBuffer(feedSignatureUrlFor(url), limits)).body.toString("utf-8");
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    throw new Error(
+      `refusing the feed: its signature could not be downloaded from ${feedSignatureUrlFor(url)} (${reason}). ` +
+        `A mirror must publish feed.json.sig beside the feed, or the caller must pass --allow-unsigned-feed. ` +
+        `The previous cache stays in effect.`,
+    );
+  }
+  return { raw, signatureText };
+}
+
+/**
+ * The release path: the signed feed of the latest release, and when that
+ * release carries none (a patch on an older major became `latest`), the newest
+ * release that does. It only chooses the release; the signature of what it
+ * returns is verified like any other source.
+ */
+async function fetchReleaseFeed(
+  limits: RemoteRequestLimits,
+  options: RefreshOptions,
+): Promise<{ raw: Buffer; signatureText?: string }> {
+  try {
+    return await fetchFeedAndSignature(RELEASE_FEED_URL, limits, options);
+  } catch (latestErr) {
+    let sourceUrl: string;
+    try {
+      sourceUrl = await (options.resolveSignedRelease ?? newestSignedReleaseFeedUrl)(limits);
+    } catch (resolveErr) {
+      const why = (e: unknown) => (e instanceof Error ? e.message : String(e));
+      throw new Error(
+        `refusing the feed: the latest release carries no signed feed (${why(latestErr)}), and no other ` +
+          `release with feed.json and feed.json.sig could be found (${why(resolveErr)}). ` +
+          `The previous cache stays in effect.`,
+      );
+    }
+    return fetchFeedAndSignature(sourceUrl, limits, options);
+  }
+}
+
+/**
+ * Verify, parse, guard and write one downloaded feed. Shared by every source,
+ * so a feed from the daily channel, a release, a mirror or a local directory
+ * passes exactly the same checks. Throws before anything is written.
+ */
+export async function installFeedBytes(
+  raw: Buffer,
+  signatureText: string | undefined,
+  cacheDir: string,
+  options: RefreshOptions,
+  minEntries: number,
+): Promise<{ entryCount: number; cachePath: string; generatedAt?: string }> {
+  // Authenticate the exact downloaded bytes BEFORE anything parses them. A
+  // feed the bundled key did not sign is refused outright, with the previous
+  // cache left in place, unless the caller opted out explicitly.
+  if (!options.allowUnsigned) {
+    if (signatureText === undefined) {
+      throw new Error("refusing the feed: it carries no signature. The previous cache stays in effect.");
+    }
+    try {
+      assertFeedSignature(raw, signatureText);
+    } catch (err) {
+      throw new Error(
+        `refusing the feed: ${err instanceof Error ? err.message : String(err)}. The previous cache stays in effect.`,
+      );
+    }
+  }
+
+  const { entries, generatedAt } = parseFeedDocument(raw.toString("utf-8"));
+
+  // Refuse before anything is written: a rollback, a replay of an older feed
+  // or a shrunken one must leave the previous cache in effect.
+  assertFeedMayReplace(entries, generatedAt, readCachedGeneratedAt(path.join(cacheDir, FEED_CACHE_FILE)), minEntries, Date.now());
+
+  // The feed's own generation time is stored beside the client-side refresh
+  // time. `timestamp` answers "when did this machine last refresh" (the 24h
+  // refresh-due check); `generatedAt` answers "how new is the intel", which
+  // the client clock cannot say.
+  // The signed bytes and their signature are kept beside the cache so every
+  // scan can re-verify the cache against the bundled key (loadThreatIntel).
+  // They are written first: a run killed between the writes leaves a cache
+  // that does not match them, which reads as unreadable, never as trusted.
+  if (!options.allowUnsigned && signatureText !== undefined) {
+    writeCacheFileAtomic(cacheDir, FEED_SIGNED_COPY_FILE, raw);
+    writeCacheFileAtomic(cacheDir, FEED_SIGNATURE_FILE, signatureText.trim() + "\n");
+  }
+  const cachePath = writeCacheFileAtomic(
+    cacheDir,
+    FEED_CACHE_FILE,
+    JSON.stringify(
+      {
+        timestamp: new Date().toISOString(),
+        ...(generatedAt === undefined ? {} : { generatedAt }),
+        // Recorded so loadThreatIntel knows this cache was installed on
+        // purpose without a signature. Anyone who can write the cache can
+        // write this too; it is a statement of intent, not a defence.
+        ...(options.allowUnsigned ? { unsigned: true } : {}),
+        entries,
+      },
+      null,
+      2,
+    ),
+  );
+  return { entryCount: entries.length, cachePath, ...(generatedAt === undefined ? {} : { generatedAt }) };
+}
+
+const SOURCE_LABEL: Record<RefreshSource, string> = {
+  channel: "refreshed from the daily channel",
+  release: "refreshed from the latest release",
+  custom: "refreshed from the given URL",
+  file: "installed from a local directory",
+};
+
+/** The first lines `feed refresh` and `feed import` print for a result. */
+export function refreshSummaryLines(
+  result: Pick<RefreshResult, "entryCount" | "cachePath" | "source" | "keptCurrentCache" | "generatedAt">,
+): string[] {
+  const head = result.keptCurrentCache
+    ? `Threat feed cache is current (generated ${result.keptCurrentCache.generatedAt}); nothing newer was offered.`
+    : `Threat feed ${SOURCE_LABEL[result.source]}: ${result.entryCount} entries cached${
+        result.generatedAt ? ` (generated ${result.generatedAt})` : ""
+      }.`;
+  return [head, `Cache file: ${result.cachePath}`];
+}
+
+/**
+ * `--allow-unsigned-feed` applies only to a `--url` mirror
+ * (docs/daily-feed-channel-design.md): the built-in sources are always signed.
+ * Returns the refusal message, or undefined when the combination is allowed.
+ */
+export function unsignedFeedRefusal(url: string | undefined, allowUnsigned: boolean): string | undefined {
+  if (!allowUnsigned) return undefined;
+  if (url === undefined || url === DEFAULT_FEED_URL || url === RELEASE_FEED_URL) {
+    return "--allow-unsigned-feed applies only to a self-hosted mirror passed with --url; the built-in sources are always signed.";
+  }
+  return undefined;
+}
+
+/** A cache refreshed within this long counts as fresh (CACHE_TTL_MS in threat-intel.ts). */
+const FEED_CACHE_FRESH_MS = 24 * 60 * 60 * 1000;
+/**
+ * A channel feed older than this is stale: the publisher has missed a run. The
+ * release path is then consulted too, and the newer of the two is kept.
+ */
+const CHANNEL_STALE_AFTER_MS = 30 * 60 * 60 * 1000;
+
+/**
+ * The cache on disk, when it exists, carries `generatedAt` and was refreshed
+ * within the last day. Only such a cache may be reported current.
+ */
+function freshCacheGeneratedAt(cachePath: string, nowMs: number): string | undefined {
+  try {
+    const cached = JSON.parse(fs.readFileSync(cachePath, "utf-8")) as { generatedAt?: unknown; timestamp?: unknown };
+    if (typeof cached.generatedAt !== "string" || typeof cached.timestamp !== "string") return undefined;
+    const age = nowMs - Date.parse(cached.timestamp);
+    return Number.isFinite(age) && age >= 0 && age < FEED_CACHE_FRESH_MS ? cached.generatedAt : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Entry count of the cache on disk, for a refresh that kept it. */
+function cachedEntryCount(cachePath: string): number {
+  try {
+    const cached = JSON.parse(fs.readFileSync(cachePath, "utf-8")) as { entries?: unknown };
+    return Array.isArray(cached.entries) ? cached.entries.length : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Download the published threat-intel feed and cache it locally in the
+ * `{ timestamp, entries }` shape loadThreatIntel() reads. Entries stay live
+ * for 24h (CACHE_TTL_MS in threat-intel.ts); re-run daily for same-day
+ * protection. Never crashes the process on network failure - callers get a
+ * rejected promise with a clear message.
+ *
+ * Sources (docs/daily-feed-channel-design.md):
+ *  - DEFAULT_FEED_URL, the daily channel. When it cannot be installed for ANY
+ *    reason, the release path follows with the same checks. When both are only
+ *    older than what this machine already has, the cache is kept and reported
+ *    current (`keptCurrentCache`), not as a failure.
+ *  - RELEASE_FEED_URL, the release path alone.
+ *  - Any other URL, a mirror: no fallback, and the catalog follows it.
+ *
+ * The download is bounded by FEED_REMOTE_LIMITS. `limitOverrides` relaxes or
+ * tightens a single dimension per call (a slow link may want a longer deadline)
+ * and leaves the rest at the package defaults. Every bound fails closed: the
+ * download is abandoned, nothing is written, and the previous cache stays in
+ * effect.
+ */
 export async function refreshFeed(
   feedUrl: string = DEFAULT_FEED_URL,
   cacheDirOption?: string,
@@ -959,6 +1199,8 @@ export async function refreshFeed(
   const { minEntries: minEntriesOverride, ...networkOverrides } = limitOverrides;
   const limits: RemoteRequestLimits = { ...FEED_REMOTE_LIMITS, ...networkOverrides };
   const cacheDir = resolveCacheDir(cacheDirOption);
+  const minEntries = minEntriesOverride ?? Math.ceil(getBundledFeedRef().length * FEED_MIN_SHARE_OF_BUNDLE);
+  const why = (e: unknown) => (e instanceof Error ? e.message : String(e));
   try {
     // Refuse a linked cache target up front, before a download is spent on it.
     // The write helper checks again at write time.
@@ -967,101 +1209,64 @@ export async function refreshFeed(
     assertCacheTargetSafe(path.join(cacheDir, CATALOG_MARKER_FILE));
     assertCacheTargetSafe(path.join(cacheDir, FEED_SIGNED_COPY_FILE));
     assertCacheTargetSafe(path.join(cacheDir, FEED_SIGNATURE_FILE));
-    // The default source is the latest release. When that release carries no
-    // signed feed (a patch on an older major became `latest`), fall back to the
-    // newest release that does. Custom URLs never fall back.
-    let sourceUrl = feedUrl;
-    let raw: Buffer;
-    let signatureBody: Buffer | undefined;
-    if (feedUrl !== DEFAULT_FEED_URL) {
-      raw = (await fetchHttpsBuffer(sourceUrl, limits)).body;
-    } else {
+
+    const install = async (fetch: () => Promise<{ raw: Buffer; signatureText?: string }>) => {
+      const { raw, signatureText } = await fetch();
+      return installFeedBytes(raw, signatureText, cacheDir, options, minEntries);
+    };
+
+    let installed: { entryCount: number; cachePath: string; generatedAt?: string } | undefined;
+    let keptCurrentCache: RefreshResult["keptCurrentCache"];
+    let channelError: string | undefined;
+    let source: RefreshSource;
+    if (feedUrl === DEFAULT_FEED_URL) {
       try {
-        raw = (await fetchHttpsBuffer(sourceUrl, limits)).body;
-        if (!options.allowUnsigned) {
-          signatureBody = (await fetchHttpsBuffer(feedSignatureUrlFor(sourceUrl), limits)).body;
+        installed = await install(() => fetchFeedAndSignature(DEFAULT_FEED_URL, limits, options));
+        source = "channel";
+        // A channel whose publisher stopped still installs (it is newer than the
+        // cache), but it must not hide a newer release: try the release too, and
+        // the rollback guard keeps whichever is newer.
+        const age = installed.generatedAt === undefined ? Infinity : Date.now() - Date.parse(installed.generatedAt);
+        if (!(age <= CHANNEL_STALE_AFTER_MS)) {
+          try {
+            installed = await install(() => fetchReleaseFeed(limits, options));
+            source = "release";
+          } catch (releaseErr) {
+            if (releaseErr instanceof CacheTargetRefusedError) throw releaseErr;
+          }
         }
-      } catch (latestErr) {
+      } catch (channelErr) {
+        if (channelErr instanceof CacheTargetRefusedError) throw channelErr;
+        channelError = why(channelErr);
         try {
-          sourceUrl = await (options.resolveSignedRelease ?? newestSignedReleaseFeedUrl)(limits);
-        } catch (resolveErr) {
-          const why = (e: unknown) => (e instanceof Error ? e.message : String(e));
-          throw new Error(
-            `refusing the feed: the latest release carries no signed feed (${why(latestErr)}), and no other ` +
-              `release with feed.json and feed.json.sig could be found (${why(resolveErr)}). ` +
-              `The previous cache stays in effect.`,
-          );
+          installed = await install(() => fetchReleaseFeed(limits, options));
+          source = "release";
+        } catch (releaseErr) {
+          if (releaseErr instanceof CacheTargetRefusedError) throw releaseErr;
+          const current =
+            channelErr instanceof FeedNotNewerError && releaseErr instanceof FeedNotNewerError
+              ? freshCacheGeneratedAt(path.join(cacheDir, FEED_CACHE_FILE), Date.now())
+              : undefined;
+          const compared = channelErr instanceof FeedNotNewerError ? channelErr.currentGeneratedAt : undefined;
+          if (current === undefined || current !== compared) {
+            const nothingNewer =
+              channelErr instanceof FeedNotNewerError && releaseErr instanceof FeedNotNewerError
+                ? "nothing newer was offered, but the cache on this machine is missing or older than a day: "
+                : "";
+            throw new Error(`${nothingNewer}the daily channel: ${why(channelErr)}; the release: ${why(releaseErr)}`);
+          }
+          keptCurrentCache = { generatedAt: current };
+          channelError = undefined;
+          source = "channel";
         }
-        raw = (await fetchHttpsBuffer(sourceUrl, limits)).body;
-        signatureBody = undefined;
       }
+    } else if (feedUrl === RELEASE_FEED_URL) {
+      installed = await install(() => fetchReleaseFeed(limits, options));
+      source = "release";
+    } else {
+      installed = await install(() => fetchFeedAndSignature(feedUrl, limits, options));
+      source = "custom";
     }
-
-    // Authenticate the exact downloaded bytes BEFORE anything parses them. A
-    // feed the bundled key did not sign is refused outright, with the previous
-    // cache left in place, unless the caller opted out explicitly.
-    let signatureText: string | undefined;
-    if (!options.allowUnsigned) {
-      try {
-        signatureText = (signatureBody ?? (await fetchHttpsBuffer(feedSignatureUrlFor(sourceUrl), limits)).body).toString("utf-8");
-      } catch (err) {
-        const reason = err instanceof Error ? err.message : String(err);
-        throw new Error(
-          `refusing the feed: its signature could not be downloaded from ${feedSignatureUrlFor(sourceUrl)} (${reason}). ` +
-            `A mirror must publish feed.json.sig beside the feed, or the caller must pass --allow-unsigned-feed. ` +
-            `The previous cache stays in effect.`,
-        );
-      }
-      try {
-        assertFeedSignature(raw, signatureText);
-      } catch (err) {
-        throw new Error(
-          `refusing the feed: ${err instanceof Error ? err.message : String(err)}. The previous cache stays in effect.`,
-        );
-      }
-    }
-
-    const { entries, generatedAt } = parseFeedDocument(raw.toString("utf-8"));
-
-    // Refuse before anything is written: a rollback, a replay of an older feed
-    // or a shrunken one must leave the previous cache in effect.
-    assertFeedMayReplace(
-      entries,
-      generatedAt,
-      readCachedGeneratedAt(path.join(cacheDir, FEED_CACHE_FILE)),
-      minEntriesOverride ?? Math.ceil(getBundledFeedRef().length * FEED_MIN_SHARE_OF_BUNDLE),
-      Date.now(),
-    );
-
-    // The feed's own generation time is stored beside the client-side refresh
-    // time. `timestamp` answers "when did this machine last refresh" (the 24h
-    // refresh-due check); `generatedAt` answers "how new is the intel", which
-    // the client clock cannot say.
-    // The signed bytes and their signature are kept beside the cache so every
-    // scan can re-verify the cache against the bundled key (loadThreatIntel).
-    // They are written first: a run killed between the writes leaves a cache
-    // that does not match them, which reads as unreadable, never as trusted.
-    if (signatureText !== undefined) {
-      writeCacheFileAtomic(cacheDir, FEED_SIGNED_COPY_FILE, raw);
-      writeCacheFileAtomic(cacheDir, FEED_SIGNATURE_FILE, signatureText.trim() + "\n");
-    }
-    const cachePath = writeCacheFileAtomic(
-      cacheDir,
-      FEED_CACHE_FILE,
-      JSON.stringify(
-        {
-          timestamp: new Date().toISOString(),
-          ...(generatedAt === undefined ? {} : { generatedAt }),
-          // Recorded so loadThreatIntel knows this cache was installed on
-          // purpose without a signature. Anyone who can write the cache can
-          // write this too; it is a statement of intent, not a defence.
-          ...(options.allowUnsigned ? { unsigned: true } : {}),
-          entries,
-        },
-        null,
-        2,
-      ),
-    );
 
     // The catalog is a second, independent document. Its failures are recorded
     // and returned, never thrown: a caller who asked to refresh the feed got
@@ -1078,9 +1283,14 @@ export async function refreshFeed(
       catalogError = err instanceof Error ? err.message : String(err);
     }
 
+    const cachePath = installed?.cachePath ?? path.join(cacheDir, FEED_CACHE_FILE);
     return {
-      entryCount: entries.length,
+      entryCount: installed?.entryCount ?? cachedEntryCount(cachePath),
       cachePath,
+      source,
+      ...(keptCurrentCache ? { keptCurrentCache } : {}),
+      ...(installed?.generatedAt !== undefined ? { generatedAt: installed.generatedAt } : {}),
+      ...(channelError !== undefined ? { channelError } : {}),
       catalog,
       catalogError,
       ...(options.allowUnsigned ? { unsigned: true } : {}),

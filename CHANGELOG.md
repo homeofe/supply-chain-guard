@@ -20,6 +20,20 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Changed
 
+- `feed refresh` (and the GitHub Action, which runs it) reads the daily
+  signed feed channel on GitHub Pages by default and falls back to the signed
+  feed of the latest GitHub Release when the channel cannot be installed for
+  any reason, with the same signature, rollback and size checks. It says which
+  source it installed. When the cache is already newer than both sources it is
+  kept and reported current, with exit 0. The catalog is still read from the
+  release assets. A `--url` mirror behaves as before. `RELEASE_FEED_URL` is
+  exported beside `DEFAULT_FEED_URL`, which now names the channel.
+  `feed refresh` prints when the installed feed was generated and why the
+  channel was not used when the release stood in. A channel feed older than
+  30 hours never hides a newer release feed. The cache is reported current
+  only when it exists and was refreshed within a day.
+  `--allow-unsigned-feed` now needs `--url`: the built-in sources are always
+  signed.
 - The feed importer's JSON report (`--json`, also on `--dry-run`) labels each
   proposed version pin with where its version came from: named by the source
   record (`listed`), resolved from a version range (against the registry, or
