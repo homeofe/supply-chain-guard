@@ -2,19 +2,19 @@
   "aahp_version": "3.0",
   "project": "supply-chain-guard",
   "last_session": {
-    "agent": "handoff-refresh",
-    "session_id": "cli-1792388526",
-    "timestamp": "2026-10-19T05:42:06Z",
-    "commit": "aa101d6",
+    "agent": "cli-tool",
+    "session_id": "cli-1792578331",
+    "timestamp": "2026-10-21T10:25:31Z",
+    "commit": "53cb4fa",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:947d5970ee401fa0629e0f6067845a93eb9890bd26f8607565da026bd0876a06",
-      "updated": "2026-10-19T05:41:46Z",
-      "lines": 15042,
-      "summary": "Windowed import (GHSA + OpenSSF + DataDog, since 2026-10-05): 13 new entries, 13 to the bundle, 0 to the catalog."
+      "checksum": "sha256:c871f8fdbdfb975a91c455b21dc9fed403b2a1043519f7413cb42ab368073d90",
+      "updated": "2026-10-21T10:25:31Z",
+      "lines": 15132,
+      "summary": "Three daily pull requests were open at once (424, 427, 428), each cut from the same `main`, so each later one re-imported the earlier windowed..."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:cedf2e47e0f1feb9911b2f036601891fb220d53a54d6110f1ec9a7bec32151ea",
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "Windowed import (GHSA + OpenSSF + DataDog, since 2026-10-05): 13 new entries, 13 to the bundle, 0 to the catalog. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Three daily pull requests were open at once (424, 427, 428), each cut from the same `main`, so each later one re-imported the earlier windowed... Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 915,
-    "manifest_plus_core": 224346,
-    "full_read": 238074
+    "manifest_only": 930,
+    "manifest_plus_core": 225700,
+    "full_read": 239428
   }
 }

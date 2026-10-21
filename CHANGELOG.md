@@ -9,6 +9,31 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Added
 
+- Threat intel for 2026-10-20 and 2026-10-21: 259 package entries from the
+  GitHub Advisory Database, OpenSSF and the DataDog dataset (250 in the offline
+  bundle, 9 in the catalog). Bare names, each an npm security holding package
+  now: eight AI-tool installer lures (`chatgpt-pro-setup-tool`,
+  `chatgpt-pro-activator`, `chatgpt-desktop-setup`, `claude-desktop-setup`,
+  `codex-setup`, `api-anthropic`, `@decoopus/chatgpt-setup`,
+  `@decoopus/claude-setup`), seven `@an1mshnpmb9c84920/` packages, the Baileys
+  forks `aldi02-baileys`, `aemath-baileys`, `zero-baileys` and
+  `zeroz-baileys`, the DGXeon forks `@dreamguyxeon/baileyx` and
+  `@dreamguyxeon/libsignal-node` plus `my-auto-follow` and
+  `my-auto-follow-eltio`, `bs58x64`, `bs58x64.js`, `base58x64`,
+  `array-inline`, `array-inline-transform`, `items-validator`,
+  `item-validator`, 33 random six-character names, 65 album-download spam
+  names and more single-release names. Version pins: 27 versions of the
+  `@alannxd/baileys` WhatsApp fork; a cluster of 24 Tailwind and animate.css
+  plugin lookalikes (`tailwindcss-keyframe-kit`, `animatecss-tailwind-*`,
+  `tailwind-animate-kit` and others) with the `signalledger-bridge` and
+  `signalledger-diagnostics` companions; `html-to-gutenberg` 4.2.24 to
+  4.2.26; PyPI `semver` typosquats (`semer`, `ssemver`, `semverr`,
+  `semvver`, `semmver`, `semveer`), `debbug`/`deebug`, `workalendar`
+  lookalikes, `pyyi` 2.5.0 to 2.5.5 and `fabtoolkit@0.2.1`.
+  Dependency-confusion pins at 99.9.1 (`sc-geeksquad-core`, `sc-font-icons`,
+  `sc-announcer`, `sc-wizard`, `fanarena-common`, `ccl-global-shopping`,
+  `ing-feat-itsme-oidc-authentication`) and PyPI `asurion@99.0.0` and
+  `vinted-mocked-apis@99.0.0`.
 - Threat intel for 2026-10-19: 13 package entries from the GitHub Advisory
   Database and OpenSSF, all in the offline bundle. PyPI: `fabtoolkit`
   (3 versions), `fabdeploycheck@0.1.1` and four more `leakdeep` versions.
