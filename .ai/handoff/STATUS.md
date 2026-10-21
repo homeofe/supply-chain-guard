@@ -1,3 +1,25 @@
+## Design: daily signed feed channel and offline import (2026-10-21) (claude-opus-5-5)
+
+Adds `docs/daily-feed-channel-design.md`. Owner
+decisions of 2026-10-21: code releases weekly (security fixes immediately),
+threat data daily through a signed `feed.json` on GitHub Pages that does not
+need a release; only exact-version pins whose version a source names, and file
+hashes, may reach that channel without review; everything else, including pins
+derived from ranges or whole-package claims, waits for the weekly review on
+`main`. Also `feed import` for networks without internet access, and a project
+website on the same Pages deployment (its own project).
+
+The design was read by an independent builder before it was committed; the
+calls made in answer to that read are listed in the document's "Calls made"
+section for the owner to check. Nothing is built yet; the implementation plan
+comes next.
+
+Process change outside the repository, recorded here because it shapes the
+pull requests: the daily threat-intel routine now keeps at most ONE open
+threat-intel pull request and adds each day to it as a new commit, instead of
+opening one pull request per day. Three overlapping daily pull requests (424,
+427, 428) had each re-imported the earlier days.
+
 ## Release v6.5.10 (2026-10-21) (claude-opus-5-5)
 
 Threat-intel release on the owner's instruction, cut from `main` at
