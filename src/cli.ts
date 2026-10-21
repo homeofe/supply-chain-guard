@@ -994,7 +994,9 @@ feedCmd
   )
   .action(async (opts: { url?: string; cacheDir?: string; allowUnsignedFeed?: boolean }) => {
     try {
-      const { refreshFeed, refreshSummaryLines, DEFAULT_FEED_URL } = await import("./feed.js");
+      const { refreshFeed, refreshSummaryLines, unsignedFeedRefusal, DEFAULT_FEED_URL } = await import("./feed.js");
+      const refusal = unsignedFeedRefusal(opts.url, opts.allowUnsignedFeed === true);
+      if (refusal) throw new Error(refusal);
       if (opts.allowUnsignedFeed) {
         console.error(
           "\n  Warning: --allow-unsigned-feed: the feed signature is NOT checked. Anyone who controls the feed source or the cache directory can change what this scanner detects.",
@@ -1006,6 +1008,7 @@ feedCmd
       const [head, ...rest] = refreshSummaryLines(result);
       console.log(`\n  ${head}`);
       for (const line of rest) console.log(`  ${line}`);
+      if (result.channelError) console.log(`  Note: the daily channel was not used: ${result.channelError}`);
       const { legacyRefreshNote } = await import("./cache-dir.js");
       const legacyNote = legacyRefreshNote(opts.cacheDir);
       if (legacyNote) console.log(legacyNote);

@@ -25,6 +25,20 @@ keeping the cache on a real failure.
 Until the owner enables Pages the channel answers 404 and every refresh falls
 back to the release feed, as before.
 
+Independent review before merge, fixed here: the cache was reported current
+even when missing (both sources older than the bundle) or older than a day,
+against the spec, which keeps it only when it exists and is fresh; a channel
+feed that is still newer than the cache but older than 30 hours (publisher
+stalled) would hide a newer release, so the release is now consulted too and
+the newer kept; the channel's failure reason was dropped on a successful
+fallback and is now `channelError`, printed by the CLI; `--allow-unsigned-feed`
+applied to the built-in sources and now needs `--url`
+(`unsignedFeedRefusal`); the mixed failure (one source only older, the other
+forged) had no test; the package entry did not export the new names the
+CHANGELOG named; SECURITY.md described only the release signature. Five cuts,
+each red on its own test. Deferred: the release label does not name the tag
+after a resolver fallback.
+
 ## Daily feed channel: builder, workflow, freshness check (2026-10-21) (claude-opus-5-5)
 
 Second of four pull requests implementing `docs/daily-feed-channel-design.md`.

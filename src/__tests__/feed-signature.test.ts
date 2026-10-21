@@ -21,7 +21,7 @@ import {
   feedSigningKeyFingerprint,
   setFeedPublicKeyForTests,
 } from "../feed-signing-key.js";
-import { FEED_CACHE_FILE, loadThreatIntel, resetThreatIntelCache } from "../threat-intel.js";
+import { FEED_CACHE_FILE, FEED_GENERATED_AT, loadThreatIntel, resetThreatIntelCache } from "../threat-intel.js";
 import { scan } from "../scanner.js";
 
 const NO_FLOOR = { minEntries: 0 };
@@ -504,5 +504,96 @@ describe("the daily channel and its release fallback", () => {
     await expect(refreshFeed(MIRROR, tmpDir, NO_FLOOR, noRelease)).rejects.toThrow();
     const paths = requested();
     expect(paths.includes(CHANNEL_PATH) || paths.includes(FEED_PATH)).toBe(false);
+  });
+});
+
+// Review findings on PR C: "current" only for a cache that exists and is fresh,
+// a stale channel never hides a newer release, the channel's failure stays
+// visible, and a mixed failure is never mistaken for "nothing newer".
+describe("daily channel edge cases", () => {
+  const CHANNEL_PATH = pathOf(DEFAULT_FEED_URL);
+  const CHANNEL_SIG_PATH = pathOf(feedSignatureUrlFor(DEFAULT_FEED_URL));
+  const docAt = (generatedAt: string, value = "edge-fixture.example") =>
+    JSON.stringify({ schema: 1, generatedAt, entries: [{ type: "domain", value, severity: "critical", confidence: 1 }] });
+  const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
+  const noRelease = { resolveSignedRelease: async () => { throw new Error("no release in this test"); } };
+  const H = 3_600_000;
+  afterEach(() => vi.useRealTimers());
+
+  const seedChannel = async (generatedAt: string) => {
+    const d = docAt(generatedAt);
+    serve({ [CHANNEL_PATH]: d, [CHANNEL_SIG_PATH]: sigOf(d) });
+    await refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR, noRelease);
+  };
+
+  it("does not report a missing cache as current", async () => {
+    const old = docAt("2026-01-01T00:00:00.000Z");
+    serve({ [CHANNEL_PATH]: old, [CHANNEL_SIG_PATH]: sigOf(old), [FEED_PATH]: old, [SIG_PATH]: sigOf(old) });
+    await expect(refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR, noRelease)).rejects.toThrow(/nothing newer/);
+    expect(fs.existsSync(path.join(tmpDir, FEED_CACHE_FILE))).toBe(false);
+  });
+
+  it("does not report a cache older than a day as current", async () => {
+    await seedChannel(ago(60_000));
+    const cachePath = path.join(tmpDir, FEED_CACHE_FILE);
+    const cache = JSON.parse(fs.readFileSync(cachePath, "utf8"));
+    cache.timestamp = ago(25 * H);
+    fs.writeFileSync(cachePath, JSON.stringify(cache));
+    const older = docAt(ago(2 * H), "older-edge.example");
+    serve({ [CHANNEL_PATH]: older, [CHANNEL_SIG_PATH]: sigOf(older), [FEED_PATH]: older, [SIG_PATH]: sigOf(older) });
+    await expect(refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR, noRelease)).rejects.toThrow(/nothing newer/);
+  });
+
+  it("refuses when the channel is only older but the release is forged", async () => {
+    await seedChannel(ago(60_000));
+    const older = docAt(ago(2 * H), "older-edge.example");
+    const forged = docAt(ago(30_000), "forged-edge.example");
+    serve({ [CHANNEL_PATH]: older, [CHANNEL_SIG_PATH]: sigOf(older), [FEED_PATH]: forged, [SIG_PATH]: sigOf(forged, otherPair.privateKey) });
+    await expect(refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR, noRelease)).rejects.toThrow(/does not verify/);
+  });
+
+  it("refuses when the channel is forged and the release is only older", async () => {
+    await seedChannel(ago(60_000));
+    const forged = docAt(ago(30_000), "forged-edge.example");
+    const older = docAt(ago(2 * H), "older-edge.example");
+    serve({ [CHANNEL_PATH]: forged, [CHANNEL_SIG_PATH]: sigOf(forged, otherPair.privateKey), [FEED_PATH]: older, [SIG_PATH]: sigOf(older) });
+    await expect(refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR, noRelease)).rejects.toThrow(/does not verify/);
+  });
+
+  it("reports the channel's failure beside a successful fallback", async () => {
+    const forged = docAt(ago(30_000), "forged-edge.example");
+    serve({ [CHANNEL_PATH]: forged, [CHANNEL_SIG_PATH]: sigOf(forged, otherPair.privateKey), [FEED_PATH]: FEED_DOC, [SIG_PATH]: sigOf(FEED_DOC) });
+    const result = await refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR, noRelease);
+    expect(result.source).toBe("release");
+    expect(result.channelError).toMatch(/does not verify/);
+  });
+
+  // A channel that stopped publishing still installs (it is newer than the
+  // cache), but a newer release must win over it, and the age must show.
+  it("prefers a newer release over a channel feed older than 30 hours", async () => {
+    const bundled = Date.parse(FEED_GENERATED_AT);
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(bundled + 48 * H));
+    const staleChannel = docAt(new Date(bundled + 2 * H).toISOString(), "stale-channel.example");
+    const newerRelease = docAt(new Date(bundled + 40 * H).toISOString(), "newer-release.example");
+    serve({
+      [CHANNEL_PATH]: staleChannel,
+      [CHANNEL_SIG_PATH]: sigOf(staleChannel),
+      [FEED_PATH]: newerRelease,
+      [SIG_PATH]: sigOf(newerRelease),
+    });
+    const result = await refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR, noRelease);
+    expect(result.source).toBe("release");
+    expect(result.generatedAt).toBe(JSON.parse(newerRelease).generatedAt);
+    expect(JSON.stringify(cacheOf())).toContain("newer-release.example");
+  });
+
+  it("keeps a fresh channel feed without consulting the release", async () => {
+    const d = docAt(ago(60_000));
+    serve({ [CHANNEL_PATH]: d, [CHANNEL_SIG_PATH]: sigOf(d) });
+    const result = await refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR, noRelease);
+    expect(result.source).toBe("channel");
+    const paths = (https.get as unknown as ReturnType<typeof vi.fn>).mock.calls.map((c) => (c[0] as { path?: string }).path ?? "");
+    expect(paths.includes(FEED_PATH)).toBe(false);
   });
 });

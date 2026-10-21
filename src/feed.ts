@@ -584,6 +584,14 @@ export interface RefreshResult {
    * cache was kept. Not a failure: the cache is current.
    */
   keptCurrentCache?: { generatedAt: string };
+  /** The installed feed's own `generatedAt`, when it declares one. */
+  generatedAt?: string;
+  /**
+   * Why the daily channel was not used, when the release path stood in for it.
+   * A 404 is an outage; a signature or parse failure on the channel means a
+   * broken or tampered deploy, and the caller should see it.
+   */
+  channelError?: string;
 }
 
 export type RefreshSource = "channel" | "release" | "custom" | "file";
@@ -1104,11 +1112,51 @@ const SOURCE_LABEL: Record<RefreshSource, string> = {
 };
 
 /** The first lines `feed refresh` and `feed import` print for a result. */
-export function refreshSummaryLines(result: Pick<RefreshResult, "entryCount" | "cachePath" | "source" | "keptCurrentCache">): string[] {
+export function refreshSummaryLines(
+  result: Pick<RefreshResult, "entryCount" | "cachePath" | "source" | "keptCurrentCache" | "generatedAt">,
+): string[] {
   const head = result.keptCurrentCache
     ? `Threat feed cache is current (generated ${result.keptCurrentCache.generatedAt}); nothing newer was offered.`
-    : `Threat feed ${SOURCE_LABEL[result.source]}: ${result.entryCount} entries cached.`;
+    : `Threat feed ${SOURCE_LABEL[result.source]}: ${result.entryCount} entries cached${
+        result.generatedAt ? ` (generated ${result.generatedAt})` : ""
+      }.`;
   return [head, `Cache file: ${result.cachePath}`];
+}
+
+/**
+ * `--allow-unsigned-feed` applies only to a `--url` mirror
+ * (docs/daily-feed-channel-design.md): the built-in sources are always signed.
+ * Returns the refusal message, or undefined when the combination is allowed.
+ */
+export function unsignedFeedRefusal(url: string | undefined, allowUnsigned: boolean): string | undefined {
+  if (!allowUnsigned) return undefined;
+  if (url === undefined || url === DEFAULT_FEED_URL || url === RELEASE_FEED_URL) {
+    return "--allow-unsigned-feed applies only to a self-hosted mirror passed with --url; the built-in sources are always signed.";
+  }
+  return undefined;
+}
+
+/** A cache refreshed within this long counts as fresh (CACHE_TTL_MS in threat-intel.ts). */
+const FEED_CACHE_FRESH_MS = 24 * 60 * 60 * 1000;
+/**
+ * A channel feed older than this is stale: the publisher has missed a run. The
+ * release path is then consulted too, and the newer of the two is kept.
+ */
+const CHANNEL_STALE_AFTER_MS = 30 * 60 * 60 * 1000;
+
+/**
+ * The cache on disk, when it exists, carries `generatedAt` and was refreshed
+ * within the last day. Only such a cache may be reported current.
+ */
+function freshCacheGeneratedAt(cachePath: string, nowMs: number): string | undefined {
+  try {
+    const cached = JSON.parse(fs.readFileSync(cachePath, "utf-8")) as { generatedAt?: unknown; timestamp?: unknown };
+    if (typeof cached.generatedAt !== "string" || typeof cached.timestamp !== "string") return undefined;
+    const age = nowMs - Date.parse(cached.timestamp);
+    return Number.isFinite(age) && age >= 0 && age < FEED_CACHE_FRESH_MS ? cached.generatedAt : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /** Entry count of the cache on disk, for a refresh that kept it. */
@@ -1167,24 +1215,48 @@ export async function refreshFeed(
       return installFeedBytes(raw, signatureText, cacheDir, options, minEntries);
     };
 
-    let installed: { entryCount: number; cachePath: string } | undefined;
+    let installed: { entryCount: number; cachePath: string; generatedAt?: string } | undefined;
     let keptCurrentCache: RefreshResult["keptCurrentCache"];
+    let channelError: string | undefined;
     let source: RefreshSource;
     if (feedUrl === DEFAULT_FEED_URL) {
       try {
         installed = await install(() => fetchFeedAndSignature(DEFAULT_FEED_URL, limits, options));
         source = "channel";
+        // A channel whose publisher stopped still installs (it is newer than the
+        // cache), but it must not hide a newer release: try the release too, and
+        // the rollback guard keeps whichever is newer.
+        const age = installed.generatedAt === undefined ? Infinity : Date.now() - Date.parse(installed.generatedAt);
+        if (!(age <= CHANNEL_STALE_AFTER_MS)) {
+          try {
+            installed = await install(() => fetchReleaseFeed(limits, options));
+            source = "release";
+          } catch (releaseErr) {
+            if (releaseErr instanceof CacheTargetRefusedError) throw releaseErr;
+          }
+        }
       } catch (channelErr) {
         if (channelErr instanceof CacheTargetRefusedError) throw channelErr;
+        channelError = why(channelErr);
         try {
           installed = await install(() => fetchReleaseFeed(limits, options));
           source = "release";
         } catch (releaseErr) {
           if (releaseErr instanceof CacheTargetRefusedError) throw releaseErr;
-          if (!(channelErr instanceof FeedNotNewerError && releaseErr instanceof FeedNotNewerError)) {
-            throw new Error(`the daily channel: ${why(channelErr)}; the release: ${why(releaseErr)}`);
+          const current =
+            channelErr instanceof FeedNotNewerError && releaseErr instanceof FeedNotNewerError
+              ? freshCacheGeneratedAt(path.join(cacheDir, FEED_CACHE_FILE), Date.now())
+              : undefined;
+          const compared = channelErr instanceof FeedNotNewerError ? channelErr.currentGeneratedAt : undefined;
+          if (current === undefined || current !== compared) {
+            const nothingNewer =
+              channelErr instanceof FeedNotNewerError && releaseErr instanceof FeedNotNewerError
+                ? "nothing newer was offered, but the cache on this machine is missing or older than a day: "
+                : "";
+            throw new Error(`${nothingNewer}the daily channel: ${why(channelErr)}; the release: ${why(releaseErr)}`);
           }
-          keptCurrentCache = { generatedAt: channelErr.currentGeneratedAt };
+          keptCurrentCache = { generatedAt: current };
+          channelError = undefined;
           source = "channel";
         }
       }
@@ -1217,6 +1289,8 @@ export async function refreshFeed(
       cachePath,
       source,
       ...(keptCurrentCache ? { keptCurrentCache } : {}),
+      ...(installed?.generatedAt !== undefined ? { generatedAt: installed.generatedAt } : {}),
+      ...(channelError !== undefined ? { channelError } : {}),
       catalog,
       catalogError,
       ...(options.allowUnsigned ? { unsigned: true } : {}),

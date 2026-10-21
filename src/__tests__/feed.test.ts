@@ -24,6 +24,7 @@ import {
   CATALOG_MAX_DECOMPRESSED_BYTES,
   DEFAULT_FEED_URL,
   refreshSummaryLines,
+  unsignedFeedRefusal,
 } from "../feed.js";
 import {
   loadThreatIntel,
@@ -969,5 +970,25 @@ describe("refreshSummaryLines", () => {
     const lines = refreshSummaryLines({ ...base, source: "channel", keptCurrentCache: { generatedAt: "2026-10-22T05:17:00.000Z" } });
     expect(lines[0]).toBe("Threat feed cache is current (generated 2026-10-22T05:17:00.000Z); nothing newer was offered.");
     expect(lines.join(" ")).not.toMatch(/refreshed/);
+  });
+});
+
+describe("refresh review fixes", () => {
+  it("shows when the installed feed was generated", () => {
+    const lines = refreshSummaryLines({ entryCount: 3, cachePath: "/c/f.json", source: "channel", generatedAt: "2026-10-22T05:17:00.000Z" });
+    expect(lines[0]).toBe("Threat feed refreshed from the daily channel: 3 entries cached (generated 2026-10-22T05:17:00.000Z).");
+  });
+  it("allows --allow-unsigned-feed only with a --url mirror", () => {
+    expect(unsignedFeedRefusal(undefined, true)).toMatch(/--url/);
+    expect(unsignedFeedRefusal("https://mirror.invalid/feed.json", true)).toBeUndefined();
+    expect(unsignedFeedRefusal(undefined, false)).toBeUndefined();
+    expect(unsignedFeedRefusal(DEFAULT_FEED_URL, true)).toMatch(/--url/);
+  });
+  it("exports the new feed names from the package entry", async () => {
+    const api = await import("../index.js");
+    expect(api.RELEASE_FEED_URL).toBe("https://github.com/homeofe/supply-chain-guard/releases/latest/download/feed.json");
+    expect(typeof api.FeedNotNewerError).toBe("function");
+    expect(typeof api.refreshSummaryLines).toBe("function");
+    expect(typeof api.installFeedBytes).toBe("function");
   });
 });

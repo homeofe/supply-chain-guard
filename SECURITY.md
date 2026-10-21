@@ -30,9 +30,13 @@ We will acknowledge your report within 48 hours and aim to release a fix within 
 ## Feed integrity
 
 `feed.json`, the threat feed that `supply-chain-guard feed refresh` downloads, is
-signed with Ed25519 by the release job, and the signature (`feed.json.sig`) is a
-release asset next to it. The public key is compiled into the package
-(`src/feed-signing-key.ts`); the private key exists only as a repository secret.
+signed with Ed25519, and the signature (`feed.json.sig`) is published next to it.
+`feed refresh` reads the daily feed channel on GitHub Pages by default, signed by
+the `sign` job of `.github/workflows/feed-daily.yml`, and falls back to the
+feed attached to the latest GitHub Release, signed by the release job. Both use
+the same key. The public key is compiled into the package
+(`src/feed-signing-key.ts`); the private key is a GitHub Actions secret
+available only to those two jobs.
 `feed refresh` refuses any feed whose signature does not verify against that key,
 and every scan re-verifies the cached copy.
 
