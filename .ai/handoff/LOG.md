@@ -11,6 +11,14 @@
 
 ---
 
+## [2026-10-21] v6.6.0
+
+A daily signed feed channel on GitHub Pages (feed-daily.yml, scripts/build-daily-feed.mjs). Every day it publishes feed.json built from the reviewed main plus exact-version pins whose version a...
+
+Full notes: CHANGELOG.md, section [6.6.0].
+
+---
+
 ## [2026-10-21] v6.5.10
 
 Threat intel for 2026-10-20 and 2026-10-21: 259 package entries from the GitHub Advisory Database, OpenSSF and the DataDog dataset (250 in the offline bundle, 9 in the catalog). Bare names, each...
@@ -80,11 +88,3 @@ Full notes: CHANGELOG.md, section [6.5.3].
 Threat intel for 2026-10-07: 6 package entries from the GitHub Advisory Database, OpenSSF and the DataDog dataset (all 6 to the bundle): tailwind-forms-kit 0.5.3, css-jptvix-polyfill 1.0.0, PyPI...
 
 Full notes: CHANGELOG.md, section [6.5.2].
-
----
-
-## [2026-10-06] v6.5.1
-
-Threat intel for 2026-10-06: 113 package entries from the GitHub Advisory Database and OpenSSF (111 to the bundle, 2 to the catalog). Among them a RubyGems crypto-wallet typosquat wave (80...
-
-Full notes: CHANGELOG.md, section [6.5.1].

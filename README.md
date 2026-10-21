@@ -48,7 +48,7 @@ Gate every pull request:
 
 ```yaml
 - uses: actions/checkout@v4
-- uses: homeofe/supply-chain-guard@v6.5.10
+- uses: homeofe/supply-chain-guard@v6.6.0
 ```
 
 Let your AI coding agent check a package before it installs it (MCP):
@@ -222,7 +222,7 @@ Run the scanner as a [pre-commit](https://pre-commit.com) hook (Python-ecosystem
 ```yaml
 repos:
   - repo: https://github.com/homeofe/supply-chain-guard
-    rev: v6.5.10
+    rev: v6.6.0
     hooks:
       - id: supply-chain-guard
 ```
@@ -254,7 +254,7 @@ The hook scans the repository root on every commit and fails on high or critical
 Run the scanner without a Node toolchain via the official multi-arch image (linux/amd64, linux/arm64), published to GHCR on every release tag:
 
 ```bash
-docker run --rm -v ${PWD}:/scan ghcr.io/homeofe/supply-chain-guard:6.5.10 scan /scan
+docker run --rm -v ${PWD}:/scan ghcr.io/homeofe/supply-chain-guard:6.6.0 scan /scan
 ```
 
 `${PWD}` works in bash, zsh, and PowerShell; in cmd.exe use `%cd%` instead.
@@ -264,8 +264,8 @@ is gone after `--rm`. To keep it across runs, mount a named volume there, and ru
 the refresh once a day to pick up the daily feed:
 
 ```bash
-docker run --rm -v scg-cache:/cache ghcr.io/homeofe/supply-chain-guard:6.5.10 feed refresh
-docker run --rm -v scg-cache:/cache -v ${PWD}:/scan ghcr.io/homeofe/supply-chain-guard:6.5.10 scan /scan
+docker run --rm -v scg-cache:/cache ghcr.io/homeofe/supply-chain-guard:6.6.0 feed refresh
+docker run --rm -v scg-cache:/cache -v ${PWD}:/scan ghcr.io/homeofe/supply-chain-guard:6.6.0 scan /scan
 ```
 
 ## Quickstart
@@ -1076,7 +1076,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: homeofe/supply-chain-guard@v6.5.10
+      - uses: homeofe/supply-chain-guard@v6.6.0
         with:
           fail-on: critical
           comment-on-pr: true
@@ -1165,7 +1165,7 @@ two are never confused. If a deliberately frozen rule set is the intent, exclude
 the rule by name:
 
 ```yaml
-- uses: homeofe/supply-chain-guard@v6.5.10
+- uses: homeofe/supply-chain-guard@v6.6.0
   with:
     exclude-rules: THREAT_FEED_STALE
 ```
@@ -1283,7 +1283,7 @@ workflow does not count, and `catalog: required` on the Action needs both inputs
 left on (the default), or explicitly:
 
 ```yaml
-- uses: homeofe/supply-chain-guard@v6.5.10
+- uses: homeofe/supply-chain-guard@v6.6.0
   with:
     refresh-catalog: true
 ```
@@ -1294,7 +1294,7 @@ setting rather than firing on every scan. If scanning against the bundled set
 alone is the intent, exclude the rule by name:
 
 ```yaml
-- uses: homeofe/supply-chain-guard@v6.5.10
+- uses: homeofe/supply-chain-guard@v6.6.0
   with:
     exclude-rules: THREAT_FEED_CATALOG_MISSING
 ```

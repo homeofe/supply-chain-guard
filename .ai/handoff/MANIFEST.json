@@ -3,30 +3,30 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "cli-tool",
-    "session_id": "cli-1792605108",
-    "timestamp": "2026-10-21T17:51:48Z",
-    "commit": "4eaf14b",
+    "session_id": "cli-1792605228",
+    "timestamp": "2026-10-21T17:53:48Z",
+    "commit": "575870f",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:6dbab4a058454213f40219328d661829244c6e9e440fe51192eaa3eba5235c94",
-      "updated": "2026-10-21T17:51:47Z",
-      "lines": 15445,
-      "summary": "A whole-feature audit before the release found that the GitHub Action never used the daily channel: it ran `feed refresh` only with..."
+      "checksum": "sha256:5d603faf917c93c02674eaebda2ef003d86b2b98823285fad0bd8cf51241fde7",
+      "updated": "2026-10-21T17:53:45Z",
+      "lines": 15466,
+      "summary": "Minor release (new command `feed import`, new default source for `feed refresh`, new Action inputs), the owner's choice over 6.5.11."
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:cd56cf2251b821b327e4c92def4f8db00af1d5d77b9bc63609ed884b7e0bb37c",
-      "updated": "2026-10-21T10:54:39Z",
+      "checksum": "sha256:bd8fe052586a4d7116a9ff03a7569e84b32db93a21dccc4773becaaf19cc3f03",
+      "updated": "2026-10-21T17:53:15Z",
       "lines": 231,
       "summary": "Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete."
     },
     "LOG.md": {
-      "checksum": "sha256:54e74b86e259c467bcf4f59d76234bb9e57a19193eae35751c164752b73903cf",
-      "updated": "2026-10-21T10:55:48Z",
+      "checksum": "sha256:f1dc0646d30c6b750edb2465b81651cab0748cf3b12099c11fe2b83704a63c06",
+      "updated": "2026-10-21T17:53:47Z",
       "lines": 90,
-      "summary": "Latest entry: [2026-10-21] v6.5.10"
+      "summary": "Latest entry: [2026-10-21] v6.6.0"
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
@@ -41,14 +41,14 @@
       "summary": "LOG archive index: 5 entries."
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:3ff9c3c59d3e8962287bbbe6830eec7cfd792ae5da3bc393091eb94415ed9c91",
-      "updated": "2026-10-21T14:42:50Z",
+      "checksum": "sha256:7cf4427590934fab057ee59d7552fbb820381c33b85aecf43127dadda271ecea",
+      "updated": "2026-10-21T17:53:47Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:743ba181843e6517129e98d6393dfc91daa1ac438f303d9d84237b9f06e226cf",
-      "updated": "2026-10-21T14:42:50Z",
+      "checksum": "sha256:fbd5b02aa437149fb5db74ec34e1c7bd52bbb8caec7d54b092d65651077e0162",
+      "updated": "2026-10-21T17:53:47Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "A whole-feature audit before the release found that the GitHub Action never used the daily channel: it ran `feed refresh` only with... Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Minor release (new command `feed import`, new default source for `feed refresh`, new Action inputs), the owner's choice over 6.5.11. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 924,
-    "manifest_plus_core": 230378,
-    "full_read": 244106
+    "manifest_only": 923,
+    "manifest_plus_core": 230659,
+    "full_read": 244388
   }
 }

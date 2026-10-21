@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [6.6.0] - 2026-10-21
+
 ### Added
 
 - A daily signed feed channel on GitHub Pages (`feed-daily.yml`,
@@ -31,6 +33,10 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Changed
 
+- Node support policy: the `nodejs/Release` schedule, re-read on 2026-10-21,
+  is unchanged (Node 24 in Maintenance since 2026-10-20, Node 26 Active LTS
+  from 2026-10-28), so `activeLtsMajor` stays 24 and the review milestone
+  moves to 6.6.1.
 - The GitHub Action now uses the network before the scan by default, also
   for `@v6` users who change nothing: it installs the signed daily feed
   (about 2 MB) and the historical catalog (about 3.6 MB compressed;
@@ -7790,7 +7796,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.5.10...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.6.0...HEAD
+[6.6.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.6.0
 [6.5.10]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.10
 [6.5.9]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.9
 [6.5.8]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.8

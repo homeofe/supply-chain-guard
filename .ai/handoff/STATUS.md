@@ -1,3 +1,24 @@
+## Release v6.6.0 (2026-10-21) (claude-opus-5-5)
+
+Minor release (new command `feed import`, new default source for
+`feed refresh`, new Action inputs), the owner's choice over 6.5.11. Ships the
+daily feed channel (PRs 431 to 438): the importer's derivation labels, the
+signed daily publish on GitHub Pages, the client's channel default with the
+release fallback, `feed import`, and the Action installing the daily feed and
+the catalog on every run. The version bump is the second commit of PR 438, so
+the Action pin and the CLI that knows `--no-catalog` arrive together.
+
+Release commit: the version sites and the lockfile's two fields via
+`npm install --package-lock-only`. `release:prepare` left the cutoff at
+2026-09-21 (6.5.10 moved it the same day), so nothing migrated (catalog
+264145 entries).
+Node schedule re-read against `nodejs/Release`: unchanged, milestone 6.6.1.
+SECURITY.md lists majors only (6.x supported), so it needs no change.
+
+After the tag: run the published Action once (`uses:
+homeofe/supply-chain-guard@v6.6.0`) and check its log for the daily channel
+line, because the only Action test drives a fake CLI.
+
 ## The Action installs the daily feed; release readiness for 6.6.0 (2026-10-21) (claude-opus-5-5)
 
 A whole-feature audit before the release found that the GitHub Action never
