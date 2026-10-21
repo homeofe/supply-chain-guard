@@ -8741,6 +8741,17 @@ const FEED_CHUNK_26: FeedIOC[] = [
   { type: "package", value: "pypi:pyyi@2.5.4", severity: "critical", confidence: 1.0, source: "GHSA-4vr9-vg98-9xpf, MAL-2026-17866 (amazon-inspector)", firstSeen: "2026-10-14" },
   { type: "package", value: "pypi:pyyi@2.5.3", severity: "critical", confidence: 1.0, source: "GHSA-4vr9-vg98-9xpf, MAL-2026-17866 (amazon-inspector)", firstSeen: "2026-10-14" },
   { type: "package", value: "gemini-computer-use@0.4.5", severity: "critical", confidence: 1.0, source: "MAL-2026-16355 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-09-21" },
+
+  // MALFEX npm campaign, imgdecode wave (SafeDep, 2026-10-13). imgdecode hides
+  // the loader in a compiled Windows addon (imgdecode.node). All four versions
+  // were published by the campaign account malfexteste8 and the name has no
+  // other history (created 2026-09-30), so the name is blocked whole. The C2 IP
+  // and the cavecrew payload paths are already bundled above. Single-source, 0.85.
+  { type: "package", value: "imgdecode", severity: "critical", confidence: 0.85, family: "MALFEX", campaign: "MALFEX npm campaign", source: "SafeDep MALFEX imgdecode write-up (single-source)", firstSeen: "2026-10-13" },
+  { type: "hash", value: "d7b2f6d7da81301e7f76d6812d78f4a453439141d419831522ebf7cf5bf1c714", severity: "critical", confidence: 0.85, family: "MALFEX", campaign: "MALFEX npm campaign", source: "SafeDep MALFEX imgdecode write-up (single-source)", firstSeen: "2026-10-13" },
+  { type: "hash", value: "54d995c5be97408e96db72ecc27af1dd65716f96371df085c4ce681dca623d85", severity: "critical", confidence: 0.85, family: "MALFEX", campaign: "MALFEX npm campaign", source: "SafeDep MALFEX imgdecode write-up (single-source)", firstSeen: "2026-10-13" },
+  { type: "hash", value: "a53946269ffcd25c7fe1fad358c189f144dcca4d736f2b5a8ebc517a8d929dd1", severity: "critical", confidence: 0.85, family: "MALFEX", campaign: "MALFEX npm campaign", source: "SafeDep MALFEX imgdecode write-up (single-source)", firstSeen: "2026-10-13" },
+  { type: "hash", value: "8d50cb1ba0c2a16a673a2d08a8fb5c45bd8755c95c30ded98a84c74bfe52c9e6", severity: "critical", confidence: 0.85, family: "MALFEX", campaign: "MALFEX npm campaign", source: "SafeDep MALFEX imgdecode write-up (single-source)", firstSeen: "2026-10-13" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips

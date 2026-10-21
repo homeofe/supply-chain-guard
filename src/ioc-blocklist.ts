@@ -1663,6 +1663,11 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   "8f7ed69fb5505b57f06e673826779d459f7735739756de73a6d3347a9c8ea0cc": "MALFEX: cdn-img-fetch 1.0.3 banner.jpg payload (SHA256)",
   "d54853d6be467567d9f22d7f22ac48214df52c1f9c7a503930e901286423044a": "MALFEX: function-flag 1.7.3 index.js (SHA256)",
   "886b84f83a0f760e664046ba40d8c800b7d0cf72190e13ca031ee5cf50f45bee": "MALFEX: function-flag 1.7.3 example.js postinstall (SHA256)",
+  // MALFEX npm campaign (October 2026), SafeDep imgdecode write-up (single-source)
+  "d7b2f6d7da81301e7f76d6812d78f4a453439141d419831522ebf7cf5bf1c714": "MALFEX: imgdecode 1.0.0 imgdecode.node native loader (SHA256)",
+  "54d995c5be97408e96db72ecc27af1dd65716f96371df085c4ce681dca623d85": "MALFEX: imgdecode 1.0.1 imgdecode.node native loader (SHA256)",
+  "a53946269ffcd25c7fe1fad358c189f144dcca4d736f2b5a8ebc517a8d929dd1": "MALFEX: imgdecode 1.0.2/1.0.3 imgdecode.node native loader (SHA256)",
+  "8d50cb1ba0c2a16a673a2d08a8fb5c45bd8755c95c30ded98a84c74bfe52c9e6": "MALFEX: stage 3 Windows installer (SHA256)",
   // Apex Accelerator fake Web3 accelerator (October 2026, Elastic Security Labs, single-source)
   "985829083f3937df6c82419216f7697afae0caac8efca6257a756066fe2c0abb": "Apex Accelerator: apex-windows-x64.exe Bun coding agent with verification bootstrap (SHA256)",
   "5ee7145061f05779f7f6f9b72e216713d17d53e183a92f408bfbbc44f2bfb95d": "Apex Accelerator: apex-audit-windows-x64.exe Bun audit app with verification bootstrap (SHA256)",

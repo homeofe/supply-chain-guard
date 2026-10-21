@@ -64103,3 +64103,6 @@
 {"type":"package","value":"html-to-gutenberg@4.2.26","severity":"critical","confidence":1,"source":"MAL-2026-6359 (amazon-inspector+ghsa-malware)","firstSeen":"2026-06-24"}
 {"type":"package","value":"html-to-gutenberg@4.2.25","severity":"critical","confidence":1,"source":"MAL-2026-6359 (amazon-inspector+ghsa-malware)","firstSeen":"2026-06-24"}
 {"type":"package","value":"html-to-gutenberg@4.2.24","severity":"critical","confidence":1,"source":"MAL-2026-6359 (amazon-inspector+ghsa-malware)","firstSeen":"2026-06-24"}
+{"type":"package","value":"kartyk-github-token-pkg@1.0.3","severity":"critical","confidence":0.9,"source":"GHSA-4rmp-vchm-9gvg","firstSeen":"2026-09-16"}
+{"type":"package","value":"kartyk-github-token-pkg@1.0.4","severity":"critical","confidence":0.9,"source":"GHSA-4rmp-vchm-9gvg","firstSeen":"2026-09-16"}
+{"type":"package","value":"kartyk-github-oidc-test-pkg@1.0.4","severity":"critical","confidence":0.9,"source":"GHSA-4vxh-7998-9h4g","firstSeen":"2026-09-16"}

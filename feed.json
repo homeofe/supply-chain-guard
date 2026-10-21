@@ -2,7 +2,7 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "6.5.9",
-  "entryCount": 7315,
+  "entryCount": 7320,
   "generatedAt": "2026-10-21T00:00:00.000Z",
   "entries": [
     {
@@ -61262,6 +61262,56 @@
       "confidence": 1,
       "source": "MAL-2026-16355 (amazon-inspector+ossf-package-analysis)",
       "firstSeen": "2026-09-21"
+    },
+    {
+      "type": "package",
+      "value": "imgdecode",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "SafeDep MALFEX imgdecode write-up (single-source)",
+      "firstSeen": "2026-10-13"
+    },
+    {
+      "type": "hash",
+      "value": "d7b2f6d7da81301e7f76d6812d78f4a453439141d419831522ebf7cf5bf1c714",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "SafeDep MALFEX imgdecode write-up (single-source)",
+      "firstSeen": "2026-10-13"
+    },
+    {
+      "type": "hash",
+      "value": "54d995c5be97408e96db72ecc27af1dd65716f96371df085c4ce681dca623d85",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "SafeDep MALFEX imgdecode write-up (single-source)",
+      "firstSeen": "2026-10-13"
+    },
+    {
+      "type": "hash",
+      "value": "a53946269ffcd25c7fe1fad358c189f144dcca4d736f2b5a8ebc517a8d929dd1",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "SafeDep MALFEX imgdecode write-up (single-source)",
+      "firstSeen": "2026-10-13"
+    },
+    {
+      "type": "hash",
+      "value": "8d50cb1ba0c2a16a673a2d08a8fb5c45bd8755c95c30ded98a84c74bfe52c9e6",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "MALFEX",
+      "campaign": "MALFEX npm campaign",
+      "source": "SafeDep MALFEX imgdecode write-up (single-source)",
+      "firstSeen": "2026-10-13"
     }
   ]
 }
