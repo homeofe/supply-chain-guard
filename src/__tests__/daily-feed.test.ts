@@ -6,7 +6,7 @@
  * main's reviewed feed unchanged, plus only listed exact pins, hashes and the
  * catalog entries main already carries. Package names are synthetic.
  */
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -137,6 +137,45 @@ describe("assertDailyInvariant", () => {
     });
   }
 
+  // A whole-package claim can carry an `@` in its NAME (a Firefox add-on id is
+  // an email address), and "after the last @" is not a version there. The
+  // invariant accepts a pin only with an importer ecosystem prefix and a literal
+  // version: no empty version, no wildcard, no range, no foreign prefix.
+  const notPins = [
+    "firefox:scg-whole@scg.example",
+    "scg-empty@",
+    "scg-star@*",
+    "scg-range@>=1.0.0",
+    "PYPI:scg-upper@2.0",
+    "docker:scg-image@1.0",
+    "chrome:scgextensionid@1.0",
+  ];
+  for (const value of notPins) {
+    it(`rejects ${value} as a pin`, async () => {
+      const { assertDailyInvariant, buildDailyFeed } = await load();
+      const daily = buildDailyFeed(mainFeed(), [pkg(value)], NOW);
+      expect(() => assertDailyInvariant(mainFeed(), daily, [])).toThrow(/not allowed without review/);
+    });
+  }
+
+  it("accepts real pin shapes of every importer ecosystem", async () => {
+    const { assertDailyInvariant, buildDailyFeed } = await load();
+    const pins = [
+      "scg-a@1.0.0",
+      "@scg-scope/core@99.9.1",
+      "pypi:scg-b@17.1.0.dev0",
+      "pypi:scg-c@2.3",
+      "go:scg.example/mod@v1.2.3",
+      "ruby:scg-d@1.0.0.pre",
+      "openvsx:scgpub.ext@1.8.3",
+      "maven:org.scg-example:scg-art@4.18.1",
+      "vscode:scgpub.ext@1.8.3",
+      "scg-e@0.0.0-stage",
+      "scg-f@1.0.0+build.5",
+    ].map((v) => pkg(v));
+    expect(() => assertDailyInvariant(mainFeed(), buildDailyFeed(mainFeed(), pins, NOW), [])).not.toThrow();
+  });
+
   it("rejects an entryCount that does not match the entries", async () => {
     const { assertDailyInvariant } = await load();
     const daily = await good();
@@ -165,7 +204,18 @@ describe("assertDailyInvariant", () => {
 
 describe("the CLI", () => {
   const dirs: string[] = [];
+  // The CLI reports to the console; the suite must stay silent on stderr, so
+  // both are captured here and the refusal text is asserted instead.
+  let errors: string[] = [];
+  let lastMainRoot = "";
+  let lastReleaseRoot = "";
+  beforeEach(() => {
+    errors = [];
+    vi.spyOn(console, "error").mockImplementation((...args: unknown[]) => void errors.push(args.join(" ")));
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+  });
   afterEach(() => {
+    vi.restoreAllMocks();
     for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
   });
   const tree = (catalogLines: string[], feed?: object) => {
@@ -181,6 +231,8 @@ describe("the CLI", () => {
     const shared = JSON.stringify(pkg("scg-shared@1.0.0"));
     const mainRoot = tree([shared, JSON.stringify(pkg("scg-cat@1.0.0"))], mainFeed());
     const releaseRoot = tree([shared]);
+    lastMainRoot = mainRoot;
+    lastReleaseRoot = releaseRoot;
     const out = fs.mkdtempSync(path.join(os.tmpdir(), "scg-daily-out-"));
     dirs.push(out);
     const reportFile = path.join(out, "report.json");
@@ -206,6 +258,25 @@ describe("the CLI", () => {
       expect(code).toBe(1);
       expect(fs.existsSync(feedPath)).toBe(false);
     }
+    expect(errors).toHaveLength(3);
+    expect(errors.every((e) => /Nothing was written/.test(e))).toBe(true);
+  });
+
+  // The signing job runs no dependencies and re-checks the built feed itself,
+  // so whatever ran in the build job cannot hand it something else to sign.
+  it("--verify accepts the built feed and refuses a tampered one", async () => {
+    const { main } = await load();
+    const { code, out, feedPath } = await run(report([["scg-a@1.0.0", "listed"]]));
+    expect(code).toBe(0);
+    const args =(f: string) => ["--verify", f, "--main-root", lastMainRoot, "--release-root", lastReleaseRoot];
+    expect(await main(args(feedPath))).toBe(0);
+    const tampered = JSON.parse(fs.readFileSync(feedPath, "utf8"));
+    tampered.entries.push(pkg("scg-smuggled"));
+    tampered.entryCount = tampered.entries.length;
+    const tamperedPath = path.join(out, "tampered.json");
+    fs.writeFileSync(tamperedPath, JSON.stringify(tampered));
+    expect(await main(args(tamperedPath))).toBe(1);
+    expect(errors.join(" ")).toMatch(/not allowed without review: package scg-smuggled/);
   });
 
   it("refuses a report without derivations (an importer older than the labels)", async () => {
@@ -214,5 +285,6 @@ describe("the CLI", () => {
     const { code, feedPath } = await run(r);
     expect(code).toBe(1);
     expect(fs.existsSync(feedPath)).toBe(false);
+    expect(errors.join(" ")).toMatch(/no derivations aligned with its entries/);
   });
 });

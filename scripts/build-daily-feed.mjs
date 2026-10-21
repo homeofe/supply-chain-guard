@@ -4,6 +4,12 @@
 //   node scripts/build-daily-feed.mjs --report <importer dry-run JSON> \
 //     --main-root <checkout of main> --release-root <checkout of the latest tag> \
 //     --out <dir> [--cap 2000]
+//   node scripts/build-daily-feed.mjs --verify <feed.json> \
+//     --main-root <checkout of main> --release-root <checkout of the latest tag> [--cap 2000]
+//
+// --verify re-runs only the invariant against an already built feed. The
+// signing job uses it: that job installs no dependencies, so whatever ran in
+// the build job cannot hand it a different document to sign.
 //
 // Design: docs/daily-feed-channel-design.md. The daily feed reaches users WITHOUT
 // review, so what it may add is the owner's decision of 2026-10-21: main's
@@ -24,7 +30,7 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readCatalogLines } from "./catalog-store.mjs";
-import { splitPackageValue } from "./import-threat-feed.mjs";
+import { ECOSYSTEM_PREFIX, splitPackageValue } from "./import-threat-feed.mjs";
 
 /** More added pins than this in one day is a bulk wave, and a bulk wave needs a human. */
 export const DEFAULT_DAILY_CAP = 2000;
@@ -49,6 +55,32 @@ function canonical(value) {
 
 const isVersionedPackage = (entry) =>
   entry?.type === "package" && typeof entry.value === "string" && splitPackageValue(entry.value).version !== undefined;
+
+/**
+ * The prefixes the importer emits (`openvsx:` comes from its OSV aliases). A
+ * Firefox add-on id is an email address, so `firefox:name@domain` is a
+ * WHOLE-package claim although it splits like a pin; prefixes outside this
+ * list never pass as a pin.
+ */
+const PIN_PREFIXES = new Set([...Object.values(ECOSYSTEM_PREFIX), "openvsx:"]);
+/** A literal version: no empty version, no wildcard, no range operator. */
+const LITERAL_VERSION = /^[0-9A-Za-z][0-9A-Za-z.+_-]*$/;
+
+/**
+ * The invariant's own notion of an exact pin, deliberately stricter than
+ * selectDailyPins: an importer ecosystem prefix and a literal version.
+ */
+function isExactPin(entry) {
+  if (entry?.type !== "package" || typeof entry.value !== "string") return false;
+  const prefix = /^([a-z]+:)/.exec(entry.value)?.[1] ?? "";
+  if (!PIN_PREFIXES.has(prefix)) return false;
+  const rest = entry.value.slice(prefix.length);
+  const at = rest.lastIndexOf("@");
+  // An npm name never holds a colon: `PYPI:x@1` is not an npm package. Maven's
+  // group:artifact names do, behind their own prefix.
+  if (prefix === "" && rest.slice(0, Math.max(at, 0)).includes(":")) return false;
+  return at > 0 && LITERAL_VERSION.test(rest.slice(at + 1));
+}
 
 /**
  * The importer's proposed entries that may reach the daily channel: package pins
@@ -128,7 +160,7 @@ export function assertDailyInvariant(mainFeed, dailyFeed, catalogAdditions, { ca
   for (const entry of daily.values()) {
     if (catalog.get(key(entry)) === canonical(entry)) continue;
     if (entry.type === "hash" && typeof entry.value === "string" && HASH.test(entry.value)) continue;
-    if (isVersionedPackage(entry)) {
+    if (isExactPin(entry)) {
       pins++;
       continue;
     }
@@ -156,10 +188,11 @@ function parseArgs(argv) {
     else if (arg === "--main-root") opts.mainRoot = next();
     else if (arg === "--release-root") opts.releaseRoot = next();
     else if (arg === "--out") opts.out = next();
+    else if (arg === "--verify") opts.verify = next();
     else if (arg === "--cap") opts.cap = Number(next());
     else throw new Error(`unknown argument ${arg}`);
   }
-  for (const required of ["report", "mainRoot", "releaseRoot", "out"]) {
+  for (const required of opts.verify ? ["mainRoot", "releaseRoot"] : ["report", "mainRoot", "releaseRoot", "out"]) {
     if (!opts[required]) throw new Error(`--${required.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)} is required`);
   }
   if (!Number.isInteger(opts.cap) || opts.cap < 0) throw new Error("--cap must be a non-negative integer");
@@ -170,6 +203,14 @@ function parseArgs(argv) {
 export async function main(argv, { now = new Date() } = {}) {
   try {
     const opts = parseArgs(argv);
+    if (opts.verify) {
+      const mainFeed = JSON.parse(readFileSync(join(opts.mainRoot, "feed.json"), "utf8"));
+      const daily = JSON.parse(readFileSync(opts.verify, "utf8"));
+      const catalogAdditions = catalogAdditionsSinceRelease(readCatalogLines(opts.mainRoot), readCatalogLines(opts.releaseRoot));
+      assertDailyInvariant(mainFeed, daily, catalogAdditions, { cap: opts.cap });
+      console.log(`verified: ${daily.entryCount} entries, generatedAt ${daily.generatedAt}`);
+      return 0;
+    }
     const report = JSON.parse(readFileSync(opts.report, "utf8"));
     if (report.dryRun !== true) throw new Error("the importer report is not from a dry run");
     if (report.truncated !== false) throw new Error("the importer report is truncated");

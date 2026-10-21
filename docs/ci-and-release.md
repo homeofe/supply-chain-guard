@@ -83,7 +83,7 @@ request code has permission to change protection.
 | `ci.yml` | PR, push to `main`, semver tags | build, gates, full suite on every Node lane, container smoke, and on a tag: npm publish, MCP Registry listing (`mcp-registry`, after npm, OIDC, pinned and checksum-verified `mcp-publisher`; the GitHub Release does not wait for it), GitHub Release, `vN` major-ref branch fast-forward |
 | `scorecard.yml` | push to `main`, weekly, branch protection changes | publishes the OpenSSF Scorecard behind the README badge. Not a required check and never runs on a PR. Its shape is fixed by the Scorecard API's workflow restrictions, which is why it is not a job in `ci.yml` |
 | `feed-reconcile.yml` | daily, manual | `npm run feed:reconcile`: compares both feed stores against OpenSSF's complete OSV export and the DataDog malicious-software-packages-dataset, and fails when a record has been upstream for more than two days and is still missing, or when a record cannot be mapped and is not recorded in `threat-feed-unresolvable.json`. The complete GitHub malware history (1,243 API pages) exceeds a workflow token's 1,000 requests per hour, so it is reconciled weekly by the maintainer's scheduled routine instead. Writes nothing. Not a PR check, because its verdict depends on the date rather than on the change |
-| `feed-daily.yml` | daily, manual | the daily feed channel: builds `feed.json` from `main` plus the importer's source-listed exact pins and `main`'s catalog additions since the latest release, checks it against `main` (`scripts/build-daily-feed.mjs`), validates it with the client's parser, signs it and deploys it with the site to GitHub Pages under `/feed/`. See [Daily feed channel](#daily-feed-channel). Not a PR check |
+| `feed-daily.yml` | daily, manual | the daily feed channel: builds `feed.json` from `main` plus the importer's source-listed exact pins and `main`'s catalog additions since the latest release, checks it against `main` (`scripts/build-daily-feed.mjs`), validates it with the client's parser, then a job that installs nothing re-checks and signs it, and it deploys with the site to GitHub Pages under `/feed/`. See [Daily feed channel](#daily-feed-channel). Not a PR check |
 | `codeql.yml` | PR, push to `main`, weekly | CodeQL static analysis of `javascript-typescript` and of the workflows themselves (`actions`), into code scanning. Not a required check |
 | `pr-metadata-policy.yml` | PR open/edit/reopen/sync | PR title and body attribution policy. No checkout, so it cannot execute PR code |
 | `aahp-verify.yml` | PR, push to `main` | the four-layer AAHP handoff gate, with no escape hatch at CI level |
@@ -139,10 +139,13 @@ reaches users every day without a release; code releases stay weekly.
 
 What `feed-daily.yml` may publish without review is fixed by
 `assertDailyInvariant` in `scripts/build-daily-feed.mjs`, an independent
-comparison of the built document against `main`'s `feed.json`:
+comparison of the built document against `main`'s `feed.json`, run once in
+the `build` job and again, with no dependencies installed, in the `sign` job
+that holds the key:
 
 - every entry of `main`'s feed, unchanged;
 - exact-version package pins whose version a source names (the importer's
+  ecosystem prefixes only, a literal version; the importer's
   `listed` derivation; pins derived from ranges, pin-only resolution or
   whole-package claims are dropped and counted in the job log);
 - hashes;
@@ -163,7 +166,7 @@ repository variable `FEED_CHANNEL_LIVE` is set.
 - Pages enabled with the source "GitHub Actions".
 - An environment `feed-publish` whose deployment policy allows the branch
   `main` and tags matching `v*.*.*`, holding the secret `FEED_SIGNING_KEY`.
-  The release job in `ci.yml` and the build job in `feed-daily.yml` both run
+  The release job in `ci.yml` and the `sign` job in `feed-daily.yml` both run
   in it.
 - The repository variable `FEED_CHANNEL_LIVE`, set after the first green
   deploy.
