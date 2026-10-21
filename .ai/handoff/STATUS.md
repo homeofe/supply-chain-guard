@@ -1,3 +1,25 @@
+## Daily feed workflow: registration, tsc only, strict freshness flag (2026-10-21) (claude-opus-5-5)
+
+GitHub never processed the push of PR 433's merge (`7f3e8cc`, 14:04 UTC)
+during its incident "Delays for Pull Requests and Webhook deliveries": no
+workflow ran on that commit, and `feed-daily.yml` was never registered, so it
+was missing under Actions and `workflow_dispatch` answered 404, although the
+file is on `main` and its YAML is valid (no duplicate keys). Other delayed
+pushes of the same hour (`ada3149`, `08eb165`) were delivered late. This
+change touches the workflow so its push registers it, and takes two items the
+PR 433 review had deferred:
+
+- `feed-daily.yml` build job: `npx --no-install tsc` instead of
+  `npm run build`. Only `dist/feed.js` is needed; the prebuild gates already
+  ran on the push to main, and an unrelated gate must not stop the channel.
+- `feed-reconcile.yml` freshness step: armed only by `FEED_CHANNEL_LIVE`
+  being exactly `true`, and a `generatedAt` more than an hour in the future
+  fails instead of passing the age check forever.
+
+Owner settings are in place (Pages source "GitHub Actions", environment
+`feed-publish`). Next: the first manual run of "Daily feed channel", then
+`FEED_CHANNEL_LIVE=true`.
+
 ## Offline import: feed import <dir> (2026-10-21) (claude-opus-5-5)
 
 Fourth and last pull request implementing `docs/daily-feed-channel-design.md`.
