@@ -93,6 +93,22 @@ export const DISCOVERY_SOURCE = {
 };
 
 /**
+ * Where a pin's version came from. The daily feed channel publishes only
+ * `listed` pins without review (docs/daily-feed-channel-design.md): a version
+ * the source record itself names. The others are derived, and two of the worst
+ * false-positive traps (a range resolved against today's registry, a
+ * whole-package claim on a hijacked live package) came from derived pins.
+ * Transient like every `_` field; the dry-run report carries it as
+ * `derivations`, index-aligned with `entries`.
+ */
+export const DERIVATION = Object.freeze({
+  LISTED: "listed",
+  RANGE_RESOLVED: "range-resolved",
+  PIN_ONLY: "pin-only",
+  WHOLE_CLAIM_SAMPLE: "whole-claim-sample",
+});
+
+/**
  * Upstream ecosystem -> feed value prefix.
  *
  * These are exactly the prefixes the scanner resolves today: bare names are
@@ -670,6 +686,7 @@ export function mapAdvisory(advisory, { ecosystems } = {}) {
           entry._ecosystemPrefix = prefix;
           entry._name = name;
           entry._discoverySource = DISCOVERY_SOURCE.GITHUB;
+          entry._derivation = DERIVATION.LISTED;
           entries.push(entry);
         }
         continue;
@@ -714,6 +731,7 @@ export function mapAdvisory(advisory, { ecosystems } = {}) {
     // A pin-only scope settles a whole-package verdict against the registry
     // (applyPinOnlyList), which needs the advisory's assessment time.
     if (range.kind === "all" && typeof advisory.published_at === "string") entry._assessedAt = advisory.published_at;
+    if (range.kind === "exact") entry._derivation = DERIVATION.LISTED;
     entries.push(entry);
   }
 
@@ -863,6 +881,7 @@ export function mapOsvMalwareRecord(record, { ecosystems } = {}) {
       entry._discoverySource = DISCOVERY_SOURCE.OPENSSF;
       entry._origins = origins;
       if (pinnedFromWholeRange && version !== undefined) entry._pinnedFromWholeRange = true;
+      if (version !== undefined) entry._derivation = DERIVATION.LISTED;
       // What a pin-only scope settles a whole-package verdict from
       // (applyPinOnlyList): the listed versions and the assessment time.
       if (version === undefined) {
@@ -1085,6 +1104,12 @@ export async function resolveBoundedNpmRanges(
       entry._discoverySource = item.discoverySource ?? DISCOVERY_SOURCE.OPENSSF;
       entry._origins = item.origins;
       if (item.queueDate) entry._queueDate = item.queueDate;
+      entry._derivation =
+        item.pinOnly && (item.listedVersions ?? []).includes(version)
+          ? DERIVATION.LISTED
+          : item.pinOnly
+            ? DERIVATION.PIN_ONLY
+            : DERIVATION.RANGE_RESOLVED;
       entries.push(entry);
     }
   }
@@ -1135,6 +1160,9 @@ export function coalesceCandidates(entries) {
     }
     if (entry._queueDate && !current._queueDate) current._queueDate = entry._queueDate;
     if (entry._origins) current._origins = entry._origins;
+    if (entry._derivation === DERIVATION.LISTED || current._derivation === undefined) {
+      if (entry._derivation !== undefined) current._derivation = entry._derivation;
+    }
   }
   return { entries: [...byKey.values()], coalesced };
 }
@@ -1761,6 +1789,7 @@ export async function resolveExtensionBlockShape(
       emitted.add(key);
       const whole = { ...c, value: feedValue(c._ecosystemPrefix, c._name, undefined) };
       delete whole._pinnedFromWholeRange;
+      delete whole._derivation;
       entries.push(whole);
       continue;
     }
@@ -2711,6 +2740,8 @@ export function mapDatadogDataset(
         if (version === undefined) {
           entry._wholePackageClaim = true;
           entry._sampledVersions = [...(sampleVersions.get(`${directory}:${datadogPathName(name)}`) ?? [])];
+        } else {
+          entry._derivation = DERIVATION.LISTED;
         }
         entries.push(entry);
       }
@@ -2738,6 +2769,7 @@ export function mapDatadogDataset(
         entry._name = id;
         entry._discoverySource = DISCOVERY_SOURCE.DATADOG;
         entry._origins = ["datadog"];
+        entry._derivation = DERIVATION.LISTED;
         if (manifestDates[DATADOG_EXTENSION_DIR]) entry._queueDate = manifestDates[DATADOG_EXTENSION_DIR];
         entries.push(entry);
       }
@@ -2849,7 +2881,7 @@ export async function settleDatadogWholePackages(
       return;
     }
     for (const version of sampled) {
-      out.push({ ...entry, value: feedValue(entry._ecosystemPrefix, entry._name, version) });
+      out.push({ ...entry, value: feedValue(entry._ecosystemPrefix, entry._name, version), _derivation: DERIVATION.WHOLE_CLAIM_SAMPLE });
       pinned++;
     }
   });
@@ -3709,6 +3741,9 @@ export async function importUpstreamFeed({
     undrainable:
       capped && !since && !until && !osvSnapshot ? countUndrainable(added, { limit: appliedLimit, days, now }) : 0,
     entries: selected.map(publicEntry),
+    // Index-aligned with `entries`: where each pin's version came from (DERIVATION),
+    // null for an entry without a version. Read by the daily feed channel.
+    derivations: selected.map((entry) => entry._derivation ?? null),
     dryRun,
     written: false,
   };

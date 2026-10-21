@@ -260,6 +260,25 @@ describe("resolveBoundedNpmRanges on a pin-only item", () => {
     });
     expect(result.entries).toEqual([]);
   });
+
+  // Only a version the record itself names may reach the daily feed channel
+  // without review; a version the registry contributed is derived.
+  it("labels listed, pin-only and range-resolved versions", async () => {
+    const { resolveBoundedNpmRanges } = await load();
+    const docs = {
+      "@victim-corp/core": { time: { created: D, "999.0.3": D, "999.0.4": D } },
+      "scg-ranged": { time: { created: D, "1.0.0": D, "1.0.1": D } },
+    };
+    const pinOnly = await resolveBoundedNpmRanges([item()], { fetchImpl: registry(docs) });
+    const ranged = await resolveBoundedNpmRanges(
+      [item({ name: "scg-ranged", pinOnly: undefined, listedVersions: [], ranges: [{ type: "SEMVER", events: [{ introduced: "1.0.0" }, { fixed: "2.0.0" }] }] })],
+      { fetchImpl: registry(docs) },
+    );
+    const label = (r: { entries: Array<{ value: string; _derivation?: string }> }) =>
+      Object.fromEntries(r.entries.map((e) => [e.value, e._derivation]));
+    expect(label(pinOnly)).toEqual({ "@victim-corp/core@999.0.3": "listed", "@victim-corp/core@999.0.4": "pin-only" });
+    expect(label(ranged)).toEqual({ "scg-ranged@1.0.0": "range-resolved", "scg-ranged@1.0.1": "range-resolved" });
+  });
 });
 
 describe("the committed stores", () => {

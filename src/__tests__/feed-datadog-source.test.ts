@@ -77,6 +77,9 @@ describe("mapDatadogDataset", () => {
     expect(byValue["scg-dd-whole"].firstSeen).toBe("2025-01-02");
     expect(byValue["scg-dd-whole"]._queueDate).toBe("2026-10-02");
     expect(byValue["scg-dd-hijacked@1.2.3"]._wholePackageClaim).toBeUndefined();
+    // The manifest names this version itself.
+    expect(byValue["scg-dd-hijacked@1.2.3"]._derivation).toBe("listed");
+    expect(byValue["scg-dd-whole"]._derivation).toBeUndefined();
     // Undated: the day this run first saw it.
     expect(byValue["pypi:scg-dd-py"].firstSeen).toBe("2026-10-05");
     expect(byValue["pypi:scg-dd-py"]._queueDate).toBeUndefined();
@@ -168,6 +171,13 @@ describe("settleDatadogWholePackages", () => {
       "pypi:scg-pylive@1.1.99",
     ]);
     expect(result.entries.some((e: { value: string }) => !e.value.includes("@", 1))).toBe(false);
+    // Evidence-based, but the dataset named the PACKAGE, not these versions:
+    // they wait for review instead of reaching the daily feed channel.
+    expect(result.entries.map((e: { _derivation?: string }) => e._derivation)).toEqual([
+      "whole-claim-sample",
+      "whole-claim-sample",
+      "whole-claim-sample",
+    ]);
   });
 
   // No sample, no evidence for any version: not imported, but named.

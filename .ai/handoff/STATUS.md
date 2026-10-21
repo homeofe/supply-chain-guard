@@ -1,3 +1,23 @@
+## Importer labels where each pin's version came from (2026-10-21) (claude-opus-5-5)
+
+First of four pull requests implementing `docs/daily-feed-channel-design.md`.
+`scripts/import-threat-feed.mjs` sets a transient `_derivation` on every
+versioned package candidate (exported `DERIVATION`): `listed` for an exact
+GitHub range, the versions a non-npm GitHub range names in its own words, an
+OpenSSF record's own `versions` (also under a whole-package range), a DataDog
+manifest or extension-list version, and a registry-resolved version that a
+pin-only item's record lists; `pin-only` and `range-resolved` for versions
+the registry contributed; `whole-claim-sample` for the sampled versions of a
+DataDog whole-package claim on a live package. Coalescing keeps `listed` when
+any source lists the version. A collapsed whole-extension block drops the
+label with the version. The report gains `derivations`, index-aligned with
+`entries`, which keep the plain feed shape.
+
+Tests: seven new cases across `feed-import`, `feed-pin-only` and
+`feed-datadog-source`, each seen failing first. Four mutation cuts (coalesce
+keeps the first label, pin-only never listed, report without `derivations`,
+unlabelled DataDog samples) each turned exactly their test red.
+
 ## Design: daily signed feed channel and offline import (2026-10-21) (claude-opus-5-5)
 
 Adds `docs/daily-feed-channel-design.md`. Owner

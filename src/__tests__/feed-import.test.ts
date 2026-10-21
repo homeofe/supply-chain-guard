@@ -155,6 +155,25 @@ describe("mapAdvisory", () => {
     expect(entries[0].value).toBe("scg-fixture-pkg@4.5.6");
   });
 
+  // The daily feed channel publishes only versions a source names
+  // (docs/daily-feed-channel-design.md), so every pin says where its version
+  // came from. A bare name carries no version and no derivation.
+  it("labels an exact advisory version as listed, and a bare name not at all", async () => {
+    const { mapAdvisory } = await load();
+    const exact = mapAdvisory(
+      advisory({
+        vulnerabilities: [
+          {
+            package: { ecosystem: "npm", name: "scg-fixture-pkg" },
+            vulnerable_version_range: "= 4.5.6",
+          },
+        ],
+      }),
+    ).entries[0];
+    expect(exact._derivation).toBe("listed");
+    expect(mapAdvisory(advisory()).entries[0]._derivation).toBeUndefined();
+  });
+
   it("prefixes every non-npm ecosystem the scanner can match", async () => {
     const { mapAdvisory } = await load();
     const cases: Array<[string, string]> = [
@@ -351,6 +370,37 @@ describe("mapOsvMalwareRecord", () => {
     expect(result.entries.map((entry: FeedIOC) => entry.value)).toEqual([
       "openvsx:scgpub.scg-theme@1.8.3",
       "openvsx:scgpub.scg-theme@1.8.4",
+    ]);
+  });
+
+  it("labels the record's own listed versions as listed, also under a whole-package range", async () => {
+    const { mapOsvMalwareRecord } = await load();
+    const bounded = mapOsvMalwareRecord(
+      osvMalwareRecord({
+        affected: [
+          {
+            package: { ecosystem: "PyPI", name: "scg-fixture-python" },
+            ranges: [{ type: "ECOSYSTEM", events: [{ introduced: "1.0.0" }, { fixed: "1.2.0" }] }],
+            versions: ["1.0.0", "1.1.0"],
+          },
+        ],
+      }),
+    );
+    const whole = mapOsvMalwareRecord(
+      osvMalwareRecord({
+        affected: [
+          {
+            package: { ecosystem: "VSCode:https://open-vsx.org", name: "scgpub.scg-theme" },
+            ranges: [{ type: "ECOSYSTEM", events: [{ introduced: "0" }] }],
+            versions: ["1.8.3"],
+          },
+        ],
+      }),
+    );
+    expect([...bounded.entries, ...whole.entries].map((e: Record<string, unknown>) => e._derivation)).toEqual([
+      "listed",
+      "listed",
+      "listed",
     ]);
   });
 
@@ -587,6 +637,23 @@ describe("coalesceCandidates", () => {
       }),
     ).entries[0];
     expect(coalesceCandidates([github, ossf]).entries[0].confidence).toBe(0.9);
+  });
+
+  // One source naming the version is enough for the daily channel, whichever
+  // source the merge happened to see first.
+  it("coalesced pin keeps listed when any source lists it", async () => {
+    const { coalesceCandidates } = await load();
+    const pin = (derivation: string) => ({
+      type: "package",
+      value: "scg-fixture-pkg@1.0.0",
+      severity: "critical",
+      confidence: 0.9,
+      source: derivation,
+      _derivation: derivation,
+    });
+    expect(coalesceCandidates([pin("range-resolved"), pin("listed")]).entries[0]._derivation).toBe("listed");
+    expect(coalesceCandidates([pin("listed"), pin("pin-only")]).entries[0]._derivation).toBe("listed");
+    expect(coalesceCandidates([pin("pin-only"), pin("range-resolved")]).entries[0]._derivation).toBe("pin-only");
   });
 });
 
@@ -1812,6 +1879,28 @@ describe("importUpstreamFeed failure mode", () => {
     // "nothing would be routed" rather than "not computed yet".
     expect(report.addedToBundle + report.addedToCatalog).toBe(report.added);
     expect(report.addedToBundle).toBe(1);
+  });
+
+  // The daily channel reads the dry-run report and keeps only listed versions.
+  // `entries` stays the plain feed shape; the label travels beside it.
+  it("dry-run report carries derivations aligned with entries", async () => {
+    const { importUpstreamFeed } = await load();
+    const exact = advisory({
+      ghsa_id: "GHSA-dddd-eeee-ffff",
+      vulnerabilities: [{ package: { ecosystem: "npm", name: "scg-fixture-exact" }, vulnerable_version_range: "= 4.5.6" }],
+    });
+    const report = await importUpstreamFeed({
+      root: tmpRoot,
+      dryRun: true,
+      useOsv: false,
+      fetchImpl: singlePage([advisory(), exact]),
+    });
+    const byValue = Object.fromEntries(
+      report.entries.map((e: { value: string }, i: number) => [e.value, report.derivations[i]]),
+    );
+    expect(report.derivations).toHaveLength(report.entries.length);
+    expect(byValue).toEqual({ "scg-fixture-pkg": null, "scg-fixture-exact@4.5.6": "listed" });
+    expect(report.entries.every((e: object) => !("derivation" in e) && !("_derivation" in e))).toBe(true);
   });
 
   // The bundle stopped being the whole committed feed when the migration moved

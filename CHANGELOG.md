@@ -7,6 +7,16 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Changed
+
+- The feed importer's JSON report (`--json`, also on `--dry-run`) labels each
+  proposed version pin with where its version came from: named by the source
+  record (`listed`), resolved from a version range against the registry,
+  resolved for a pin-only package, or a sampled version of a whole-package
+  claim. The new `derivations` array is index-aligned with `entries`, which
+  keep their shape. It prepares the daily feed channel, which will publish
+  only versions a source names.
+
 ## [6.5.10] - 2026-10-21
 
 ### Added
