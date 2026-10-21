@@ -154,9 +154,10 @@ that holds the key:
 
 **Reading a red run.** Any failed step publishes nothing, and the channel keeps
 the previous day's feed. The job log names the cause: an importer error or
-tripwire, a truncated report or an unmapped gap, an invariant breach (which
-entry, and why), the parser, or the signature. Fix the cause on `main` or wait
-for the source to recover; never republish `main`'s feed with a fresh
+tripwire, a truncated report, an invariant breach or a feed above 16 MiB (which
+entry, and why), the parser, or the signature. Unmapped upstream records do not
+stop it: they are not in the feed, the job log counts them, and this workflow
+reports them. Fix the cause on `main` or wait for the source to recover; never republish `main`'s feed with a fresh
 timestamp. The `Daily feed channel is fresh` step in `feed-reconcile.yml`
 fails when the published `generatedAt` is older than 30 hours, once the
 repository variable `FEED_CHANNEL_LIVE` is set.
@@ -168,6 +169,8 @@ repository variable `FEED_CHANNEL_LIVE` is set.
   `main` and tags matching `v*.*.*`, holding the secret `FEED_SIGNING_KEY`.
   The release job in `ci.yml` and the `sign` job in `feed-daily.yml` both run
   in it.
+- No repository-level `FEED_SIGNING_KEY`: only the environment holds it, so
+  only the two signing jobs can read it.
 - The repository variable `FEED_CHANNEL_LIVE`, set after the first green
   deploy.
 

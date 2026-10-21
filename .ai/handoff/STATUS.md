@@ -1,3 +1,35 @@
+## The Action installs the daily feed; release readiness for 6.6.0 (2026-10-21) (claude-opus-5-5)
+
+A whole-feature audit before the release found that the GitHub Action never
+used the daily channel: it ran `feed refresh` only with `refresh-catalog:
+true`, off by default, while the CHANGELOG and the design said it refreshed on
+every run. Owner decision 2026-10-21: the Action installs the daily feed by
+default, the catalog stays opt-in.
+
+- `action.yml`: new input `refresh-feed` (default `true`) runs
+  `feed refresh --no-catalog` into the isolated cache before the scan;
+  `refresh-catalog: true` runs the full refresh; a failed refresh keeps the
+  bundled feed and says so; `refresh-feed: false` keeps the Action offline.
+- `src/cli.ts` / `src/feed.ts`: `feed refresh --no-catalog`
+  (`RefreshOptions.skipCatalog`).
+- `scripts/build-daily-feed.mjs`: unmapped upstream records no longer stop
+  publishing (they are not in the feed; the count is logged and
+  feed-reconcile reports them), reversing the earlier ruling, since Goal 1
+  allows no daily maintainer step; the feed is capped at 16 MiB (clients
+  refuse 32 MiB).
+- `feed-reconcile.yml` runs at 11:37 UTC, about six hours after the publish,
+  so one missed publish already fails the 30-hour freshness check.
+- Docs: README "Start in 30 seconds" now leads with the daily refresh; the
+  Dependabot cadence paragraph, the exact-pin paragraph, Docker, the egress
+  host, the Action inputs table and the Live Threat Feed description are
+  corrected; CHANGELOG no longer contradicts itself; CONTRIBUTING lists
+  `build-daily-feed.mjs` and `site/`; `docs/mcp.md` says daily; the design
+  doc is marked implemented; `docs/ci-and-release.md` covers the unmapped
+  rule and the repository secret.
+
+Owner step still open: delete the repository-level `FEED_SIGNING_KEY` (the
+environment copy is in use), so only the two signing jobs can read it.
+
 ## Freshness step: Bash syntax error fixed, every workflow script now parsed in tests (2026-10-21) (claude-opus-5-5)
 
 The first armed run of "Daily feed channel is fresh" (`feed-reconcile.yml`,

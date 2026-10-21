@@ -252,14 +252,49 @@ describe("the CLI", () => {
     expect(daily.generatedAt).toBe("2026-10-22T06:15:00.000Z");
   });
 
-  it("refuses a report that is truncated or has gaps", async () => {
-    for (const extra of [{ truncated: true }, { unmapped: 1 }, { dryRun: false }]) {
+  it("refuses a report that is truncated or not a dry run", async () => {
+    for (const extra of [{ truncated: true }, { dryRun: false }]) {
       const { code, feedPath } = await run(report([["scg-a@1.0.0", "listed"]], extra));
       expect(code).toBe(1);
       expect(fs.existsSync(feedPath)).toBe(false);
     }
-    expect(errors).toHaveLength(3);
+    expect(errors).toHaveLength(2);
     expect(errors.every((e) => /Nothing was written/.test(e))).toBe(true);
+  });
+
+  // An unmapped record is not in the report's entries at all, so the feed is
+  // still correct, only short of that record. Publishing stops for a real
+  // failure, never for a backlog the reconcile workflow already reports.
+  it("publishes despite unmapped records and says how many", async () => {
+    const logs: string[] = [];
+    (console.log as unknown as { mockImplementation: (f: (...a: unknown[]) => void) => void }).mockImplementation(
+      (...args: unknown[]) => void logs.push(args.join(" ")),
+    );
+    const { code, feedPath } = await run(report([["scg-a@1.0.0", "listed"]], { unmapped: 2 }));
+    expect(code).toBe(0);
+    expect(fs.existsSync(feedPath)).toBe(true);
+    expect(logs.join(" ")).toMatch(/2 unmapped upstream record\(s\) not in this feed/);
+  });
+
+  // Clients refuse a download above 32 MiB (FEED_REMOTE_LIMITS) and would then
+  // fall back to the release feed every day without anyone noticing.
+  it("refuses a feed above the size cap", async () => {
+    const { main } = await load();
+    const { out } = await run(report([["scg-a@1.0.0", "listed"]]));
+    fs.rmSync(path.join(out, "feed.json"));
+    const reportFile = path.join(out, "report.json");
+    const code = await main(
+      ["--report", reportFile, "--main-root", lastMainRoot, "--release-root", lastReleaseRoot, "--out", out, "--max-bytes", "200"],
+      { now: NOW },
+    );
+    expect(code).toBe(1);
+    expect(fs.existsSync(path.join(out, "feed.json"))).toBe(false);
+    expect(errors.join(" ")).toMatch(/bytes, above the 200-byte cap/);
+  });
+
+  it("caps the daily feed at 16 MiB by default", async () => {
+    const { DEFAULT_DAILY_MAX_BYTES } = await load();
+    expect(DEFAULT_DAILY_MAX_BYTES).toBe(16 * 1024 * 1024);
   });
 
   // The signing job runs no dependencies and re-checks the built feed itself,

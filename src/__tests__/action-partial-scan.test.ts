@@ -161,6 +161,11 @@ interface ScanScriptOptions {
   scanStatus?: number;
   formattedReport?: string;
   commentOnPr?: string;
+  /** Unset means the Action default. */
+  refreshFeed?: string;
+  refreshCatalog?: string;
+  /** Exit status of a `feed refresh` call on the fake CLI. */
+  refreshStatus?: number;
 }
 
 function explicitGateStatus(report: unknown, failOn: string): number {
@@ -194,6 +199,10 @@ function runScanScript(
   fs.mkdirSync(bin);
   const scanner = path.join(bin, "supply-chain-guard");
   fs.writeFileSync(scanner, `#!/usr/bin/env bash
+if [ "$1" = "feed" ]; then
+  echo "$*" >> "$FAKE_CALLS"
+  exit "$FAKE_REFRESH_STATUS"
+fi
 format=text
 json_output=
 while [ "$#" -gt 0 ]; do
@@ -212,6 +221,7 @@ exit "$FAKE_SCAN_STATUS"
   const scriptPath = path.join(temp, "scan.sh");
   fs.writeFileSync(scriptPath, scanScript, "utf8");
   const outputPath = path.join(temp, "github-output.txt");
+  const callsPath = path.join(temp, "feed-calls.txt");
   const expectedStatus = explicitGateStatus(report, failOn);
   const requestedFormat = options.format ?? "json";
   const formattedReport = options.formattedReport
@@ -233,6 +243,10 @@ exit "$FAKE_SCAN_STATUS"
       SCG_EXCLUDE_RULES: "",
       SCG_FAIL_ON: failOn,
       SCG_COMMENT_ON_PR: options.commentOnPr ?? "true",
+      ...(options.refreshFeed === undefined ? {} : { SCG_REFRESH_FEED: options.refreshFeed }),
+      ...(options.refreshCatalog === undefined ? {} : { SCG_REFRESH_CATALOG: options.refreshCatalog }),
+      FAKE_CALLS: callsPath,
+      FAKE_REFRESH_STATUS: String(options.refreshStatus ?? 0),
       FAKE_JSON: JSON.stringify(report),
       FAKE_REPORT: formattedReport,
       FAKE_SCAN_STATUS: String(options.scanStatus ?? expectedStatus),
@@ -240,6 +254,9 @@ exit "$FAKE_SCAN_STATUS"
   });
   (result as ReturnType<typeof spawnSync> & { githubOutput?: string }).githubOutput =
     fs.existsSync(outputPath) ? fs.readFileSync(outputPath, "utf8") : "";
+  (result as ReturnType<typeof spawnSync> & { feedCalls?: string[] }).feedCalls = fs.existsSync(callsPath)
+    ? fs.readFileSync(callsPath, "utf8").split("\n").filter(Boolean)
+    : [];
   fs.rmSync(temp, { recursive: true, force: true });
   return result;
 }
@@ -680,6 +697,33 @@ describe("Marketplace Action fail-closed contract", () => {
     );
   });
 
+  // The daily signed feed reaches the Action without a release
+  // (docs/daily-feed-channel-design.md): on by default and feed-only, the large
+  // catalog stays opt-in, and a failed download never stops the scan.
+  it.skipIf(!hasBash || !hasJq)("refreshes the daily feed by default, the catalog only on request, and survives a failed refresh", () => {
+    type R = ReturnType<typeof spawnSync> & { feedCalls?: string[] };
+    const byDefault = runScanScript(validEmptyReport) as R;
+    expect(byDefault.status).toBe(0);
+    expect(byDefault.feedCalls).toHaveLength(1);
+    expect(byDefault.feedCalls![0]).toMatch(/^feed refresh --no-catalog --cache-dir \S+\/cache$/);
+
+    const off = runScanScript(validEmptyReport, "critical", { refreshFeed: "false" }) as R;
+    expect(off.status).toBe(0);
+    expect(off.feedCalls).toEqual([]);
+
+    const withCatalog = runScanScript(validEmptyReport, "critical", { refreshCatalog: "true" }) as R;
+    expect(withCatalog.feedCalls).toHaveLength(1);
+    expect(withCatalog.feedCalls![0]).toMatch(/^feed refresh --cache-dir \S+\/cache$/);
+
+    const failed = runScanScript(validEmptyReport, "critical", { refreshStatus: 1 }) as R;
+    expect(failed.status).toBe(0);
+    expect(failed.stderr).toContain("Feed refresh failed; the scan uses the feed bundled with this version.");
+
+    const typo = runScanScript(validEmptyReport, "critical", { refreshFeed: "tru" }) as R;
+    expect(typo.status).toBe(1);
+    expect(typo.stderr).toContain("Invalid refresh-feed input. Allowed: true, false.");
+  });
+
   // CACHE_DIR is ".scg-cache" relative to cwd, and the Action's cwd is the
   // checkout under scan. A committed cache there is target-controlled and
   // used to silence THREAT_FEED_CATALOG_MISSING. The scan must use the
@@ -693,6 +737,12 @@ describe("Marketplace Action fail-closed contract", () => {
   // made catalog: required unsatisfiable on the Action: every run started
   // empty, and a preceding feed refresh wrote cwd .scg-cache which this
   // script ignored. The input is off by default so the Action stays offline.
+  it("declares refresh-feed, on by default, and reads it through env", () => {
+    expect(action).toMatch(/refresh-feed:[\s\S]*?default: "true"/);
+    expect(action).toContain("SCG_REFRESH_FEED: ${{ inputs['refresh-feed'] }}");
+    expect(scanScript).toContain("supply-chain-guard feed refresh --no-catalog --cache-dir \"$SCG_RUN_DIR/cache\"");
+  });
+
   it("can refresh the catalog into the isolated cache before scanning", () => {
     expect(action).toContain("refresh-catalog:");
     expect(action).toMatch(/refresh-catalog:[\s\S]*?default: "false"/);

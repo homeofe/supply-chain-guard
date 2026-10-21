@@ -1,6 +1,6 @@
 # Daily signed feed channel and offline import
 
-Status: design, approved direction (2026-10-21). Not yet built.
+Status: implemented (pull requests 432 to 437 and the 6.6.0 follow-up), released in 6.6.0. The GitHub Action installs the daily feed on every run (`refresh-feed`, on by default).
 
 ## Why
 

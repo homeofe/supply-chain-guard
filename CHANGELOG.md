@@ -14,9 +14,15 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   from the reviewed `main` plus exact-version pins whose version a source
   names, checked against `main` before it is signed, with an archive and
   checksums for offline networks. Nothing that could block a legitimate
-  package by name, range or domain reaches it without review. Clients start
-  reading it in a later release; until then `feed refresh` keeps using the
-  release feed.
+  package by name, range or domain reaches it without review. Threat data now
+  reaches users daily, while code releases come about once a week.
+- The GitHub Action installs the signed daily feed before every scan: new
+  input `refresh-feed`, on by default, downloads about 2 MB from
+  `homeofe.github.io` (fallback: the release assets on `github.com`). A failed
+  download keeps the scan on the bundled feed; `refresh-feed: false` keeps the
+  Action fully offline. The catalog stays behind `refresh-catalog: true`.
+- `feed refresh --no-catalog` installs the feed without the historical
+  catalog.
 - `supply-chain-guard feed import <dir>` installs the signed feed, and the
   release's catalog when its files are present, from a local directory, for
   networks without internet access. It runs the same signature, rollback,
@@ -26,7 +32,7 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Changed
 
-- `feed refresh` (and the GitHub Action, which runs it) reads the daily
+- `feed refresh` reads the daily
   signed feed channel on GitHub Pages by default and falls back to the signed
   feed of the latest GitHub Release when the channel cannot be installed for
   any reason, with the same signature, rollback and size checks. It says which
@@ -45,8 +51,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   record (`listed`), resolved from a version range (against the registry, or
   the ends a range names), resolved for a pin-only package, or a sampled
   version of a whole-package claim, IDE extensions included. The new `derivations` array is index-aligned with `entries`, which
-  keep their shape. It prepares the daily feed channel, which will publish
-  only versions a source names.
+  keep their shape. The daily feed channel publishes only the pins labelled
+  `listed` without review.
 
 ## [6.5.10] - 2026-10-21
 
