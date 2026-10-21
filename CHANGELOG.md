@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [6.5.10] - 2026-10-21
+
 ### Added
 
 - Threat intel for 2026-10-20 and 2026-10-21: 259 package entries from the
@@ -48,6 +50,19 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 - Weekly reconcile of the complete GitHub malware history: 3 exact pins the
   windowed runs had missed, all in the catalog (`kartyk-github-token-pkg`
   1.0.3 and 1.0.4, `kartyk-github-oidc-test-pkg@1.0.4`).
+
+### Changed
+
+- The bundle cutoff advances from 2026-09-18 to 2026-09-21, and 37 plain
+  package entries dated 2026-09-18 to 2026-09-20 move from the offline bundle
+  to the catalog. None carries a campaign or family, and no test or document
+  names any of them.
+- The Docker image is built on the current `node:24-alpine` base image
+  digest.
+- Node support policy: the `nodejs/Release` schedule, re-read on 2026-10-21,
+  is unchanged (Node 24 in Maintenance since 2026-10-20, Node 26 Active LTS
+  from 2026-10-28), so `activeLtsMajor` stays 24 and the review milestone
+  moves to 6.5.11.
 
 ## [6.5.9] - 2026-10-18
 
@@ -7722,7 +7737,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.5.9...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.5.10...HEAD
+[6.5.10]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.10
 [6.5.9]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.9
 [6.5.8]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.8
 [6.5.7]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.7

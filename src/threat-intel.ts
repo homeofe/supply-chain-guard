@@ -2741,31 +2741,6 @@ const FEED_CHUNK_20: FeedIOC[] = [
   { type: "package", value: "html-to-gutenberg@4.2.19", severity: "critical", confidence: 1, source: "MAL-2026-6359 (amazon-inspector+ghsa-malware)", firstSeen: "2026-06-24" },
   { type: "package", value: "html-to-gutenberg@4.2.20", severity: "critical", confidence: 1, source: "MAL-2026-6359 (amazon-inspector+ghsa-malware)", firstSeen: "2026-06-24" },
 
-  // Imported from GitHub Advisory Database (2026-09-05) - see docs/threat-feed-sources.md
-  { type: "package", value: "pypi:urc@99.99.99", severity: "critical", confidence: 1.0, source: "GHSA-3c7m-3qhf-wqrr, MAL-2026-16298 (kam193)", firstSeen: "2026-09-19" },
-  { type: "package", value: "keroeltop@99.99.99", severity: "critical", confidence: 1.0, source: "GHSA-gg5m-rqpp-c9xf, MAL-2026-16297 (ossf-package-analysis)", firstSeen: "2026-09-18" },
-  { type: "package", value: "pypi:py-venv-doctor@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-94w6-hr49-qjm7, MAL-2026-16296 (kam193)", firstSeen: "2026-09-18" },
-  { type: "package", value: "pypi:py-venv-doctor@0.1.1", severity: "critical", confidence: 1.0, source: "GHSA-94w6-hr49-qjm7, MAL-2026-16296 (kam193)", firstSeen: "2026-09-18" },
-  { type: "package", value: "internallib_v949", severity: "critical", confidence: 1.0, source: "GHSA-f863-m366-9cfm, MAL-2026-16294 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-18" },
-  { type: "package", value: "@shared-web/utils@9.9.10", severity: "critical", confidence: 1.0, source: "GHSA-29f7-pqf4-c94j, MAL-2026-16292 (amazon-inspector)", firstSeen: "2026-09-18" },
-  { type: "package", value: "tailwindcss-forms-ui@0.5.2", severity: "critical", confidence: 1.0, source: "GHSA-fc5q-m33g-rp9c, MAL-2026-16295 (amazon-inspector)", firstSeen: "2026-09-18" },
-  { type: "package", value: "chai-as-indexed@7.2.8", severity: "critical", confidence: 1.0, source: "GHSA-727r-6hg5-947x, MAL-2026-16293 (amazon-inspector)", firstSeen: "2026-09-18" },
-  { type: "package", value: "@shared-runtime/modules@9.9.10", severity: "critical", confidence: 1.0, source: "GHSA-g85c-jph7-8q4r, MAL-2026-16291 (amazon-inspector)", firstSeen: "2026-09-18" },
-  { type: "package", value: "@insiderintelligence/googleadmanager@9.9.10", severity: "critical", confidence: 1.0, source: "GHSA-76rx-jxhm-vhww, MAL-2026-16290 (amazon-inspector)", firstSeen: "2026-09-18" },
-  { type: "package", value: "openmct-heatmap", severity: "critical", confidence: 0.9, source: "GHSA-qx52-2xq4-3x3v, MAL-2026-16287 (ghsa-malware)", firstSeen: "2026-09-18" },
-  { type: "package", value: "test899-auth", severity: "critical", confidence: 1.0, source: "GHSA-jf2q-w77c-99vv, MAL-2026-16285 (amazon-inspector+ghsa-malware+ossf-package-analysis)", firstSeen: "2026-09-18" },
-  { type: "package", value: "test89-auth", severity: "critical", confidence: 1.0, source: "GHSA-7868-hxr7-g8r6, MAL-2026-16288 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-18" },
-  { type: "package", value: "test8999-auth", severity: "critical", confidence: 1.0, source: "GHSA-25wf-vfrc-2r82, MAL-2026-16286 (amazon-inspector+ghsa-malware+ossf-package-analysis)", firstSeen: "2026-09-18" },
-  { type: "package", value: "test890-auth", severity: "critical", confidence: 1.0, source: "GHSA-xvpv-wq7p-548c, MAL-2026-16289 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-18" },
-  { type: "package", value: "@shared-web/assets@9.9.10", severity: "critical", confidence: 1.0, source: "GHSA-vmr9-5w3x-4v98, MAL-2026-16283 (amazon-inspector)", firstSeen: "2026-09-18" },
-  { type: "package", value: "sinful", severity: "critical", confidence: 0.9, source: "GHSA-2xjj-r8mc-xpf6, MAL-2026-16284 (ghsa-malware)", firstSeen: "2026-09-18" },
-  { type: "package", value: "@sanzoffc/baileys@3.0.4", severity: "critical", confidence: 1.0, source: "GHSA-grqc-r63w-6845, MAL-2026-16281 (amazon-inspector)", firstSeen: "2026-09-18" },
-  { type: "package", value: "tailwindcss-form@0.5.1", severity: "critical", confidence: 1.0, source: "GHSA-xhr7-h7hc-7785, MAL-2026-16282 (amazon-inspector)", firstSeen: "2026-09-18" },
-  { type: "package", value: "zero-baileys@2.7.0", severity: "critical", confidence: 1.0, source: "GHSA-2q5p-vqh2-8c92, MAL-2026-16280 (amazon-inspector)", firstSeen: "2026-09-18" },
-  { type: "package", value: "xzvbailsx@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-m364-pjc8-42wc, MAL-2026-16279 (amazon-inspector)", firstSeen: "2026-09-18" },
-  { type: "package", value: "xzvbailey@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-rg4j-jh5f-w982, MAL-2026-16278 (amazon-inspector)", firstSeen: "2026-09-18" },
-  { type: "package", value: "xa424234657567@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-h7pm-6wh6-7xvw, MAL-2026-16277 (amazon-inspector)", firstSeen: "2026-09-18" },
-  { type: "package", value: "@lekzo/baileys@0.0.1", severity: "critical", confidence: 1.0, source: "GHSA-75mc-fj4c-6pfm, MAL-2026-16276 (amazon-inspector)", firstSeen: "2026-09-18" },
 
   // PhantomRaven LLM-generated npm infostealer (CrowdStrike, September 2026).
   // Curated: carries campaign and family so the whole set stays in the bundle and
@@ -2851,8 +2826,6 @@ const FEED_CHUNK_20: FeedIOC[] = [
   { type: "package", value: "@baanx/solana-lib@9.9.10", severity: "critical", confidence: 1.0, source: "GHSA-pvh9-27rp-6282, MAL-2026-16300 (amazon-inspector)", firstSeen: "2026-09-21" },
   { type: "package", value: "@nimbsuedge3/xar@1.1.1", severity: "critical", confidence: 1.0, source: "GHSA-rg8r-9wp3-7jrg, MAL-2026-16301 (amazon-inspector)", firstSeen: "2026-09-21" },
   { type: "package", value: "@nimbusedge2/xa@1.1.0", severity: "critical", confidence: 1.0, source: "GHSA-m4pg-jjmc-xgr9, MAL-2026-16306 (amazon-inspector)", firstSeen: "2026-09-21" },
-  { type: "package", value: "@pwaplatform/module-sso-integration@99.0.0", severity: "critical", confidence: 1.0, source: "GHSA-26h7-cmv3-wgv6, MAL-2026-16299 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-09-20" },
-  { type: "package", value: "@pwaplatform/module-sso-integration@99.0.1", severity: "critical", confidence: 1.0, source: "GHSA-26h7-cmv3-wgv6, MAL-2026-16299 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-09-20" },
   { type: "package", value: "starbucks-sdk@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-16345 (amazon-inspector)", firstSeen: "2026-09-21" },
   { type: "package", value: "pflag29424@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-16342 (amazon-inspector)", firstSeen: "2026-09-21" },
   { type: "package", value: "siriusbeyond@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-16343 (amazon-inspector)", firstSeen: "2026-09-21" },
@@ -2933,7 +2906,6 @@ const FEED_CHUNK_20: FeedIOC[] = [
   { type: "package", value: "pypi:starlette-healthchecks@1.3.2", severity: "critical", confidence: 1.0, source: "GHSA-6g46-rqp7-42mp, MAL-2026-16356 (kam193)", firstSeen: "2026-09-21" },
   { type: "package", value: "@baanx/abis@9.9.11", severity: "critical", confidence: 1.0, source: "GHSA-r554-rpx4-qw24, MAL-2026-16351 (amazon-inspector)", firstSeen: "2026-09-21" },
   { type: "package", value: "@baanx/blockchain-config@9.9.11", severity: "critical", confidence: 1.0, source: "GHSA-7cc3-jjqj-wrm5, MAL-2026-16352 (amazon-inspector)", firstSeen: "2026-09-21" },
-  { type: "package", value: "radio-player-theme@6.0.0", severity: "critical", confidence: 1.0, source: "GHSA-3rj7-hf4w-jh5c, MAL-2026-16347", firstSeen: "2026-09-19" },
 ];
 
 const FEED_CHUNK_21: FeedIOC[] = [
@@ -3021,7 +2993,6 @@ const FEED_CHUNK_21: FeedIOC[] = [
   { type: "package", value: "action-slack-message-root", severity: "critical", confidence: 1.0, source: "GHSA-mrmw-mqq6-fp9w, MAL-2026-16323 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-21" },
   { type: "package", value: "better-envforge", severity: "critical", confidence: 1.0, source: "GHSA-3h54-43fv-m822, MAL-2026-16324 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-21" },
   { type: "package", value: "chai-as-viem", severity: "critical", confidence: 1.0, source: "GHSA-88fm-v2m3-mx8x, MAL-2026-16329 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-21" },
-  { type: "package", value: "@pwaplatform/module-sso-integration", severity: "critical", confidence: 1.0, source: "GHSA-3gx2-xpw8-x42p, MAL-2026-16299 (amazon-inspector+ghsa-malware+ossf-package-analysis)", firstSeen: "2026-09-20" },
   { type: "package", value: "@uh-platform/webcard", severity: "critical", confidence: 1.0, source: "GHSA-7w7p-g9xr-2v29, MAL-2026-16362 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-21" },
   { type: "package", value: "@uol-afiliados/affiliated-config-lib", severity: "critical", confidence: 1.0, source: "GHSA-mx57-mmpv-mwjr, MAL-2026-16370 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-21" },
   { type: "package", value: "@uh-platform/nadaver2", severity: "critical", confidence: 1.0, source: "GHSA-x2pw-3pc4-xvh5, MAL-2026-16361 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-21" },
@@ -3033,7 +3004,6 @@ const FEED_CHUNK_21: FeedIOC[] = [
   { type: "package", value: "pypi:pullgetsage@0.1.1", severity: "critical", confidence: 1.0, source: "GHSA-4whg-cvj9-8v3f, MAL-2026-16366 (amazon-inspector+kam193)", firstSeen: "2026-09-21" },
   { type: "package", value: "@woodpecker-web-shared/components@4.20.5", severity: "critical", confidence: 1.0, source: "GHSA-8hq6-gvg5-x8wq, MAL-2026-16354 (amazon-inspector)", firstSeen: "2026-09-21" },
   { type: "package", value: "@woodpecker-web-shared/components@1.20.4", severity: "critical", confidence: 1.0, source: "GHSA-8hq6-gvg5-x8wq, MAL-2026-16354 (amazon-inspector)", firstSeen: "2026-09-21" },
-  { type: "package", value: "@lekzo/baileys@0.0.7", severity: "critical", confidence: 1.0, source: "GHSA-75mc-fj4c-6pfm, MAL-2026-16276 (amazon-inspector)", firstSeen: "2026-09-18" },
   // Graphalgo campaign spreads to Terraform providers and Go modules (Aikido,
   // September 2026). Curated enrichment, not an advisory-database import: these
   // carry campaign and family so the partition policy keeps them in the bundle.
@@ -3629,7 +3599,6 @@ const FEED_CHUNK_21: FeedIOC[] = [
   // Imported from GitHub Advisory Database (2026-09-10) - see docs/threat-feed-sources.md
   { type: "package", value: "@baanx/solana-lib", severity: "critical", confidence: 1.0, source: "GHSA-5x34-3xqm-3r73, MAL-2026-16300 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-21" },
   { type: "package", value: "@insiderintelligence/componentlibrary", severity: "critical", confidence: 1.0, source: "GHSA-rjh6-qm48-cg84, MAL-2026-16353 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-21" },
-  { type: "package", value: "@insiderintelligence/googleadmanager", severity: "critical", confidence: 1.0, source: "GHSA-q699-336h-g385, MAL-2026-16290 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-18" },
   { type: "package", value: "@baanx/domain", severity: "critical", confidence: 0.9, source: "GHSA-qhfc-6rp6-pwv6, MAL-2026-16486 (ghsa-malware)", firstSeen: "2026-09-24" },
   { type: "package", value: "@baanx/blockchain-config", severity: "critical", confidence: 1.0, source: "GHSA-f67m-pjx9-96cv, MAL-2026-16352 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-21" },
   { type: "package", value: "@baanx/abis", severity: "critical", confidence: 1.0, source: "GHSA-598m-93qh-82f9, MAL-2026-16351 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-21" },
@@ -4116,7 +4085,6 @@ const FEED_CHUNK_22: FeedIOC[] = [
   { type: "package", value: "link-status-page", severity: "critical", confidence: 0.9, source: "GHSA-5j3f-rr83-xcpq, MAL-2026-17338 (ghsa-malware)", firstSeen: "2026-09-30" },
   { type: "package", value: "web-vitals-polyfill-core-v1", severity: "critical", confidence: 1.0, source: "GHSA-h475-44q2-vfjx, MAL-2026-17303 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-30" },
   { type: "package", value: "@redman89405/my-module", severity: "critical", confidence: 0.9, source: "GHSA-vc53-jhh2-pwf3, MAL-2026-17336 (ghsa-malware)", firstSeen: "2026-09-30" },
-  { type: "package", value: "radio-player-theme", severity: "critical", confidence: 1.0, source: "GHSA-pp2v-g64w-gm6f, MAL-2026-16347 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-19" },
   { type: "package", value: "iban-validator-js", severity: "critical", confidence: 0.9, source: "GHSA-wg95-pj2w-mm76, MAL-2026-17331 (ghsa-malware)", firstSeen: "2026-09-30" },
   { type: "package", value: "test-supply-npm-lib-4@3.3.6", severity: "critical", confidence: 1.0, source: "GHSA-94gj-gfw3-p6wc, MAL-2026-17314 (amazon-inspector)", firstSeen: "2026-09-30" },
   { type: "package", value: "test-supply-npm-lib-4@3.3.5", severity: "critical", confidence: 1.0, source: "GHSA-94gj-gfw3-p6wc, MAL-2026-17314 (amazon-inspector)", firstSeen: "2026-09-30" },
@@ -7737,7 +7705,6 @@ const FEED_CHUNK_25: FeedIOC[] = [
   { type: "package", value: "@praveenvjpm/color-utils-7210@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17651 (amazon-inspector)", firstSeen: "2026-10-08" },
   { type: "package", value: "css-flow-render-shim@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17655 (amazon-inspector)", firstSeen: "2026-10-08" },
   { type: "package", value: "hardhat-pack@2.0.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17661 (amazon-inspector)", firstSeen: "2026-10-08" },
-  { type: "package", value: "chai-as-indexed@6.0.5", severity: "critical", confidence: 0.9, source: "MAL-2026-16293 (amazon-inspector)", firstSeen: "2026-09-18" },
   { type: "package", value: "t3-hermes-win32-arm64", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-08" },
   // Hand-added enrichment (2026-10-08): tensorlake npm SDK compromise
   // (Shai-Hulud). The package pin came from the importer (GHSA-rqxj-g25x-4v9v);
@@ -8212,7 +8179,6 @@ const FEED_CHUNK_26: FeedIOC[] = [
   { type: "package", value: "@wanzlonely/bailsforme", severity: "critical", confidence: 0.9, source: "GHSA-p3g3-r8vh-rwhx, MAL-2026-17838 (ghsa-malware)", firstSeen: "2026-10-12" },
   { type: "package", value: "@wanzlonely/bailsme", severity: "critical", confidence: 0.9, source: "GHSA-4h3p-p24h-82rf, MAL-2026-17839 (ghsa-malware)", firstSeen: "2026-10-12" },
   { type: "package", value: "bailslonely", severity: "critical", confidence: 0.9, source: "GHSA-vc96-c7r4-h83m, MAL-2026-17844 (ghsa-malware)", firstSeen: "2026-10-12" },
-  { type: "package", value: "@sanzoffc/baileys", severity: "critical", confidence: 1.0, source: "GHSA-w5cc-9p38-q2wq, MAL-2026-16281 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-18" },
   { type: "package", value: "@sanzoffc/libsignal-node", severity: "critical", confidence: 0.9, source: "GHSA-38h3-6834-45vg, MAL-2026-17837 (ghsa-malware)", firstSeen: "2026-10-12" },
   { type: "package", value: "@saazkira/libsignal-node", severity: "critical", confidence: 0.9, source: "GHSA-5f92-7xqw-69hg, MAL-2026-17836 (ghsa-malware)", firstSeen: "2026-10-12" },
   { type: "package", value: "@saazkira/eslint-config", severity: "critical", confidence: 0.9, source: "GHSA-6h28-rjw4-r5vh, MAL-2026-17835 (ghsa-malware)", firstSeen: "2026-10-12" },
@@ -8237,7 +8203,6 @@ const FEED_CHUNK_26: FeedIOC[] = [
   { type: "package", value: "@modss/libsignal", severity: "critical", confidence: 0.9, source: "GHSA-4w65-x977-wh2r, MAL-2026-17823 (ghsa-malware)", firstSeen: "2026-10-12" },
   { type: "package", value: "@mikudeveloper/libsignal-node", severity: "critical", confidence: 0.9, source: "GHSA-hf9g-jp6h-4pr2, MAL-2026-17814 (ghsa-malware)", firstSeen: "2026-10-12" },
   { type: "package", value: "amprem", severity: "critical", confidence: 0.9, source: "GHSA-72jw-j77j-v6vv, MAL-2026-17815 (ghsa-malware)", firstSeen: "2026-10-12" },
-  { type: "package", value: "@lekzo/baileys", severity: "critical", confidence: 1.0, source: "GHSA-jv7g-wqqq-m6gm, MAL-2026-16276 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-18" },
   { type: "package", value: "@lekzo_dev/amprem", severity: "critical", confidence: 1.0, source: "GHSA-8gjr-vm34-h79m, MAL-2026-17813 (amazon-inspector+ghsa-malware)", firstSeen: "2026-10-12" },
   { type: "package", value: "ikanngeming", severity: "critical", confidence: 0.9, source: "GHSA-j3wm-94vw-jhx7, MAL-2026-17816 (ghsa-malware)", firstSeen: "2026-10-12" },
   { type: "package", value: "nakkinpm", severity: "critical", confidence: 0.9, source: "GHSA-9px4-72qq-2mj6, MAL-2026-17817 (ghsa-malware)", firstSeen: "2026-10-12" },
@@ -8288,7 +8253,6 @@ const FEED_CHUNK_26: FeedIOC[] = [
 
   // Imported from GitHub Advisory Database (2026-09-30) - see docs/threat-feed-sources.md
   { type: "package", value: "@inpeek/odata@0.0.0-stage", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-04" },
-  { type: "package", value: "cowork-os@0.5.53", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-09-20" },
   { type: "package", value: "storymesh-win32-x64", severity: "critical", confidence: 0.9, source: "datadog-malicious-packages", firstSeen: "2026-10-14" },
 
   // Imported from GitHub Advisory Database (2026-09-30) - see docs/threat-feed-sources.md
@@ -8408,7 +8372,6 @@ const FEED_CHUNK_26: FeedIOC[] = [
   { type: "package", value: "pypi:py-worm@2.0.0", severity: "critical", confidence: 1.0, source: "GHSA-483q-j87r-c97c, MAL-2026-17883 (kam193)", firstSeen: "2026-10-15" },
   { type: "package", value: "pypi:py-worm@2.0.1", severity: "critical", confidence: 1.0, source: "GHSA-483q-j87r-c97c, MAL-2026-17883 (kam193)", firstSeen: "2026-10-15" },
   { type: "package", value: "tailwindcss-uniform", severity: "critical", confidence: 0.9, source: "GHSA-r7f7-6833-rxh9, MAL-2026-17882 (ghsa-malware)", firstSeen: "2026-10-15" },
-  { type: "package", value: "tailwindcss-form", severity: "critical", confidence: 1.0, source: "GHSA-c8m9-qwg6-5cv9, MAL-2026-16282 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-18" },
 
   // Imported from GitHub Advisory Database (2026-10-16) - see docs/threat-feed-sources.md
   { type: "package", value: "pypi:fromthehotel-poems@0.1.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17897 (kam193)", firstSeen: "2026-10-16" },
@@ -8717,7 +8680,6 @@ const FEED_CHUNK_26: FeedIOC[] = [
   { type: "package", value: "ticketcathayoct12", severity: "critical", confidence: 0.9, source: "GHSA-g7mg-3h9r-c8h3, MAL-2026-17939 (ghsa-malware)", firstSeen: "2026-10-19" },
   { type: "package", value: "aldi02-baileys", severity: "critical", confidence: 0.9, source: "GHSA-fm6q-x7qr-xmpw, MAL-2026-17931 (ghsa-malware)", firstSeen: "2026-10-19" },
   { type: "package", value: "aemath-baileys", severity: "critical", confidence: 0.9, source: "GHSA-rc7v-fm82-xp4x, MAL-2026-17930 (ghsa-malware)", firstSeen: "2026-10-19" },
-  { type: "package", value: "zero-baileys", severity: "critical", confidence: 1.0, source: "GHSA-v486-jrrq-rhwx, MAL-2026-16280 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-18" },
   { type: "package", value: "zeroz-baileys", severity: "critical", confidence: 0.9, source: "GHSA-fwfc-f4gp-qrcq, MAL-2026-17933 (ghsa-malware)", firstSeen: "2026-10-19" },
   { type: "package", value: "items-validator", severity: "critical", confidence: 1.0, source: "GHSA-rpgc-c7g7-g8fh, MAL-2026-17235 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-28" },
   { type: "package", value: "item-validator", severity: "critical", confidence: 0.9, source: "GHSA-ff48-h3v7-m43r, MAL-2026-17932 (ghsa-malware)", firstSeen: "2026-10-19" },
@@ -10114,7 +10076,7 @@ export function getDetectionSetProvenance(
   const cacheMerged = cache.present;
 
   return {
-    bundledVersion: "6.5.9",
+    bundledVersion: "6.5.10",
     bundledEntryCount: BUNDLED_FEED.length,
     generatedAt: FEED_GENERATED_AT,
     cacheMerged,

@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "package": "supply-chain-guard",
-  "version": "6.5.9",
-  "entryCount": 7320,
+  "version": "6.5.10",
+  "entryCount": 7283,
   "generatedAt": "2026-10-21T00:00:00.000Z",
   "entries": [
     {
@@ -14711,198 +14711,6 @@
     },
     {
       "type": "package",
-      "value": "pypi:urc@99.99.99",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-3c7m-3qhf-wqrr, MAL-2026-16298 (kam193)",
-      "firstSeen": "2026-09-19"
-    },
-    {
-      "type": "package",
-      "value": "keroeltop@99.99.99",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-gg5m-rqpp-c9xf, MAL-2026-16297 (ossf-package-analysis)",
-      "firstSeen": "2026-09-18"
-    },
-    {
-      "type": "package",
-      "value": "pypi:py-venv-doctor@0.1.0",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-94w6-hr49-qjm7, MAL-2026-16296 (kam193)",
-      "firstSeen": "2026-09-18"
-    },
-    {
-      "type": "package",
-      "value": "pypi:py-venv-doctor@0.1.1",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-94w6-hr49-qjm7, MAL-2026-16296 (kam193)",
-      "firstSeen": "2026-09-18"
-    },
-    {
-      "type": "package",
-      "value": "internallib_v949",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-f863-m366-9cfm, MAL-2026-16294 (amazon-inspector+ghsa-malware)",
-      "firstSeen": "2026-09-18"
-    },
-    {
-      "type": "package",
-      "value": "@shared-web/utils@9.9.10",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-29f7-pqf4-c94j, MAL-2026-16292 (amazon-inspector)",
-      "firstSeen": "2026-09-18"
-    },
-    {
-      "type": "package",
-      "value": "tailwindcss-forms-ui@0.5.2",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-fc5q-m33g-rp9c, MAL-2026-16295 (amazon-inspector)",
-      "firstSeen": "2026-09-18"
-    },
-    {
-      "type": "package",
-      "value": "chai-as-indexed@7.2.8",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-727r-6hg5-947x, MAL-2026-16293 (amazon-inspector)",
-      "firstSeen": "2026-09-18"
-    },
-    {
-      "type": "package",
-      "value": "@shared-runtime/modules@9.9.10",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-g85c-jph7-8q4r, MAL-2026-16291 (amazon-inspector)",
-      "firstSeen": "2026-09-18"
-    },
-    {
-      "type": "package",
-      "value": "@insiderintelligence/googleadmanager@9.9.10",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-76rx-jxhm-vhww, MAL-2026-16290 (amazon-inspector)",
-      "firstSeen": "2026-09-18"
-    },
-    {
-      "type": "package",
-      "value": "openmct-heatmap",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "GHSA-qx52-2xq4-3x3v, MAL-2026-16287 (ghsa-malware)",
-      "firstSeen": "2026-09-18"
-    },
-    {
-      "type": "package",
-      "value": "test899-auth",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-jf2q-w77c-99vv, MAL-2026-16285 (amazon-inspector+ghsa-malware+ossf-package-analysis)",
-      "firstSeen": "2026-09-18"
-    },
-    {
-      "type": "package",
-      "value": "test89-auth",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-7868-hxr7-g8r6, MAL-2026-16288 (amazon-inspector+ghsa-malware)",
-      "firstSeen": "2026-09-18"
-    },
-    {
-      "type": "package",
-      "value": "test8999-auth",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-25wf-vfrc-2r82, MAL-2026-16286 (amazon-inspector+ghsa-malware+ossf-package-analysis)",
-      "firstSeen": "2026-09-18"
-    },
-    {
-      "type": "package",
-      "value": "test890-auth",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-xvpv-wq7p-548c, MAL-2026-16289 (amazon-inspector+ghsa-malware)",
-      "firstSeen": "2026-09-18"
-    },
-    {
-      "type": "package",
-      "value": "@shared-web/assets@9.9.10",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-vmr9-5w3x-4v98, MAL-2026-16283 (amazon-inspector)",
-      "firstSeen": "2026-09-18"
-    },
-    {
-      "type": "package",
-      "value": "sinful",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "GHSA-2xjj-r8mc-xpf6, MAL-2026-16284 (ghsa-malware)",
-      "firstSeen": "2026-09-18"
-    },
-    {
-      "type": "package",
-      "value": "@sanzoffc/baileys@3.0.4",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-grqc-r63w-6845, MAL-2026-16281 (amazon-inspector)",
-      "firstSeen": "2026-09-18"
-    },
-    {
-      "type": "package",
-      "value": "tailwindcss-form@0.5.1",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-xhr7-h7hc-7785, MAL-2026-16282 (amazon-inspector)",
-      "firstSeen": "2026-09-18"
-    },
-    {
-      "type": "package",
-      "value": "zero-baileys@2.7.0",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-2q5p-vqh2-8c92, MAL-2026-16280 (amazon-inspector)",
-      "firstSeen": "2026-09-18"
-    },
-    {
-      "type": "package",
-      "value": "xzvbailsx@1.0.0",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-m364-pjc8-42wc, MAL-2026-16279 (amazon-inspector)",
-      "firstSeen": "2026-09-18"
-    },
-    {
-      "type": "package",
-      "value": "xzvbailey@1.0.0",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-rg4j-jh5f-w982, MAL-2026-16278 (amazon-inspector)",
-      "firstSeen": "2026-09-18"
-    },
-    {
-      "type": "package",
-      "value": "xa424234657567@1.0.0",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-h7pm-6wh6-7xvw, MAL-2026-16277 (amazon-inspector)",
-      "firstSeen": "2026-09-18"
-    },
-    {
-      "type": "package",
-      "value": "@lekzo/baileys@0.0.1",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-75mc-fj4c-6pfm, MAL-2026-16276 (amazon-inspector)",
-      "firstSeen": "2026-09-18"
-    },
-    {
-      "type": "package",
       "value": "transform-jsbi-to-bigint",
       "severity": "critical",
       "confidence": 1,
@@ -15350,22 +15158,6 @@
       "confidence": 1,
       "source": "GHSA-m4pg-jjmc-xgr9, MAL-2026-16306 (amazon-inspector)",
       "firstSeen": "2026-09-21"
-    },
-    {
-      "type": "package",
-      "value": "@pwaplatform/module-sso-integration@99.0.0",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-26h7-cmv3-wgv6, MAL-2026-16299 (amazon-inspector+ossf-package-analysis)",
-      "firstSeen": "2026-09-20"
-    },
-    {
-      "type": "package",
-      "value": "@pwaplatform/module-sso-integration@99.0.1",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-26h7-cmv3-wgv6, MAL-2026-16299 (amazon-inspector+ossf-package-analysis)",
-      "firstSeen": "2026-09-20"
     },
     {
       "type": "package",
@@ -15964,14 +15756,6 @@
       "confidence": 1,
       "source": "GHSA-7cc3-jjqj-wrm5, MAL-2026-16352 (amazon-inspector)",
       "firstSeen": "2026-09-21"
-    },
-    {
-      "type": "package",
-      "value": "radio-player-theme@6.0.0",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-3rj7-hf4w-jh5c, MAL-2026-16347",
-      "firstSeen": "2026-09-19"
     },
     {
       "type": "package",
@@ -16617,14 +16401,6 @@
     },
     {
       "type": "package",
-      "value": "@pwaplatform/module-sso-integration",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-3gx2-xpw8-x42p, MAL-2026-16299 (amazon-inspector+ghsa-malware+ossf-package-analysis)",
-      "firstSeen": "2026-09-20"
-    },
-    {
-      "type": "package",
       "value": "@uh-platform/webcard",
       "severity": "critical",
       "confidence": 1,
@@ -16710,14 +16486,6 @@
       "confidence": 1,
       "source": "GHSA-8hq6-gvg5-x8wq, MAL-2026-16354 (amazon-inspector)",
       "firstSeen": "2026-09-21"
-    },
-    {
-      "type": "package",
-      "value": "@lekzo/baileys@0.0.7",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-75mc-fj4c-6pfm, MAL-2026-16276 (amazon-inspector)",
-      "firstSeen": "2026-09-18"
     },
     {
       "type": "package",
@@ -21665,14 +21433,6 @@
     },
     {
       "type": "package",
-      "value": "@insiderintelligence/googleadmanager",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-q699-336h-g385, MAL-2026-16290 (amazon-inspector+ghsa-malware)",
-      "firstSeen": "2026-09-18"
-    },
-    {
-      "type": "package",
       "value": "@baanx/domain",
       "severity": "critical",
       "confidence": 0.9,
@@ -25318,14 +25078,6 @@
       "confidence": 0.9,
       "source": "GHSA-vc53-jhh2-pwf3, MAL-2026-17336 (ghsa-malware)",
       "firstSeen": "2026-09-30"
-    },
-    {
-      "type": "package",
-      "value": "radio-player-theme",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-pp2v-g64w-gm6f, MAL-2026-16347 (amazon-inspector+ghsa-malware)",
-      "firstSeen": "2026-09-19"
     },
     {
       "type": "package",
@@ -53811,14 +53563,6 @@
     },
     {
       "type": "package",
-      "value": "chai-as-indexed@6.0.5",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "MAL-2026-16293 (amazon-inspector)",
-      "firstSeen": "2026-09-18"
-    },
-    {
-      "type": "package",
       "value": "t3-hermes-win32-arm64",
       "severity": "critical",
       "confidence": 0.9,
@@ -57349,14 +57093,6 @@
     },
     {
       "type": "package",
-      "value": "@sanzoffc/baileys",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-w5cc-9p38-q2wq, MAL-2026-16281 (amazon-inspector+ghsa-malware)",
-      "firstSeen": "2026-09-18"
-    },
-    {
-      "type": "package",
       "value": "@sanzoffc/libsignal-node",
       "severity": "critical",
       "confidence": 0.9,
@@ -57546,14 +57282,6 @@
       "confidence": 0.9,
       "source": "GHSA-72jw-j77j-v6vv, MAL-2026-17815 (ghsa-malware)",
       "firstSeen": "2026-10-12"
-    },
-    {
-      "type": "package",
-      "value": "@lekzo/baileys",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-jv7g-wqqq-m6gm, MAL-2026-16276 (amazon-inspector+ghsa-malware)",
-      "firstSeen": "2026-09-18"
     },
     {
       "type": "package",
@@ -57852,14 +57580,6 @@
       "confidence": 0.9,
       "source": "datadog-malicious-packages",
       "firstSeen": "2026-10-04"
-    },
-    {
-      "type": "package",
-      "value": "cowork-os@0.5.53",
-      "severity": "critical",
-      "confidence": 0.9,
-      "source": "datadog-malicious-packages",
-      "firstSeen": "2026-09-20"
     },
     {
       "type": "package",
@@ -58701,14 +58421,6 @@
       "confidence": 0.9,
       "source": "GHSA-r7f7-6833-rxh9, MAL-2026-17882 (ghsa-malware)",
       "firstSeen": "2026-10-15"
-    },
-    {
-      "type": "package",
-      "value": "tailwindcss-form",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-c8m9-qwg6-5cv9, MAL-2026-16282 (amazon-inspector+ghsa-malware)",
-      "firstSeen": "2026-09-18"
     },
     {
       "type": "package",
@@ -61070,14 +60782,6 @@
       "confidence": 0.9,
       "source": "GHSA-rc7v-fm82-xp4x, MAL-2026-17930 (ghsa-malware)",
       "firstSeen": "2026-10-19"
-    },
-    {
-      "type": "package",
-      "value": "zero-baileys",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-v486-jrrq-rhwx, MAL-2026-16280 (amazon-inspector+ghsa-malware)",
-      "firstSeen": "2026-09-18"
     },
     {
       "type": "package",
