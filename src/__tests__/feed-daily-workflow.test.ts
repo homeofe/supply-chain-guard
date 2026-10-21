@@ -103,6 +103,14 @@ describe("the daily feed workflow", () => {
     ]);
   });
 
+  // Only dist/feed.js is needed, for the parser check. The repository gates
+  // run on every push to main already; coupling the daily feed to all of them
+  // would let any unrelated gate stop the channel.
+  it("the build job compiles with tsc alone, not the full prebuild gates", () => {
+    expect(daily.build).toContain("npx --no-install tsc");
+    expect(daily.build).not.toContain("npm run build");
+  });
+
   it("never lets a failed step continue towards a deploy", () => {
     expect(workflow).not.toMatch(/continue-on-error/);
     expect(workflow).not.toMatch(/\|\|\s*true/);
@@ -124,5 +132,12 @@ describe("the release job and the freshness check", () => {
     expect(reconcile).toContain("https://homeofe.github.io/supply-chain-guard/feed/feed.json");
     expect(reconcile).toContain("30 * 3600 * 1000");
     expect(reconcile).toContain("vars.FEED_CHANNEL_LIVE");
+  });
+
+  it("arms the freshness check only on the exact value true, and refuses a future date", () => {
+    const reconcile = code(read(".github/workflows/feed-reconcile.yml"));
+    expect(reconcile).toContain(`process.env.CHANNEL_LIVE === "true"`);
+    expect(reconcile).not.toContain("Boolean(process.env.CHANNEL_LIVE)");
+    expect(reconcile).toMatch(/generatedAt[^\n]*in the future/);
   });
 });

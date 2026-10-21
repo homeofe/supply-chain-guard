@@ -75,7 +75,8 @@ jobs:
         run: |
           node -e '
             const url = "https://homeofe.github.io/supply-chain-guard/feed/feed.json";
-            const live = Boolean(process.env.CHANNEL_LIVE);
+            // Armed only by the exact value "true"; "false" or a typo stays unarmed.
+            const live = process.env.CHANNEL_LIVE === "true";
             (async () => {
               let feed;
               try {
@@ -88,6 +89,8 @@ jobs:
               }
               const age = Date.now() - Date.parse(feed.generatedAt);
               const hours = (age / 3600000).toFixed(1);
+              // A future date would pass the age check forever; clients refuse it anyway.
+              if (age < -3600 * 1000) throw new Error(`the daily feed's generatedAt ${feed.generatedAt} is in the future`);
               console.log(`daily feed generatedAt ${feed.generatedAt} (${hours} h old, ${feed.entryCount} entries)`);
               if (!(age <= 30 * 3600 * 1000)) throw new Error(`the daily feed is ${hours} h old; the limit is 30 h`);
             })().catch((err) => { console.error(`::error::${err.message}`); process.exit(1); });
