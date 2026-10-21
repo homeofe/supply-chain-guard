@@ -1,3 +1,26 @@
+## Freshness step: Bash syntax error fixed, every workflow script now parsed in tests (2026-10-21) (claude-opus-5-5)
+
+The first armed run of "Daily feed channel is fresh" (`feed-reconcile.yml`,
+right after the owner set `FEED_CHANNEL_LIVE`) died before checking anything:
+`syntax error near unexpected token '('`. PR 436 had added an error message
+with an apostrophe ("the daily feed's generatedAt") inside the step's
+`node -e '...'` script, and the apostrophe closed the single-quoted script.
+The tests of PR 433 and PR 436 only read the workflow as text; nothing ever
+handed the script to Bash, and the real-environment checks ran the builder and
+the client, not this step.
+
+Fix: the apostrophe is gone. New test in `feed-daily-workflow.test.ts`: every
+`run: |` block of EVERY workflow passes `bash -n`, and every inline
+`node -e '...'` body passes `node --check` (30 blocks; skipped on Windows,
+like the composite-Bash test in `action-partial-scan.test.ts`). Reintroducing
+the apostrophe turns exactly the freshness step's case red. The step itself was
+also run for real on the Linux host against the live Pages feed, armed and
+unarmed (see the pull request).
+
+Lesson, for any change to a workflow `run` script: parse it and run it once
+in the environment it lives in before the merge; text assertions do not
+cover it.
+
 ## Daily feed workflow: registration, tsc only, strict freshness flag (2026-10-21) (claude-opus-5-5)
 
 GitHub never processed the push of PR 433's merge (`7f3e8cc`, 14:04 UTC)

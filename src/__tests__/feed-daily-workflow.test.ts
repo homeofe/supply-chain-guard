@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
+import { spawnSync } from "node:child_process";
 
 // The daily feed channel publishes signed threat data without a release
 // (docs/daily-feed-channel-design.md). These cases hold the workflow to the
@@ -140,4 +142,63 @@ describe("the release job and the freshness check", () => {
     expect(reconcile).not.toContain("Boolean(process.env.CHANNEL_LIVE)");
     expect(reconcile).toMatch(/generatedAt[^\n]*in the future/);
   });
+});
+
+// Reading a script as text cannot tell whether Bash will even parse it: an
+// apostrophe inside `node -e '...'` ends the quoted script early, and the
+// freshness step died with "syntax error near unexpected token" on its first
+// armed run (2026-10-21). Every `run: |` block of every workflow goes
+// through `bash -n`, and every inline `node -e '...'` body through
+// `node --check`.
+const hasBash = process.platform !== "win32" && spawnSync("bash", ["--version"], { stdio: "ignore" }).status === 0;
+
+/** The literal `run: |` blocks of a workflow, dedented, with their step names. */
+function runBlocks(text: string): Array<{ step: string; script: string }> {
+  const lines = text.split("\n");
+  const out: Array<{ step: string; script: string }> = [];
+  let step = "?";
+  for (let i = 0; i < lines.length; i++) {
+    const name = /^\s*- name: (.+)$/.exec(lines[i]);
+    if (name) step = name[1];
+    const run = /^(\s*)run: \|$/.exec(lines[i]);
+    if (!run) continue;
+    const indent = run[1].length;
+    const body: string[] = [];
+    while (i + 1 < lines.length && (lines[i + 1].trim() === "" || lines[i + 1].length - lines[i + 1].trimStart().length > indent)) {
+      body.push(lines[++i]);
+    }
+    const cut = Math.min(...body.filter((l) => l.trim() !== "").map((l) => l.length - l.trimStart().length));
+    out.push({ step, script: body.map((l) => l.slice(cut)).join("\n") + "\n" });
+  }
+  return out;
+}
+
+describe("every workflow's run scripts parse", () => {
+  const workflows = fs.readdirSync(path.join(ROOT, ".github", "workflows")).filter((f) => /\.ya?ml$/.test(f));
+  it("finds the workflows", () => expect(workflows.length).toBeGreaterThanOrEqual(9));
+  for (const file of workflows.map((f) => `.github/workflows/${f}`)) {
+    const blocks = runBlocks(read(file));
+    for (const { step, script } of blocks) {
+      it.skipIf(!hasBash)(`${file}: "${step}" passes bash -n and node --check`, () => {
+        const temp = fs.mkdtempSync(path.join(os.tmpdir(), "scg-run-syntax-"));
+        try {
+          const sh = path.join(temp, "step.sh");
+          fs.writeFileSync(sh, script, "utf8");
+          const bash = spawnSync("bash", ["-n", sh], { encoding: "utf8" });
+          expect(bash.stderr, step).toBe("");
+          expect(bash.status, step).toBe(0);
+          const inline = /node -e '\n([\s\S]*?)\n'/.exec(script);
+          if (inline) {
+            const js = path.join(temp, "step.js");
+            fs.writeFileSync(js, inline[1], "utf8");
+            const node = spawnSync(process.execPath, ["--check", js], { encoding: "utf8" });
+            expect(node.stderr, step).toBe("");
+            expect(node.status, step).toBe(0);
+          }
+        } finally {
+          fs.rmSync(temp, { recursive: true, force: true });
+        }
+      });
+    }
+  }
 });
