@@ -125,6 +125,26 @@ describe("importFeedFromDirectory", () => {
     expect(fs.existsSync(path.join(cache, CATALOG_CACHE_FILE))).toBe(false);
   }, 60_000);
 
+  // The size cap and the regular-file check bound what decodeCatalogBody and
+  // the parser get; a directory or an oversize file must fail on its own reason.
+  it("refuses a file above the size cap", async () => {
+    const d = doc(ago(60_000));
+    await expect(
+      importFeedFromDirectory(transfer({ "feed.json": d, "feed.json.sig": sigOf(d) }), cache, { minEntries: 0, maxBytes: 64 }),
+    ).rejects.toThrow(/feed\.json is \d+ bytes, above the 64-byte limit/);
+    expect(fs.existsSync(path.join(cache, FEED_CACHE_FILE))).toBe(false);
+  });
+
+  it("refuses a directory where a file belongs", async () => {
+    const d = doc(ago(60_000));
+    const asDir = transfer({ "feed.json": d });
+    fs.mkdirSync(path.join(asDir, "feed.json.sig"));
+    await expect(importFeedFromDirectory(asDir, cache, NO_FLOOR)).rejects.toThrow(/feed\.json\.sig is not a regular file/);
+    const feedDir = transfer({});
+    fs.mkdirSync(path.join(feedDir, "feed.json"));
+    await expect(importFeedFromDirectory(feedDir, cache, NO_FLOOR)).rejects.toThrow(/feed\.json is not a regular file/);
+  });
+
   it("never touches the network", async () => {
     const d = doc(ago(60_000));
     await importFeedFromDirectory(transfer({ "feed.json": d, "feed.json.sig": sigOf(d) }), cache, NO_FLOOR);

@@ -21,6 +21,16 @@ shard, and no network call at all. Cut: skipping the signature check in the
 import path turned two of them red. The refresh and catalog suites stay
 green on the reader-based `installCatalog`.
 
+Independent review before merge, fixed here: the README procedure did not work
+as written (no directory listing on Pages, the archive has no top folder); it
+now gives the file URLs, `tar -C`, the catalog move, a GNU note and the Docker
+mount. Local reads use one non-blocking file descriptor (type and size checked
+on what is read, a FIFO refused, the cap clamped to the catalog limit), with
+tests for the size cap and a directory in place of a file; each guard cut
+turns its test red. Deferred: a routine import reports the catalog as not
+installed even when one is cached; the catalog is not attempted when the
+carried feed is refused as older.
+
 All four pull requests of the plan are merged once this one is. Open for the
 owner: Pages source, the `feed-publish` environment and its secret, the first
 run of `feed-daily.yml`, then `FEED_CHANNEL_LIVE`. Users get the client side

@@ -1011,20 +1011,34 @@ installed there with the same checks `feed refresh` applies (signature against
 the key compiled into the package, rollback and size guards, the catalog's digest
 chain), without any network request.
 
-1. On a connected machine, download `feed-offline.tar.gz` and `SHA256SUMS` from
-   `https://homeofe.github.io/supply-chain-guard/feed/`, and check them with
-   `sha256sum -c SHA256SUMS --ignore-missing`.
-2. Once per upgrade, also download the installed version's `catalog-index.json`
-   and `catalog-*.json.gz` from its GitHub Release, for the historical catalog.
-3. Carry the files across, unpack the archive (`tar -xzf feed-offline.tar.gz`)
-   into one directory with the catalog files, and run:
+1. On a connected machine, download both files of the daily channel and check
+   the archive (`--ignore-missing` is GNU coreutils; on macOS compare
+   `shasum -a 256 feed-offline.tar.gz` with its line in `SHA256SUMS`):
 
 ```bash
+curl -fLO https://homeofe.github.io/supply-chain-guard/feed/feed-offline.tar.gz
+curl -fLO https://homeofe.github.io/supply-chain-guard/feed/SHA256SUMS
+sha256sum -c SHA256SUMS --ignore-missing
+```
+
+2. Once per upgrade, also download the installed version's `catalog-index.json`
+   and `catalog-*.json.gz` from its GitHub Release, for the historical catalog.
+3. Carry the files across, unpack the archive into a new directory, put the
+   catalog files beside it, and import:
+
+```bash
+mkdir scg-feed && tar -xzf feed-offline.tar.gz -C scg-feed
+mv catalog-index.json catalog-*.json.gz scg-feed/   # after an upgrade only
 supply-chain-guard feed import ./scg-feed
 ```
 
+With the Docker image, mount the directory and the cache volume:
+`docker run --rm -v scg-cache:/cache -v "$PWD/scg-feed:/import:ro" ghcr.io/homeofe/supply-chain-guard@sha256:<digest> feed import /import`.
+
 A feed whose signature does not verify, that is older than the installed one,
-or that is truncated is refused, and the previous cache stays in place. Install
+or that is truncated is refused, and the previous cache stays in place. After an
+upgrade, carry an archive published after that release: an older one is refused
+as older than the bundled feed, and the catalog is not installed either. Install
 the npm package itself from an internal registry or mirror, and pin the Docker
 image by digest (`ghcr.io/homeofe/supply-chain-guard@sha256:...`) rather than by
 tag. If you run the scanner offline, please describe your setup in the

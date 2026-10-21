@@ -1319,19 +1319,37 @@ export async function importFeedFromDirectory(
   limitOverrides: FeedLimitOverrides = {},
 ): Promise<RefreshResult> {
   const { minEntries: minEntriesOverride, maxBytes: maxBytesOverride } = limitOverrides;
-  const maxBytes = maxBytesOverride ?? FEED_REMOTE_LIMITS.maxBytes;
+  // Never above what decodeCatalogBody accepts once decompressed: an
+  // uncompressed shard passes through it unchanged.
+  const maxBytes = Math.min(maxBytesOverride ?? FEED_REMOTE_LIMITS.maxBytes, CATALOG_MAX_DECOMPRESSED_BYTES);
   const cacheDir = resolveCacheDir(cacheDirOption);
   const minEntries = minEntriesOverride ?? Math.ceil(getBundledFeedRef().length * FEED_MIN_SHARE_OF_BUNDLE);
-  // A plain file name inside `dir`, size-capped like a download.
+  // A plain file name inside `dir`, size-capped like a download. One file
+  // descriptor from open to read, so the type and size checked are those of
+  // what is read; opened non-blocking, so a FIFO is refused instead of hanging.
+  // A symbolic link is followed on purpose (a mounted share is a legitimate
+  // source): every byte read is checked by the signature or the digest chain.
   const readLocal = async (name: string): Promise<Buffer> => {
     if (path.basename(name) !== name || name === "." || name === "..") {
       throw new Error(`refusing the file name ${JSON.stringify(name)}: only plain names inside the directory are read`);
     }
-    const file = path.join(dir, name);
-    const stat = fs.statSync(file);
-    if (!stat.isFile()) throw new Error(`${name} is not a regular file`);
-    if (stat.size > maxBytes) throw new Error(`${name} is ${stat.size} bytes, above the ${maxBytes}-byte limit`);
-    return fs.readFileSync(file);
+    const fd = fs.openSync(path.join(dir, name), fs.constants.O_RDONLY | (fs.constants.O_NONBLOCK ?? 0));
+    try {
+      const stat = fs.fstatSync(fd);
+      if (!stat.isFile()) throw new Error(`${name} is not a regular file`);
+      if (stat.size > maxBytes) throw new Error(`${name} is ${stat.size} bytes, above the ${maxBytes}-byte limit`);
+      const buffer = Buffer.alloc(maxBytes + 1);
+      let length = 0;
+      for (;;) {
+        const n = fs.readSync(fd, buffer, length, buffer.length - length, null);
+        if (n === 0) break;
+        length += n;
+        if (length > maxBytes) throw new Error(`${name} grew above the ${maxBytes}-byte limit while it was read`);
+      }
+      return buffer.subarray(0, length);
+    } finally {
+      fs.closeSync(fd);
+    }
   };
   try {
     assertCacheTargetSafe(path.join(cacheDir, FEED_CACHE_FILE));
