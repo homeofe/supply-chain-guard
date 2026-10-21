@@ -813,6 +813,9 @@ jobs:
     needs: publish
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '.')
+    # FEED_SIGNING_KEY lives in this environment, which allows main and the
+    # release tags; the daily feed job (feed-daily.yml) signs from the same one.
+    environment: feed-publish
     permissions:
       contents: write
     steps:
