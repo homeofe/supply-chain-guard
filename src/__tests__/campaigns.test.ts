@@ -7785,10 +7785,22 @@ describe("Campaign Signatures", () => {
       expect(matchBareNpmIOC("function-color", "1.0.1", feed)).toBeNull();
     });
 
+    it("blocks the imgdecode package name, not its neighbours", () => {
+      const feed = getBundledFeed();
+      expect(matchBareNpmIOC("imgdecode", "1.0.3", feed)).not.toBeNull();
+      expect(matchBareNpmIOC("imgdecode", "1.0.0", feed)).not.toBeNull();
+      expect(matchBareNpmIOC("imgdecoder", "1.0.0", feed)).toBeNull();
+    });
+
+    it("should detect the imgdecode.node loader SHA256 as text", async () => {
+      const findings = await scanFile("hash2.js", 'const sha = "a53946269ffcd25c7fe1fad358c189f144dcca4d736f2b5a8ebc517a8d929dd1";');
+      expect(findings.some((f) => f.rule === "IOC_KNOWN_MALWARE_HASH")).toBe(true);
+    });
+
     it("keeps every MALFEX atomic indicator in the bundle", () => {
       const feed = getBundledFeed();
       const set = feed.filter((i) => i.campaign === "MALFEX npm campaign");
-      expect(set.length, "4 domains, 3 IPs, 3 URLs and 17 hashes must be bundled").toBe(27);
+      expect(set.length, "4 domains, 3 IPs, 3 URLs, 21 hashes and 1 package must be bundled").toBe(32);
     });
   });
 

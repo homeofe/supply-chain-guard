@@ -64094,3 +64094,15 @@
 {"type":"package","value":"discord-players","severity":"critical","confidence":1,"source":"GHSA-mvg6-qj9g-3j3j, MAL-2026-16213 (amazon-inspector+ghsa-malware)","firstSeen":"2026-09-16"}
 {"type":"package","value":"discord-resolvers","severity":"critical","confidence":1,"source":"GHSA-whmq-ffxc-4jpc, MAL-2026-16214 (amazon-inspector+ghsa-malware)","firstSeen":"2026-09-16"}
 {"type":"package","value":"jexkcode","severity":"critical","confidence":0.9,"source":"GHSA-j72h-3h5h-43v5, MAL-2026-16220 (ghsa-malware)","firstSeen":"2026-09-16"}
+{"type":"package","value":"tinkoff-cache-path","severity":"critical","confidence":1,"source":"GHSA-phw8-h49c-9v2q, MAL-2026-12076 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-05"}
+{"type":"package","value":"eacq-payform-core","severity":"critical","confidence":1,"source":"GHSA-gpp6-qxfg-2m7x, MAL-2026-11538 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-04"}
+{"type":"package","value":"base58x64","severity":"critical","confidence":1,"source":"GHSA-57vp-ppmx-cgc5, MAL-2026-17988 (ghsa-malware), datadog-malicious-packages","firstSeen":"2025-09-12"}
+{"type":"package","value":"sc-geeksquad-core@99.9.1","severity":"critical","confidence":1,"source":"GHSA-46pw-5vw5-769w, MAL-2026-12435 (amazon-inspector+ossf-package-analysis)","firstSeen":"2026-08-05"}
+{"type":"package","value":"sc-font-icons@99.9.1","severity":"critical","confidence":1,"source":"GHSA-pcqq-p5c7-m382, MAL-2026-12800 (amazon-inspector+ossf-package-analysis)","firstSeen":"2026-08-05"}
+{"type":"package","value":"ing-feat-itsme-oidc-authentication@99.9.1","severity":"critical","confidence":1,"source":"MAL-2026-5780 (amazon-inspector+ossf-package-analysis)","firstSeen":"2026-06-15"}
+{"type":"package","value":"html-to-gutenberg@4.2.26","severity":"critical","confidence":1,"source":"MAL-2026-6359 (amazon-inspector+ghsa-malware)","firstSeen":"2026-06-24"}
+{"type":"package","value":"html-to-gutenberg@4.2.25","severity":"critical","confidence":1,"source":"MAL-2026-6359 (amazon-inspector+ghsa-malware)","firstSeen":"2026-06-24"}
+{"type":"package","value":"html-to-gutenberg@4.2.24","severity":"critical","confidence":1,"source":"MAL-2026-6359 (amazon-inspector+ghsa-malware)","firstSeen":"2026-06-24"}
+{"type":"package","value":"kartyk-github-token-pkg@1.0.3","severity":"critical","confidence":0.9,"source":"GHSA-4rmp-vchm-9gvg","firstSeen":"2026-09-16"}
+{"type":"package","value":"kartyk-github-token-pkg@1.0.4","severity":"critical","confidence":0.9,"source":"GHSA-4rmp-vchm-9gvg","firstSeen":"2026-09-16"}
+{"type":"package","value":"kartyk-github-oidc-test-pkg@1.0.4","severity":"critical","confidence":0.9,"source":"GHSA-4vxh-7998-9h4g","firstSeen":"2026-09-16"}

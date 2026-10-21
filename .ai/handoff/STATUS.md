@@ -1,3 +1,134 @@
+## Daily intel 2026-10-20 and 2026-10-21 merged onto main after PR 424 (2026-10-21) (claude-opus-5-5)
+
+Three daily pull requests were open at once (424, 427, 428), each cut from the
+same `main`, so each later one re-imported the earlier windowed entries.
+Order taken: PR 424 merged first (it alone carries the MALFEX indicators and
+the three history-run catalog pins). PR 427 is closed as superseded: every one
+of its 156 entries is in this branch under the same key, with the later
+import's source attribution. `main` (with PR 424) was then merged into this
+branch.
+
+Conflict resolution, data files only: the 2026-10-21 generation timestamp;
+the three `fabtoolkit` 0.1.x pins both sides carried kept once (identical
+lines); the MALFEX block placed after `gemini-computer-use@0.4.5`, where PR 424
+put it; the catalog as the union of both sides, re-cut through
+`writeCatalogText`. The resolver failed on any duplicate key and on any key
+either side carried that the result lost; neither occurred. `feed.json`, the
+catalog digest, the self-scan manifest and the handoff manifest were
+regenerated, not merged. Net change against `main`: 259 entries added (250
+bundle, 9 catalog), none removed or rewritten. That equals the 259 that
+`feed:reconcile` proposed on the PR 424 head.
+
+Re-verified independently before the merge: all 146 bare npm names the
+three pull requests add were probed with the importer's holding rule (PR 419):
+145 are npm holding packages; `imgdecode` is live, and all four of its
+versions were published by the campaign account `malfexteste8`. Controls:
+`lodash` live, a nonexistent name absent. The four MALFEX SHA-256 values each
+occur verbatim in SafeDep's write-up; its two other hashes are already
+bundled.
+
+## Daily threat-intel import (2026-10-21) (claude-opus-5-5)
+
+Windowed import (GHSA + OpenSSF + DataDog, since 2026-10-07): 272 new
+entries, 263 to the bundle, 9 to the catalog. Cut from `main` while PR 424
+(2026-10-19) and PR 427 (2026-10-20) are still open, so 156 of the 272 are
+the windowed entries those PRs also carry; whichever merges first, the others
+need a rebase. New today (116): `@alannxd/baileys` (27 versions,
+GHSA-7345-fjw8-x55w), DGXeon `@dreamguyxeon/baileyx` and
+`@dreamguyxeon/libsignal-node`, `my-auto-follow`, `my-auto-follow-eltio`,
+`fnd-stores`, a Tailwind/animate.css plugin lookalike cluster (MAL-2026-18065
+to MAL-2026-18090, 26 packages including two `signalledger-*`, plus `animatecss-tailwind-bridge`), PyPI
+semver/debug/workalendar typosquats from kam193 and amazon-inspector,
+`pyyi` 2.5.0 to 2.5.5, `fabtoolkit@0.2.1`. All 145 bare names probed: every
+one only `0.0.0-stage` + `0.0.1-security` published by `npm` (maintainer
+`npm` 133, `npm-support` 12). Catalog (firstSeen before the cutoff):
+`tinkoff-cache-path`, `eacq-payform-core`, `base58x64`, three 99.9.1
+dependency-confusion pins, `html-to-gutenberg` 4.2.24 to 4.2.26.
+
+Unmapped gaps 0 (+1 acknowledged). Skipped 30 (29 pin-only without a
+version, 1 unmappable range). Declined 0. No `--limit`, no page cap, no
+window slicing. DataDog: 4310 claims probed, 0 bare names, 8253 pins; 314
+DataDog-only pins of a still-published version held back (unchanged); the
+still-published IDE extension list is the six known ids.
+
+OSV snapshot reconcile: 0 proposed; `--check` exit 0, unmapped 0
+(+33 acknowledged), no stale acknowledgements. No
+vendor write-up of the window carried a new atomic indicator (GhostAction
+endpoints and the vpmdhaj OpenSearch lures are already covered), so nothing
+was added by hand. No catalogWindows, decline, pin-only or unresolvable
+change.
+## Daily threat-intel import (2026-10-20) (claude-opus-5-5)
+
+Windowed import (GHSA + OpenSSF + DataDog, since 2026-10-06): 156 new entries,
+149 to the bundle, 7 to the catalog (`base58x64`, `sc-geeksquad-core@99.9.1`,
+`sc-font-icons@99.9.1`, `ing-feat-itsme-oidc-authentication@99.9.1` and
+`html-to-gutenberg` 4.2.24 to 4.2.26, all `firstSeen` before the cutoff).
+All 132 bare names were probed against the npm registry: every one is an npm
+takedown (only `0.0.0-stage` / `0.0.1-security` versions published by `npm`,
+maintainer `npm` or `npm-support`); probe controlled with `lodash` and
+`coderabbit` (both reported live) and a 404 name. Dependency-confusion squats
+arrived as exact pins; no pin-only change needed.
+
+Overlap: PR 424 (2026-10-19 intel) was still open when this branch was cut
+from `main`, so its 13 windowed package entries are imported here again.
+Its MALFEX hand-added indicators and its three catalog entries from the
+weekly GitHub history run are NOT in this branch. Whichever merges second
+needs a rebase onto the other.
+
+Unmapped gaps 0 (+1 acknowledged). Skipped 30 (29 pin-only without a
+version, 1 unmappable range). Declined 0, no `--limit`, no page cap.
+DataDog: 4310 whole-package claims probed, 0 bare names, 8253 pins, 314
+DataDog-only pins of a still-published version held back (unchanged); the
+still-published IDE extension list is the six known ids.
+
+OSV snapshot reconcile: 0 proposed; `--check` exit 0, unmapped 0
+(+33 acknowledged), no stale acknowledgements. Not a Monday, so no full
+GitHub history run. Vendor write-ups of the window (tensorlake, SubQuery,
+Xygeni digest 92) carried no atomic indicators that are not already
+bundled, so nothing was added by hand. No catalogWindows entry, no decline,
+pin-only or unresolvable change.
+
+## Daily threat-intel import (2026-10-19) (claude-opus-5-5)
+
+Windowed import (GHSA + OpenSSF + DataDog, since 2026-10-05): 13 new entries,
+13 to the bundle, 0 to the catalog. PyPI `fabtoolkit` 0.1.0/0.1.1/0.1.2
+(GHSA-2j5q-cfcm-6vgm, MAL-2026-17927), `fabdeploycheck@0.1.1`
+(GHSA-8g2w-p5px-2pjr), `leakdeep` 2.4.1/2.4.5/2.6.2/3.0.0 (MAL-2026-17921);
+npm `@fluxionii/baileys` bare (MAL-2026-17925; probed: every remaining version
+is an npm placeholder published by `npm`, maintainer npm-support, 1.0.0
+removed), `@pkgship/frpc-linux-arm64@0.71.0`, `gemini-computer-use@0.4.5`
+(MAL-2026-16355) and two 99.9.1 dependency-confusion pins
+(`@fmr-ap149494/`, `@fcsmc/`), which arrived as exact pins without a
+pin-only change.
+
+Unmapped gaps 0 (+1 acknowledged). Skipped 30 (29 pin-only without a version,
+1 unmappable range). DataDog: 314 DataDog-only pins of a still-published
+version held back (unchanged from 2026-10-18); still-published IDE extensions
+are the six known ids.
+
+OSV snapshot reconcile: 0 proposed; `--check` exit 0, unmapped 0
+(+33 acknowledged), no stale acknowledgements.
+
+Weekly full GitHub malware history (Monday, `--since 2017-01-01`, GitHub
+only, run against unmodified main): 124,716 advisories, 1,248 pages,
+truncated false, unmapped 0, duplicates 143,057, added 16. Thirteen were
+today's windowed entries; three were missed by the windowed runs:
+`kartyk-github-token-pkg` 1.0.3/1.0.4 (GHSA-4rmp-vchm-9gvg) and
+`kartyk-github-oidc-test-pkg@1.0.4` (GHSA-4vxh-7998-9h4g), both published
+2026-09-16. Applied through the importer with a GitHub-only slice
+`--since 2026-09-16 --until 2026-09-17`, which proposed exactly those three,
+all to the catalog (`firstSeen` before the 2026-09-18 cutoff).
+
+Vendor enrichment: SafeDep's MALFEX write-up of 2026-10-13 on `imgdecode`
+(Windows native addon loader). Added the bare name `imgdecode` (live on npm,
+all four versions 1.0.0 to 1.0.3 by the campaign account `malfexteste8`, name
+created 2026-09-30, no other history) and four SHA-256 hashes (three
+`imgdecode.node` builds, stage 3 Windows installer), all with the MALFEX family and
+campaign, confidence 0.85 single-source. The C2 IP and the cavecrew payload
+paths it names were already bundled. Hashes were checked against the raw page,
+not only the fetch summary. No catalogWindows entry, no decline, pin-only or
+unresolvable change.
+
 ## Release v6.5.9 (2026-10-18) (claude-opus-5-5)
 
 Threat-intel release on the owner's instruction, cut from `main` at
