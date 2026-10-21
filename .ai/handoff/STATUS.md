@@ -1,3 +1,57 @@
+## Daily feed channel: builder, workflow, freshness check (2026-10-21) (claude-opus-5-5)
+
+Second of four pull requests implementing `docs/daily-feed-channel-design.md`.
+
+- `scripts/build-daily-feed.mjs`: `selectDailyPins` (listed exact pins
+  only), `catalogAdditionsSinceRelease`, `buildDailyFeed` and
+  `assertDailyInvariant`, which compares the finished document against
+  `main`'s feed on its own terms (not through the selection) and accepts a
+  pin only with an importer ecosystem prefix and a literal version. The CLI
+  refuses a report that is not a dry run, is truncated, has unmapped gaps or
+  carries no derivations, and writes nothing on any failure; `--verify`
+  re-runs the invariant alone on a built feed.
+- `.github/workflows/feed-daily.yml`: daily 05:17 UTC and manual, `main`
+  only. `build` (contents: read, no environment): `npm ci`, build, importer
+  dry run, builder, the client's own parser from `dist/feed.js`, artifact.
+  `sign` (environment `feed-publish`, installs NOTHING): the same commit and
+  tag, `--verify` on the artifact, `sign-feed.mjs`, offline archive and
+  `SHA256SUMS`, the static `site/`, Pages artifact. `deploy` (pages and
+  id-token write only, no repository code).
+- `ci.yml`: the release job runs in `feed-publish` too, so the signing key
+  can move out of the repository-level secrets.
+- `feed-reconcile.yml`: `Daily feed channel is fresh` fails above 30 hours,
+  once `FEED_CHANNEL_LIVE` is set; until then it only reports.
+- `site/index.html`: a minimal page until the website project exists.
+- `docs/ci-and-release.md`: "Daily feed channel" section.
+
+Tests: `daily-feed.test.ts` (21) and `feed-daily-workflow.test.ts` (8),
+seen failing first. Mutation cuts, each red on its own test: no deep-equal on
+main entries, no type check on additions, no cap, no timestamp check, the
+selection keeping derived pins, the CLI ignoring a truncated report, the build
+job holding `pages: write`, a sign step that may fail. The type-check cut
+first stayed green: the breach tests had failed on a stale `entryCount`
+instead of on the breach. They now keep the count consistent and assert the
+reason.
+
+Independent review before merge, two findings fixed here: (1) the invariant
+used the selection's own "has a version" test, so a whole-package claim with
+an `@` in its name (`firefox:` add-on ids are email addresses; main holds 40
+such claims), an empty version, `*` or a foreign prefix passed as a pin; it
+now has its own stricter predicate. (2) the signing key shared a job with
+`npm ci` and the build; signing now runs in a job that installs nothing and
+re-checks the feed itself. Eight more cuts, each red on its own test. CI's
+first run was red on the stderr gate (the CLI tests let the builder's
+messages through); the tests now capture and assert them. Deferred from the
+review: a byte budget below the client's 32 MiB cap, asserting main's entry
+order, `FEED_CHANNEL_LIVE` read as a boolean string, latest tag versus latest
+published release, `npm run build` versus `tsc` in the build job.
+
+Owner steps before the first run (`docs/ci-and-release.md`, "Daily feed
+channel"): enable Pages with the source "GitHub Actions"; create the
+environment `feed-publish` allowing `main` and tags `v*.*.*`; move the
+secret `FEED_SIGNING_KEY` into it; after the first green deploy set the
+repository variable `FEED_CHANNEL_LIVE`.
+
 ## Importer labels where each pin's version came from (2026-10-21) (claude-opus-5-5)
 
 First of four pull requests implementing `docs/daily-feed-channel-design.md`.

@@ -7,6 +7,17 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- A daily signed feed channel on GitHub Pages (`feed-daily.yml`,
+  `scripts/build-daily-feed.mjs`). Every day it publishes `feed.json` built
+  from the reviewed `main` plus exact-version pins whose version a source
+  names, checked against `main` before it is signed, with an archive and
+  checksums for offline networks. Nothing that could block a legitimate
+  package by name, range or domain reaches it without review. Clients start
+  reading it in a later release; until then `feed refresh` keeps using the
+  release feed.
+
 ### Changed
 
 - The feed importer's JSON report (`--json`, also on `--dry-run`) labels each

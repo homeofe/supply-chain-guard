@@ -61,3 +61,34 @@ jobs:
           # The token is read-only (permissions: contents: read above).
           GITHUB_TOKEN: ${{ github.token }}
         run: npm run feed:reconcile
+
+      # The daily feed channel (feed-daily.yml) must publish within about a day.
+      # Checked HERE, in a different workflow, so a publisher that stopped
+      # running at all is noticed too. The margin over 24 hours absorbs GitHub's
+      # delayed scheduled runs and the Pages deploy. Until the owner sets the
+      # repository variable FEED_CHANNEL_LIVE after the first deploy, a missing
+      # channel is reported but not failed.
+      - name: Daily feed channel is fresh
+        if: ${{ !cancelled() }}
+        env:
+          CHANNEL_LIVE: ${{ vars.FEED_CHANNEL_LIVE }}
+        run: |
+          node -e '
+            const url = "https://homeofe.github.io/supply-chain-guard/feed/feed.json";
+            const live = Boolean(process.env.CHANNEL_LIVE);
+            (async () => {
+              let feed;
+              try {
+                const res = await fetch(url, { signal: AbortSignal.timeout(30000) });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                feed = await res.json();
+              } catch (err) {
+                if (!live) { console.log(`channel not published yet (${err.message}); FEED_CHANNEL_LIVE is unset`); return; }
+                throw new Error(`the daily feed channel could not be read: ${err.message}`);
+              }
+              const age = Date.now() - Date.parse(feed.generatedAt);
+              const hours = (age / 3600000).toFixed(1);
+              console.log(`daily feed generatedAt ${feed.generatedAt} (${hours} h old, ${feed.entryCount} entries)`);
+              if (!(age <= 30 * 3600 * 1000)) throw new Error(`the daily feed is ${hours} h old; the limit is 30 h`);
+            })().catch((err) => { console.error(`::error::${err.message}`); process.exit(1); });
+          '
