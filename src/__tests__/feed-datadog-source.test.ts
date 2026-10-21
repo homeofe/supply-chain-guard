@@ -460,6 +460,10 @@ describe("the DataDog source in a full run", () => {
       now: new Date("2026-10-05T08:00:00Z"),
     });
     expect(report.entries.map((e: { value: string }) => e.value).sort()).toEqual(["scg-gone", "scg-live@1.2.0"]);
+    // The derived label survives settlement, dedupe and routing into the report.
+    expect(
+      Object.fromEntries(report.entries.map((e: { value: string }, i: number) => [e.value, report.derivations[i]])),
+    ).toEqual({ "scg-gone": null, "scg-live@1.2.0": "whole-claim-sample" });
     expect(report.datadog).toEqual(
       expect.objectContaining({
         wholePackageClaimsProbed: 2,
@@ -472,6 +476,41 @@ describe("the DataDog source in a full run", () => {
     const gone = report.entries.find((e: { value: string }) => e.value === "scg-gone");
     expect(gone.firstSeen).toBe("2025-05-05");
     expect(Object.keys(gone).some((k) => k.startsWith("_"))).toBe(false);
+  });
+
+  // The extension manifest's null pins every sampled version; only a listed
+  // manifest names its versions. The flag travels from the fetch to the label.
+  it("records whether the extension manifest listed its versions", async () => {
+    const { fetchDatadogDataset } = await load();
+    const routes = network({
+      "samples/npm/manifest.json": { "scg-gone": null },
+      "samples/pypi/manifest.json": {},
+      "samples/ide_extensions/manifest.json": { "scgpub.whole": null, "scgpub.named": ["1.0.0"] },
+      "git/trees/main": { tree: [{ path: "samples", type: "tree", sha: "sha-samples" }] },
+      "git/trees/sha-samples": {
+        tree: [
+          { path: "npm", type: "tree", sha: "sha-npm" },
+          { path: "ide_extensions", type: "tree", sha: "sha-ide" },
+        ],
+      },
+      "git/trees/sha-npm": { tree: [{ path: "malicious_intent", type: "tree", sha: "sha-mal" }] },
+      "git/trees/sha-mal": { tree: [{ path: "scg-gone/1.0.0/2025-05-05-scg-gone-v1.0.0.zip", type: "blob" }] },
+      "git/trees/sha-ide": { tree: [{ path: "compromised_lib", type: "tree", sha: "sha-cl" }] },
+      "git/trees/sha-cl": {
+        tree: [
+          { path: "scgpub.whole/2.0.0.vsix", type: "blob" },
+          { path: "scgpub.named/1.0.0.vsix", type: "blob" },
+        ],
+      },
+      "open-vsx.org": 404,
+    });
+    const fetchImpl = async (url: string | URL, init?: { method?: string }) =>
+      init?.method === "POST" ? json({ results: [{ extensions: [] }] }) : routes(url);
+    const dataset = await fetchDatadogDataset({ fetchImpl });
+    expect(Object.fromEntries(dataset.extensions.map((x: { id: string; listed: boolean }) => [x.id, x.listed]))).toEqual({
+      "scgpub.whole": false,
+      "scgpub.named": true,
+    });
   });
 
   // Samples are the evidence; without the tree nothing can be verified.
@@ -591,5 +630,33 @@ describe("DataDog IDE extensions", () => {
       "vscode:scgpub.scg-ext@1.84.0",
       "openvsx:scgpub.scg-ext@1.84.0",
     ]);
+  });
+
+  // A null in the extension manifest claims the whole extension, and every
+  // SAMPLED version gets pinned: derived, not named. Only a manifest that lists
+  // the version names it. An extension without the flag is treated as derived.
+  it("labels a manifest-listed extension version listed and a whole-claim sample whole-claim-sample", async () => {
+    const { mapDatadogDataset } = await load();
+    const gone = [{ version: "1.0.0", inVscode: false, inOpenVsx: false }];
+    const { entries } = mapDatadogDataset(
+      {
+        manifests: {},
+        dates: new Map(),
+        extensions: [
+          { id: "scgpub.named", listed: true, placements: gone },
+          { id: "scgpub.whole", listed: false, placements: gone },
+          { id: "scgpub.unflagged", placements: gone },
+        ],
+      },
+      { now: new Date("2026-10-05T08:00:00Z") },
+    );
+    expect(Object.fromEntries(entries.map((e: { value: string; _derivation?: string }) => [e.value, e._derivation]))).toEqual({
+      "vscode:scgpub.named@1.0.0": "listed",
+      "openvsx:scgpub.named@1.0.0": "listed",
+      "vscode:scgpub.whole@1.0.0": "whole-claim-sample",
+      "openvsx:scgpub.whole@1.0.0": "whole-claim-sample",
+      "vscode:scgpub.unflagged@1.0.0": "whole-claim-sample",
+      "openvsx:scgpub.unflagged@1.0.0": "whole-claim-sample",
+    });
   });
 });

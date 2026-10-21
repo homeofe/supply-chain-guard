@@ -686,7 +686,8 @@ export function mapAdvisory(advisory, { ecosystems } = {}) {
           entry._ecosystemPrefix = prefix;
           entry._name = name;
           entry._discoverySource = DISCOVERY_SOURCE.GITHUB;
-          entry._derivation = DERIVATION.LISTED;
+          // Read out of a range expression, not a version list: derived.
+          entry._derivation = DERIVATION.RANGE_RESOLVED;
           entries.push(entry);
         }
         continue;
@@ -2534,7 +2535,9 @@ export async function fetchDatadogDataset({
         extensionsWithoutSample.push(id);
         continue;
       }
-      extensions.push({ id, placements: await probeExtensionVersions(id, versions, { fetchImpl }) });
+      // `listed`: the manifest named these versions. A null claims the whole
+      // extension and every SAMPLED version is pinned: derived, not named.
+      extensions.push({ id, listed: Array.isArray(listed), placements: await probeExtensionVersions(id, versions, { fetchImpl }) });
     }
     try {
       const headers = { "User-Agent": "supply-chain-guard-feed-import", Accept: "application/vnd.github+json" };
@@ -2747,7 +2750,7 @@ export function mapDatadogDataset(
       }
     }
   }
-  for (const { id, placements } of extensions) {
+  for (const { id, placements, listed } of extensions) {
     for (const placement of placements) {
       const prefixes = extensionPrefixesFor(placement);
       if (prefixes.length === 0) {
@@ -2769,7 +2772,8 @@ export function mapDatadogDataset(
         entry._name = id;
         entry._discoverySource = DISCOVERY_SOURCE.DATADOG;
         entry._origins = ["datadog"];
-        entry._derivation = DERIVATION.LISTED;
+        // Only a manifest that lists the version names it; anything else is derived.
+        entry._derivation = listed === true ? DERIVATION.LISTED : DERIVATION.WHOLE_CLAIM_SAMPLE;
         if (manifestDates[DATADOG_EXTENSION_DIR]) entry._queueDate = manifestDates[DATADOG_EXTENSION_DIR];
         entries.push(entry);
       }

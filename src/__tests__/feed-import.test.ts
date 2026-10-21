@@ -174,6 +174,23 @@ describe("mapAdvisory", () => {
     expect(mapAdvisory(advisory()).entries[0]._derivation).toBeUndefined();
   });
 
+  // The ends of a non-npm range (`>= 0.5.15, <= 0.5.16`) are read out of a range
+  // expression, not out of a version list: derived, like a resolved npm range.
+  it("labels the explicit ends of a non-npm range as range-resolved", async () => {
+    const { mapAdvisory } = await load();
+    const { entries } = mapAdvisory(
+      advisory({
+        vulnerabilities: [
+          { package: { ecosystem: "pip", name: "scg-fixture-pkg" }, vulnerable_version_range: ">= 0.5.15, <= 0.5.16" },
+        ],
+      }),
+    );
+    expect(entries.map((e: { value: string; _derivation?: string }) => [e.value, e._derivation])).toEqual([
+      ["pypi:scg-fixture-pkg@0.5.15", "range-resolved"],
+      ["pypi:scg-fixture-pkg@0.5.16", "range-resolved"],
+    ]);
+  });
+
   it("prefixes every non-npm ecosystem the scanner can match", async () => {
     const { mapAdvisory } = await load();
     const cases: Array<[string, string]> = [
@@ -438,6 +455,8 @@ describe("mapOsvMalwareRecord", () => {
       expect(entries.map((e: FeedIOC) => e.value)).toEqual(["vscode:scgpub.gone", "openvsx:scgpub.gone-ovsx"]);
       expect(collapsed).toBe(2);
       expect(entries.every((e: Record<string, unknown>) => !("_pinnedFromWholeRange" in e))).toBe(true);
+      // A whole-extension block carries no version, so it carries no label either.
+      expect(entries.every((e: Record<string, unknown>) => !("_derivation" in e))).toBe(true);
     });
 
     it("keeps the pins of a live extension (a hijacked legitimate one)", async () => {
