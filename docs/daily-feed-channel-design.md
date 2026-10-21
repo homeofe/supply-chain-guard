@@ -78,9 +78,12 @@ removal or change of an existing entry.
 
 The reason: a pin fires only on one exact release, and a hash only on one exact
 file. But not every pin the importer emits was named by a source. Some are
-DERIVED: a version range or a whole-package claim resolved against today's
-registry (`_pinnedFromWholeRange` and the range resolution in
-`scripts/import-threat-feed.mjs`). The two worst false-positive traps found so far
+DERIVED: a version range resolved against today's registry or read out of a
+range expression, or the sampled versions of a whole-package claim (the
+`range-resolved`, `pin-only` and `whole-claim-sample` labels of the importer's
+`DERIVATION`). Pins from an OpenSSF record's own `versions` list are NOT derived,
+also when the record's range covers the whole package (`_pinnedFromWholeRange`):
+the record names those versions. The two worst false-positive traps found so far
 came from exactly that: resolving a range would have pinned 45 legitimate releases
 of `flipper-frontend-core`, and a whole-package claim on a hijacked live package
 would have pinned all 1,927 releases of `@toptal/picasso`. The importer now guards

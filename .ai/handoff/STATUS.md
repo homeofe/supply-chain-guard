@@ -1,3 +1,34 @@
+## Importer labels where each pin's version came from (2026-10-21) (claude-opus-5-5)
+
+First of four pull requests implementing `docs/daily-feed-channel-design.md`.
+`scripts/import-threat-feed.mjs` sets a transient `_derivation` on every
+versioned package candidate (exported `DERIVATION`): `listed` for an exact
+GitHub range, an OpenSSF record's own `versions` (also under a whole-package
+range), a version a DataDog npm/PyPI manifest or extension manifest lists, and
+a registry-resolved version that a pin-only item's record lists;
+`range-resolved` for versions the registry contributed to a bounded range and
+for the ends a non-npm GitHub range names (`>= x, <= y`: read out of a range
+expression, not a version list); `pin-only` for versions the registry
+contributed to a pin-only item; `whole-claim-sample` for the sampled versions
+of a DataDog whole-package claim, npm/PyPI or IDE extension (an extension
+manifest `null` pins every sampled version, so `fetchDatadogDataset` now
+records `listed` per extension). Coalescing keeps `listed` when any source
+lists the version. A collapsed whole-extension block drops the label with the
+version. The report gains `derivations`, index-aligned with `entries`, which
+keep the plain feed shape. The design document's sentence on derived pins is
+corrected: `_pinnedFromWholeRange` pins are the record's own versions.
+
+An independent review before merge found the extension case (a whole-claim
+sample labelled `listed`, the unsafe direction) and the unlabelled range ends;
+both fixed here.
+
+Tests: eleven new cases or assertions across `feed-import`, `feed-pin-only`
+and `feed-datadog-source`, each seen failing first. Eight mutation cuts each
+turned exactly their test red: coalesce keeps the first label, pin-only never
+listed, report without `derivations`, unlabelled DataDog samples, extension
+fetch always `listed`, extension label always `listed`, collapsed block keeps
+its label, range ends labelled `listed`.
+
 ## Design: daily signed feed channel and offline import (2026-10-21) (claude-opus-5-5)
 
 Adds `docs/daily-feed-channel-design.md`. Owner
