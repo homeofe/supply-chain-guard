@@ -7,6 +7,23 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat intel for 2026-10-21: 272 package entries from the GitHub Advisory
+  Database, OpenSSF and the DataDog dataset (263 in the offline bundle, 9 in
+  the catalog). 156 of them are the 2026-10-19 and 2026-10-20 entries also
+  carried by the still-open daily pull requests for those days. New today:
+  27 versions of the `@alannxd/baileys` WhatsApp fork; the DGXeon forks
+  `@dreamguyxeon/baileyx` and `@dreamguyxeon/libsignal-node` plus
+  `my-auto-follow` and `my-auto-follow-eltio`; a cluster of 24 Tailwind and
+  animate.css plugin lookalikes (`tailwindcss-keyframe-kit`,
+  `animatecss-tailwind-*`, `tailwind-animate-kit` and others) with the
+  `signalledger-bridge` and `signalledger-diagnostics` companions; PyPI
+  `semver` typosquats (`semer`, `ssemver`, `semverr`, `semvver`, `semmver`,
+  `semveer`), `debbug`/`deebug`, `workalendar` lookalikes, `pyyi` 2.5.0 to
+  2.5.5 and other single-release names. Every bare name was probed against
+  the npm registry and is an npm security holding package.
+
 ## [6.5.9] - 2026-10-18
 
 ### Added

@@ -1,3 +1,34 @@
+## Daily threat-intel import (2026-10-21) (claude-opus-5-5)
+
+Windowed import (GHSA + OpenSSF + DataDog, since 2026-10-07): 272 new
+entries, 263 to the bundle, 9 to the catalog. Cut from `main` while PR 424
+(2026-10-19) and PR 427 (2026-10-20) are still open, so 156 of the 272 are
+the windowed entries those PRs also carry; whichever merges first, the others
+need a rebase. New today (116): `@alannxd/baileys` (27 versions,
+GHSA-7345-fjw8-x55w), DGXeon `@dreamguyxeon/baileyx` and
+`@dreamguyxeon/libsignal-node`, `my-auto-follow`, `my-auto-follow-eltio`,
+`fnd-stores`, a Tailwind/animate.css plugin lookalike cluster (MAL-2026-18065
+to MAL-2026-18090, 26 packages including two `signalledger-*`, plus `animatecss-tailwind-bridge`), PyPI
+semver/debug/workalendar typosquats from kam193 and amazon-inspector,
+`pyyi` 2.5.0 to 2.5.5, `fabtoolkit@0.2.1`. All 145 bare names probed: every
+one only `0.0.0-stage` + `0.0.1-security` published by `npm` (maintainer
+`npm` 133, `npm-support` 12). Catalog (firstSeen before the cutoff):
+`tinkoff-cache-path`, `eacq-payform-core`, `base58x64`, three 99.9.1
+dependency-confusion pins, `html-to-gutenberg` 4.2.24 to 4.2.26.
+
+Unmapped gaps 0 (+1 acknowledged). Skipped 30 (29 pin-only without a
+version, 1 unmappable range). Declined 0. No `--limit`, no page cap, no
+window slicing. DataDog: 4310 claims probed, 0 bare names, 8253 pins; 314
+DataDog-only pins of a still-published version held back (unchanged); the
+still-published IDE extension list is the six known ids.
+
+OSV snapshot reconcile: 0 proposed; `--check` exit 0, unmapped 0
+(+33 acknowledged), no stale acknowledgements. No
+vendor write-up of the window carried a new atomic indicator (GhostAction
+endpoints and the vpmdhaj OpenSearch lures are already covered), so nothing
+was added by hand. No catalogWindows, decline, pin-only or unresolvable
+change.
+
 ## Release v6.5.9 (2026-10-18) (claude-opus-5-5)
 
 Threat-intel release on the owner's instruction, cut from `main` at
