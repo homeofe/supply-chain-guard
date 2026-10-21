@@ -1,3 +1,15 @@
+## Docker base image digest bump (2026-10-21) (claude-opus-5-5)
+
+Carries Dependabot PR 425, which moves both `FROM node:24-alpine` lines of
+the Dockerfile (builder and runtime stage) from `sha256:ebfe2f904627...` to
+`sha256:44fce696f38b...`. It cannot merge on its own: it is red on
+`aahp-verify` Layer 2 alone ("Missing: .ai/handoff/STATUS.md update",
+"Missing: regenerated .ai/handoff/MANIFEST.json"), because Dependabot cannot
+add the handoff update. The new digest is the one Docker Hub serves today for
+`node:24-alpine` (manifest list digest read from the registry). The tag
+stays on Node 24; only the patch-level base image changes. PR 425 is closed
+as superseded once this lands.
+
 ## Daily intel 2026-10-20 and 2026-10-21 merged onto main after PR 424 (2026-10-21) (claude-opus-5-5)
 
 Three daily pull requests were open at once (424, 427, 428), each cut from the
