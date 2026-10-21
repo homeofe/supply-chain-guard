@@ -975,7 +975,7 @@ its own output.
 
 **Offline by default:**
 `scan` on a local path runs fully offline (unless one of the opt-in flags
-`--check-registry` or `--external-intel` is passed), as do `guard`, `feed stats`,
+`--check-registry` or `--external-intel` is passed), as do `guard`, `feed stats`, `feed import`,
 and all report formatters. These
 commands make zero network requests and are suitable for air-gapped and
 data-egress-restricted environments.
@@ -1001,7 +1001,34 @@ The commands that reach the network do so deliberately for their specific functi
 - `supply-chain-guard scan . --external-intel`: opt-in flag for the two-tier score. It **sends each dependency's name, ecosystem and version to the OSV API**, the CVE ids found to FIRST's EPSS API, and the project's GitHub `owner/repo` to the OpenSSF Scorecard API, and downloads the public CISA KEV catalog.
 
 Offline runs use the feed bundled with the installed version, so pin the version
-you intend to audit against.
+you intend to audit against. To keep an offline network on the daily feed, see
+[Air-gapped networks](#air-gapped-networks).
+
+### Air-gapped networks
+
+The signed daily feed can be carried into a network without internet access and
+installed there with the same checks `feed refresh` applies (signature against
+the key compiled into the package, rollback and size guards, the catalog's digest
+chain), without any network request.
+
+1. On a connected machine, download `feed-offline.tar.gz` and `SHA256SUMS` from
+   `https://homeofe.github.io/supply-chain-guard/feed/`, and check them with
+   `sha256sum -c SHA256SUMS --ignore-missing`.
+2. Once per upgrade, also download the installed version's `catalog-index.json`
+   and `catalog-*.json.gz` from its GitHub Release, for the historical catalog.
+3. Carry the files across, unpack the archive (`tar -xzf feed-offline.tar.gz`)
+   into one directory with the catalog files, and run:
+
+```bash
+supply-chain-guard feed import ./scg-feed
+```
+
+A feed whose signature does not verify, that is older than the installed one,
+or that is truncated is refused, and the previous cache stays in place. Install
+the npm package itself from an internal registry or mirror, and pin the Docker
+image by digest (`ghcr.io/homeofe/supply-chain-guard@sha256:...`) rather than by
+tag. If you run the scanner offline, please describe your setup in the
+repository's GitHub Discussions, so the offline path can be shaped by real use.
 
 ## GitHub Action
 

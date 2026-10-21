@@ -1042,6 +1042,34 @@ feedCmd
   });
 
 feedCmd
+  .command("import <dir>")
+  .description(
+    "Install the signed feed from a local directory, for networks without internet access: feed.json and feed.json.sig (the daily channel's offline archive, unpacked), plus the release's catalog-index.json and catalog shards when present. Same checks as feed refresh; no network request",
+  )
+  .option("-c, --cache-dir <dir>", "Cache directory to write to (default: SCG_CACHE_DIR, else the per-user cache directory)")
+  .action(async (dir: string, opts: { cacheDir?: string }) => {
+    try {
+      const { importFeedFromDirectory, refreshSummaryLines } = await import("./feed.js");
+      const result = await importFeedFromDirectory(dir, opts.cacheDir);
+      const [head, ...rest] = refreshSummaryLines(result);
+      console.log(`\n  ${head}`);
+      for (const line of rest) console.log(`  ${line}`);
+      if (result.catalog) {
+        console.log(`\n  Historical catalog installed: ${result.catalog.entryCount} entries.`);
+        console.log(`  Cache file: ${result.catalog.cachePath}`);
+      } else {
+        console.log(`\n  Historical catalog not installed.`);
+        if (result.catalogError) console.log(`  Reason: ${result.catalogError}`);
+      }
+      console.log("");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`\n  Error: ${message}\n`);
+      process.exit(1);
+    }
+  });
+
+feedCmd
   .command("osv")
   .description(
     "Export the feed's malicious-package IOCs as OSV records (osv.dev schema) for osv-scanner / ossf-malicious-packages consumption (offline)",

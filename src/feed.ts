@@ -898,16 +898,12 @@ function sha256Hex(text: string): string {
  * halfway leaves the previous catalog in place rather than a partial one.
  */
 async function installCatalog(
-  feedUrl: string,
+  read: (file: string) => Promise<Buffer>,
   cacheDir: string,
-  limits: RemoteRequestLimits,
 ): Promise<{ entryCount: number; cachePath: string }> {
   const version = CATALOG_DIGEST.version;
-  const template = catalogTemplateForFeedUrl(feedUrl);
 
-  const indexBody = (
-    await fetchHttpsBuffer(catalogUrlFor(version, "catalog-index.json", template), limits)
-  ).body.toString("utf-8");
+  const indexBody = (await read("catalog-index.json")).toString("utf-8");
 
   const indexDigest = sha256Hex(indexBody);
   if (indexDigest !== CATALOG_DIGEST.sha256) {
@@ -933,7 +929,7 @@ async function installCatalog(
 
   const entries: FeedIOC[] = [];
   for (const shard of index.shards) {
-    const raw = (await fetchHttpsBuffer(catalogUrlFor(version, shard.path, template), limits)).body;
+    const raw = await read(shard.path);
     // Digest the DECODED document, matching how the generator computes it: a
     // mirror may serve the asset uncompressed, and gzip output is not
     // byte-stable across zlib versions.
@@ -1275,7 +1271,11 @@ export async function refreshFeed(
     let catalog: RefreshResult["catalog"];
     let catalogError: string | undefined;
     try {
-      catalog = await installCatalog(feedUrl, cacheDir, limits);
+      const template = catalogTemplateForFeedUrl(feedUrl);
+      catalog = await installCatalog(
+        async (file) => (await fetchHttpsBuffer(catalogUrlFor(CATALOG_DIGEST.version, file, template), limits)).body,
+        cacheDir,
+      );
     } catch (err) {
       // A refused write target is not "the catalog is unavailable": it is a link
       // planted in the cache directory, and the command must fail, not shrug.
@@ -1298,5 +1298,75 @@ export async function refreshFeed(
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     throw new Error(`Failed to refresh threat feed from ${feedUrl}: ${message}`);
+  }
+}
+
+/**
+ * `feed import <dir>`: install the signed feed, and the release's catalog when
+ * its files are there, from a local directory, for networks without internet
+ * access (docs/daily-feed-channel-design.md, "Offline import").
+ *
+ * `<dir>` holds files named like the published assets: `feed.json` and
+ * `feed.json.sig` (the daily channel's offline archive, unpacked), and
+ * optionally `catalog-index.json` with its `catalog-*.json.gz` shards from the
+ * installed version's release. The checks are those of `feed refresh`: the
+ * signature is always required, then the rollback guard and the size floor, and
+ * the catalog's digest chain from the package anchor. No network request.
+ */
+export async function importFeedFromDirectory(
+  dir: string,
+  cacheDirOption?: string,
+  limitOverrides: FeedLimitOverrides = {},
+): Promise<RefreshResult> {
+  const { minEntries: minEntriesOverride, maxBytes: maxBytesOverride } = limitOverrides;
+  const maxBytes = maxBytesOverride ?? FEED_REMOTE_LIMITS.maxBytes;
+  const cacheDir = resolveCacheDir(cacheDirOption);
+  const minEntries = minEntriesOverride ?? Math.ceil(getBundledFeedRef().length * FEED_MIN_SHARE_OF_BUNDLE);
+  // A plain file name inside `dir`, size-capped like a download.
+  const readLocal = async (name: string): Promise<Buffer> => {
+    if (path.basename(name) !== name || name === "." || name === "..") {
+      throw new Error(`refusing the file name ${JSON.stringify(name)}: only plain names inside the directory are read`);
+    }
+    const file = path.join(dir, name);
+    const stat = fs.statSync(file);
+    if (!stat.isFile()) throw new Error(`${name} is not a regular file`);
+    if (stat.size > maxBytes) throw new Error(`${name} is ${stat.size} bytes, above the ${maxBytes}-byte limit`);
+    return fs.readFileSync(file);
+  };
+  try {
+    assertCacheTargetSafe(path.join(cacheDir, FEED_CACHE_FILE));
+    assertCacheTargetSafe(path.join(cacheDir, CATALOG_CACHE_FILE));
+    assertCacheTargetSafe(path.join(cacheDir, CATALOG_MARKER_FILE));
+    assertCacheTargetSafe(path.join(cacheDir, FEED_SIGNED_COPY_FILE));
+    assertCacheTargetSafe(path.join(cacheDir, FEED_SIGNATURE_FILE));
+
+    const raw = await readLocal("feed.json");
+    let signatureText: string | undefined;
+    try {
+      signatureText = (await readLocal("feed.json.sig")).toString("utf-8");
+    } catch (err) {
+      throw new Error(
+        `refusing the feed: its signature feed.json.sig could not be read from ${dir} (${err instanceof Error ? err.message : String(err)}). ` +
+          `The previous cache stays in effect.`,
+      );
+    }
+    const installed = await installFeedBytes(raw, signatureText, cacheDir, {}, minEntries);
+
+    let catalog: RefreshResult["catalog"];
+    let catalogError: string | undefined;
+    if (!fs.existsSync(path.join(dir, "catalog-index.json"))) {
+      catalogError = `no catalog files in ${dir} (catalog-index.json and its shards come from the release of version ${CATALOG_DIGEST.version})`;
+    } else {
+      try {
+        catalog = await installCatalog(readLocal, cacheDir);
+      } catch (err) {
+        if (err instanceof CacheTargetRefusedError) throw err;
+        catalogError = err instanceof Error ? err.message : String(err);
+      }
+    }
+    return { ...installed, source: "file", catalog, catalogError };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`Failed to import threat feed from ${dir}: ${message}`);
   }
 }
