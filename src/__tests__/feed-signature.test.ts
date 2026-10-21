@@ -12,7 +12,7 @@ vi.mock("node:https", () => {
 });
 
 import * as https from "node:https";
-import { refreshFeed, DEFAULT_FEED_URL, feedSignatureUrlFor, newestSignedReleaseFeedUrl } from "../feed.js";
+import { refreshFeed, DEFAULT_FEED_URL, RELEASE_FEED_URL, feedSignatureUrlFor, newestSignedReleaseFeedUrl } from "../feed.js";
 import {
   FEED_SIGNING_PUBLIC_KEY_PEM,
   FEED_SIGNING_KEY_FINGERPRINT_PREFIX,
@@ -45,8 +45,10 @@ const OTHER_DOC = JSON.stringify({
 });
 
 const pathOf = (url: string) => new URL(url).pathname;
-const FEED_PATH = pathOf(DEFAULT_FEED_URL);
-const SIG_PATH = pathOf(feedSignatureUrlFor(DEFAULT_FEED_URL));
+// The release source, addressed directly: these cases pin today's release
+// behaviour, which the daily channel falls back to.
+const FEED_PATH = pathOf(RELEASE_FEED_URL);
+const SIG_PATH = pathOf(feedSignatureUrlFor(RELEASE_FEED_URL));
 
 /** Answer each request from a path -> body map; anything else is a 404. */
 const serve = (routes: Record<string, string>) => {
@@ -95,18 +97,17 @@ describe("the bundled feed signing key", () => {
     expect(fs.readFileSync(path.join(ROOT, "SECURITY.md"), "utf8")).toContain("91b2c7d7d50612a3");
   });
 
-  it("defaults the refresh source to the latest release assets", () => {
-    expect(DEFAULT_FEED_URL).toBe(
-      "https://github.com/homeofe/supply-chain-guard/releases/latest/download/feed.json",
-    );
+  it("defaults the refresh source to the daily channel, with the latest release assets as fallback", () => {
+    expect(DEFAULT_FEED_URL).toBe("https://homeofe.github.io/supply-chain-guard/feed/feed.json");
     expect(feedSignatureUrlFor(DEFAULT_FEED_URL)).toBe(`${DEFAULT_FEED_URL}.sig`);
+    expect(RELEASE_FEED_URL).toBe("https://github.com/homeofe/supply-chain-guard/releases/latest/download/feed.json");
   });
 });
 
 describe("refreshFeed verifies the feed signature", () => {
   it("accepts a feed whose signature verifies, and keeps the signed bytes beside the cache", async () => {
     serve({ [FEED_PATH]: FEED_DOC, [SIG_PATH]: sigOf(FEED_DOC) + "\n" });
-    const result = await refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR);
+    const result = await refreshFeed(RELEASE_FEED_URL, tmpDir, NO_FLOOR);
     expect(result.entryCount).toBe(1);
     expect(result.unsigned).toBeUndefined();
     expect(fs.readFileSync(path.join(tmpDir, FEED_SIGNED_COPY_FILE), "utf8")).toBe(FEED_DOC);
@@ -115,7 +116,7 @@ describe("refreshFeed verifies the feed signature", () => {
 
   const seedCache = async () => {
     serve({ [FEED_PATH]: FEED_DOC, [SIG_PATH]: sigOf(FEED_DOC) });
-    await refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR);
+    await refreshFeed(RELEASE_FEED_URL, tmpDir, NO_FLOOR);
     return fs.readFileSync(path.join(tmpDir, FEED_CACHE_FILE), "utf8");
   };
 
@@ -132,7 +133,7 @@ describe("refreshFeed verifies the feed signature", () => {
     it(`refuses ${name} and keeps the previous cache`, async () => {
       const before = await seedCache();
       serve(routes());
-      await expect(refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR)).rejects.toThrow(message);
+      await expect(refreshFeed(RELEASE_FEED_URL, tmpDir, NO_FLOOR)).rejects.toThrow(message);
       expect(fs.readFileSync(path.join(tmpDir, FEED_CACHE_FILE), "utf8")).toBe(before);
       expect(fs.readFileSync(path.join(tmpDir, FEED_SIGNED_COPY_FILE), "utf8")).toBe(FEED_DOC);
     });
@@ -140,7 +141,7 @@ describe("refreshFeed verifies the feed signature", () => {
 
   it("verifies BEFORE parsing: an unsigned non-JSON body is refused as unsigned, not as invalid JSON", async () => {
     serve({ [FEED_PATH]: "<html>not json</html>" });
-    await expect(refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR)).rejects.toThrow(/latest release carries no signed feed/);
+    await expect(refreshFeed(RELEASE_FEED_URL, tmpDir, NO_FLOOR)).rejects.toThrow(/latest release carries no signed feed/);
   });
 });
 
@@ -155,20 +156,20 @@ describe("fallback when the latest release carries no signed feed", () => {
 
   it("reads the newest signed release when latest has no feed", async () => {
     serve({ [V6_PATH]: FEED_DOC, [V6_SIG_PATH]: sigOf(FEED_DOC) });
-    const result = await refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR, resolveTo(V6));
+    const result = await refreshFeed(RELEASE_FEED_URL, tmpDir, NO_FLOOR, resolveTo(V6));
     expect(result.entryCount).toBe(1);
     expect(fs.readFileSync(path.join(tmpDir, FEED_SIGNED_COPY_FILE), "utf8")).toBe(FEED_DOC);
   });
 
   it("still verifies the fallback release's signature", async () => {
     serve({ [V6_PATH]: OTHER_DOC, [V6_SIG_PATH]: sigOf(OTHER_DOC, otherPair.privateKey) });
-    await expect(refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR, resolveTo(V6))).rejects.toThrow(/does not verify/);
+    await expect(refreshFeed(RELEASE_FEED_URL, tmpDir, NO_FLOOR, resolveTo(V6))).rejects.toThrow(/does not verify/);
   });
 
   it("does not consult the fallback when latest carries a signed feed", async () => {
     serve({ [FEED_PATH]: FEED_DOC, [SIG_PATH]: sigOf(FEED_DOC) });
     const resolver = vi.fn(async () => V6);
-    await refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR, { resolveSignedRelease: resolver });
+    await refreshFeed(RELEASE_FEED_URL, tmpDir, NO_FLOOR, { resolveSignedRelease: resolver });
     expect(resolver).not.toHaveBeenCalled();
   });
 
@@ -251,7 +252,7 @@ describe("the cached feed is re-verified on every load", () => {
   };
   const seed = async () => {
     serve({ [FEED_PATH]: FEED_DOC, [SIG_PATH]: sigOf(FEED_DOC) });
-    await refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR);
+    await refreshFeed(RELEASE_FEED_URL, tmpDir, NO_FLOOR);
     resetThreatIntelCache();
   };
   const rules = async () => {
@@ -329,7 +330,7 @@ describe("a newer feed in an older client", () => {
       ],
     });
     serve({ [FEED_PATH]: future, [SIG_PATH]: sigOf(future) });
-    await expect(refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR)).rejects.toThrow(/invalid feed entry/);
+    await expect(refreshFeed(RELEASE_FEED_URL, tmpDir, NO_FLOOR)).rejects.toThrow(/invalid feed entry/);
   });
 });
 
@@ -421,5 +422,87 @@ describe("the release job signs the feed", () => {
     const stepStart = releaseJob.lastIndexOf("\n      - name:", at);
     const stepEnd = releaseJob.indexOf("\n      - name:", at);
     expect(releaseJob.slice(stepStart, stepEnd)).toContain("sign-feed.mjs");
+  });
+});
+
+// The daily channel (docs/daily-feed-channel-design.md) is the default source.
+// Any failure to install it falls back to the release path with the same
+// checks; a cache that is already newer than both is kept and reported current.
+describe("the daily channel and its release fallback", () => {
+  const CHANNEL_PATH = pathOf(DEFAULT_FEED_URL);
+  const CHANNEL_SIG_PATH = pathOf(feedSignatureUrlFor(DEFAULT_FEED_URL));
+  const at = (msAgo: number) => new Date(Date.now() - msAgo).toISOString();
+  const doc = (generatedAt: string, value = "channel-fixture.example") =>
+    JSON.stringify({ schema: 1, generatedAt, entries: [{ type: "domain", value, severity: "critical", confidence: 1 }] });
+  const requested = () =>
+    (https.get as unknown as ReturnType<typeof vi.fn>).mock.calls.map((c) => (c[0] as { path?: string }).path ?? "");
+  const noRelease = { resolveSignedRelease: async () => { throw new Error("no release in this test"); } };
+
+  it("installs the daily channel by default", async () => {
+    const d = doc(at(60_000));
+    serve({ [CHANNEL_PATH]: d, [CHANNEL_SIG_PATH]: sigOf(d) });
+    const result = await refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR, noRelease);
+    expect(result.source).toBe("channel");
+    expect(cacheOf().generatedAt).toBe(JSON.parse(d).generatedAt);
+  });
+
+  it("falls back to the release feed when the channel is down", async () => {
+    serve({ [FEED_PATH]: FEED_DOC, [SIG_PATH]: sigOf(FEED_DOC) });
+    const result = await refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR, noRelease);
+    expect(result.source).toBe("release");
+    expect(fs.readFileSync(path.join(tmpDir, FEED_SIGNED_COPY_FILE), "utf8")).toBe(FEED_DOC);
+  });
+
+  it("falls back when the channel serves HTML", async () => {
+    serve({ [CHANNEL_PATH]: "<html><body>Site not found</body></html>", [FEED_PATH]: FEED_DOC, [SIG_PATH]: sigOf(FEED_DOC) });
+    const result = await refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR, noRelease);
+    expect(result.source).toBe("release");
+  });
+
+  it("falls back when the channel signature does not verify", async () => {
+    const forged = doc(at(60_000), "forged-fixture.example");
+    serve({
+      [CHANNEL_PATH]: forged,
+      [CHANNEL_SIG_PATH]: sigOf(forged, otherPair.privateKey),
+      [FEED_PATH]: FEED_DOC,
+      [SIG_PATH]: sigOf(FEED_DOC),
+    });
+    const result = await refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR, noRelease);
+    expect(result.source).toBe("release");
+    expect(JSON.stringify(cacheOf())).not.toContain("forged-fixture.example");
+  });
+
+  it("keeps a newer cache and reports it current", async () => {
+    const newest = doc(at(60_000));
+    serve({ [CHANNEL_PATH]: newest, [CHANNEL_SIG_PATH]: sigOf(newest) });
+    await refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR, noRelease);
+    const before = fs.readFileSync(path.join(tmpDir, FEED_CACHE_FILE), "utf8");
+    const older = doc(at(3_600_000), "older-fixture.example");
+    serve({ [CHANNEL_PATH]: older, [CHANNEL_SIG_PATH]: sigOf(older), [FEED_PATH]: older, [SIG_PATH]: sigOf(older) });
+    const result = await refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR, noRelease);
+    expect(result.keptCurrentCache?.generatedAt).toBe(JSON.parse(newest).generatedAt);
+    expect(fs.readFileSync(path.join(tmpDir, FEED_CACHE_FILE), "utf8")).toBe(before);
+  });
+
+  it("still fails, naming both sources, when neither can be installed for another reason", async () => {
+    serve({});
+    await expect(refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR, noRelease)).rejects.toThrow(/daily channel.*release/s);
+  });
+
+  it("takes the catalog from release assets after a channel install", async () => {
+    const d = doc(at(60_000));
+    serve({ [CHANNEL_PATH]: d, [CHANNEL_SIG_PATH]: sigOf(d) });
+    await refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR, noRelease);
+    const paths = requested();
+    expect(paths.some((p) => /^\/homeofe\/supply-chain-guard\/releases\/download\/v[^/]+\/catalog-index\.json$/.test(p))).toBe(true);
+    expect(paths.some((p) => p.startsWith("/supply-chain-guard/feed/catalog"))).toBe(false);
+  });
+
+  it("a custom URL never falls back to the channel or the release", async () => {
+    const MIRROR = "https://mirror.invalid/scg/feed.json";
+    serve({});
+    await expect(refreshFeed(MIRROR, tmpDir, NO_FLOOR, noRelease)).rejects.toThrow();
+    const paths = requested();
+    expect(paths.includes(CHANNEL_PATH) || paths.includes(FEED_PATH)).toBe(false);
   });
 });

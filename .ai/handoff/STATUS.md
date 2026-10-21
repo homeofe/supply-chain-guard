@@ -1,3 +1,30 @@
+## Client reads the daily feed channel, release as fallback (2026-10-21) (claude-opus-5-5)
+
+Third of four pull requests implementing `docs/daily-feed-channel-design.md`.
+
+- `src/feed.ts`: `DEFAULT_FEED_URL` is the Pages channel; `RELEASE_FEED_URL`
+  is the old default. `refreshFeed` installs the channel and, on ANY failure
+  of that attempt, runs the release path (latest, then newest signed release)
+  with the same checks. `installFeedBytes` holds the shared
+  verify-parse-guard-write sequence (PR D reuses it). `assertFeedMayReplace`
+  throws `FeedNotNewerError` when a feed is older than the cache or the
+  bundle; when both sources fail only that way the cache is kept and
+  `keptCurrentCache` returned. `RefreshResult.source` says
+  channel/release/custom/file. `catalogTemplateForFeedUrl` keeps the release
+  assets for both built-in sources. A custom URL is unchanged.
+- `src/cli.ts`: `feed refresh` prints the source or "cache is current"
+  (`refreshSummaryLines`).
+- README "Live Threat Feed" section and the networked-commands list.
+
+Tests: eight channel cases and two summary cases, seen failing first; the
+release-path cases now address `RELEASE_FEED_URL` explicitly, so they still
+pin the release behaviour. Four cuts each red on their own test: no release
+fallback, catalog following the channel, the cache refusal as a plain error,
+keeping the cache on a real failure.
+
+Until the owner enables Pages the channel answers 404 and every refresh falls
+back to the release feed, as before.
+
 ## Daily feed channel: builder, workflow, freshness check (2026-10-21) (claude-opus-5-5)
 
 Second of four pull requests implementing `docs/daily-feed-channel-design.md`.

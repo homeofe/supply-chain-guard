@@ -23,6 +23,7 @@ import {
   decodeCatalogBody,
   CATALOG_MAX_DECOMPRESSED_BYTES,
   DEFAULT_FEED_URL,
+  refreshSummaryLines,
 } from "../feed.js";
 import {
   loadThreatIntel,
@@ -464,7 +465,7 @@ describe("refreshFeed", () => {
     expect(result.entryCount).toBe(1);
   });
 
-  it("defaults to the signed feed of the latest GitHub Release", async () => {
+  it("defaults to the signed daily channel on GitHub Pages", async () => {
     mockHttpResponse(200, [JSON.stringify({ schema: 1, entries: [EXTRA_DOMAIN_IOC] })]);
     await refreshFeed(undefined, tmpDir, NO_FLOOR, ALLOW_UNSIGNED);
     // The bounded downloader parses the URL and passes RequestOptions, so the
@@ -475,9 +476,7 @@ describe("refreshFeed", () => {
       path: string;
     };
     expect(`${options.protocol}//${options.hostname}${options.path}`).toBe(DEFAULT_FEED_URL);
-    expect(DEFAULT_FEED_URL).toContain(
-      "github.com/homeofe/supply-chain-guard/releases/latest/download/feed.json",
-    );
+    expect(DEFAULT_FEED_URL).toBe("https://homeofe.github.io/supply-chain-guard/feed/feed.json");
   });
 
   it("rejects with a clear error when the network is down (no crash)", async () => {
@@ -955,5 +954,20 @@ describe("isInertThreatFeedFile, exemption boundary", () => {
     expect(isInertThreatFeedFile(".scg-cache/threat-feed.json", doc([{ ...ok, ...probe }]))).toBe(true);
     expect(used.has("note")).toBe(false);
     expect(used.has("ecosystem")).toBe(false);
+  });
+});
+
+describe("refreshSummaryLines", () => {
+  const base = { entryCount: 7285, cachePath: "/c/threat-feed.json" };
+  it("names the source the feed came from", () => {
+    expect(refreshSummaryLines({ ...base, source: "channel" })[0]).toBe("Threat feed refreshed from the daily channel: 7285 entries cached.");
+    expect(refreshSummaryLines({ ...base, source: "release" })[0]).toBe("Threat feed refreshed from the latest release: 7285 entries cached.");
+    expect(refreshSummaryLines({ ...base, source: "custom" })[0]).toBe("Threat feed refreshed from the given URL: 7285 entries cached.");
+    expect(refreshSummaryLines({ ...base, source: "file" })[0]).toBe("Threat feed installed from a local directory: 7285 entries cached.");
+  });
+  it("reports a kept cache as current, not as refreshed", () => {
+    const lines = refreshSummaryLines({ ...base, source: "channel", keptCurrentCache: { generatedAt: "2026-10-22T05:17:00.000Z" } });
+    expect(lines[0]).toBe("Threat feed cache is current (generated 2026-10-22T05:17:00.000Z); nothing newer was offered.");
+    expect(lines.join(" ")).not.toMatch(/refreshed/);
   });
 });

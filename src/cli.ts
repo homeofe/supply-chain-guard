@@ -984,7 +984,7 @@ feedCmd
 feedCmd
   .command("refresh")
   .description(
-    "Download the published IOC feed into the local cache for same-day protection (default source: the signed feed.json of the latest GitHub Release; its Ed25519 signature is verified against the key bundled with this release)",
+    "Download the published IOC feed into the local cache for same-day protection (default source: the signed daily feed channel on GitHub Pages, falling back to the signed feed.json of the latest GitHub Release; every source's Ed25519 signature is verified against the key bundled with this release)",
   )
   .option("-u, --url <url>", "Feed URL to download instead of the default")
   .option("-c, --cache-dir <dir>", "Cache directory to write to (default: SCG_CACHE_DIR, else the per-user cache directory)")
@@ -994,7 +994,7 @@ feedCmd
   )
   .action(async (opts: { url?: string; cacheDir?: string; allowUnsignedFeed?: boolean }) => {
     try {
-      const { refreshFeed, DEFAULT_FEED_URL } = await import("./feed.js");
+      const { refreshFeed, refreshSummaryLines, DEFAULT_FEED_URL } = await import("./feed.js");
       if (opts.allowUnsignedFeed) {
         console.error(
           "\n  Warning: --allow-unsigned-feed: the feed signature is NOT checked. Anyone who controls the feed source or the cache directory can change what this scanner detects.",
@@ -1003,8 +1003,9 @@ feedCmd
       const result = await refreshFeed(opts.url ?? DEFAULT_FEED_URL, opts.cacheDir, {}, {
         allowUnsigned: opts.allowUnsignedFeed === true,
       });
-      console.log(`\n  Threat feed refreshed: ${result.entryCount} entries cached.`);
-      console.log(`  Cache file: ${result.cachePath}`);
+      const [head, ...rest] = refreshSummaryLines(result);
+      console.log(`\n  ${head}`);
+      for (const line of rest) console.log(`  ${line}`);
       const { legacyRefreshNote } = await import("./cache-dir.js");
       const legacyNote = legacyRefreshNote(opts.cacheDir);
       if (legacyNote) console.log(legacyNote);
