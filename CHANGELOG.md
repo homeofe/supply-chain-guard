@@ -16,11 +16,10 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   checksums for offline networks. Nothing that could block a legitimate
   package by name, range or domain reaches it without review. Threat data now
   reaches users daily, while code releases come about once a week.
-- The GitHub Action installs the signed daily feed before every scan: new
-  input `refresh-feed`, on by default, downloads about 2 MB from
-  `homeofe.github.io` (fallback: the release assets on `github.com`). A failed
-  download keeps the scan on the bundled feed; `refresh-feed: false` keeps the
-  Action fully offline. The catalog stays behind `refresh-catalog: true`.
+- The GitHub Action's new input `refresh-feed` (on by default) downloads the
+  signed daily feed into its isolated cache before every scan. A failed
+  download keeps the scan on the bundled indicators and shows a warning
+  annotation.
 - `feed refresh --no-catalog` installs the feed without the historical
   catalog.
 - `supply-chain-guard feed import <dir>` installs the signed feed, and the
@@ -32,6 +31,13 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Changed
 
+- The GitHub Action now uses the network before the scan by default, also
+  for `@v6` users who change nothing: it installs the signed daily feed
+  (about 2 MB) and the historical catalog (about 3.6 MB compressed;
+  `refresh-catalog` is now on by default). Hosts: `homeofe.github.io`, with
+  fallback to `github.com`, `release-assets.githubusercontent.com` and
+  `api.github.com`. `refresh-catalog: false` skips the catalog;
+  `refresh-feed: false` downloads no threat data, as before 6.6.0.
 - `feed refresh` reads the daily
   signed feed channel on GitHub Pages by default and falls back to the signed
   feed of the latest GitHub Release when the channel cannot be installed for

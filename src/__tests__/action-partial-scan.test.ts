@@ -697,27 +697,32 @@ describe("Marketplace Action fail-closed contract", () => {
     );
   });
 
-  // The daily signed feed reaches the Action without a release
-  // (docs/daily-feed-channel-design.md): on by default and feed-only, the large
-  // catalog stays opt-in, and a failed download never stops the scan.
-  it.skipIf(!hasBash || !hasJq)("refreshes the daily feed by default, the catalog only on request, and survives a failed refresh", () => {
+  // The daily signed feed and the catalog reach the Action without a release
+  // (docs/daily-feed-channel-design.md): both on by default (owner decision
+  // 2026-10-21, about 2 MB and 3.6 MB compressed), the catalog can be dropped,
+  // refresh-feed: false downloads nothing, and a failed download never stops
+  // the scan but is shown as a warning annotation.
+  it.skipIf(!hasBash || !hasJq)("refreshes feed and catalog by default, each can be turned off, and a failed refresh warns", () => {
     type R = ReturnType<typeof spawnSync> & { feedCalls?: string[] };
     const byDefault = runScanScript(validEmptyReport) as R;
     expect(byDefault.status).toBe(0);
     expect(byDefault.feedCalls).toHaveLength(1);
-    expect(byDefault.feedCalls![0]).toMatch(/^feed refresh --no-catalog --cache-dir \S+\/cache$/);
+    expect(byDefault.feedCalls![0]).toMatch(/^feed refresh --cache-dir \S+\/cache$/);
+
+    const feedOnly = runScanScript(validEmptyReport, "critical", { refreshCatalog: "false" }) as R;
+    expect(feedOnly.feedCalls).toHaveLength(1);
+    expect(feedOnly.feedCalls![0]).toMatch(/^feed refresh --no-catalog --cache-dir \S+\/cache$/);
 
     const off = runScanScript(validEmptyReport, "critical", { refreshFeed: "false" }) as R;
     expect(off.status).toBe(0);
     expect(off.feedCalls).toEqual([]);
 
-    const withCatalog = runScanScript(validEmptyReport, "critical", { refreshCatalog: "true" }) as R;
-    expect(withCatalog.feedCalls).toHaveLength(1);
-    expect(withCatalog.feedCalls![0]).toMatch(/^feed refresh --cache-dir \S+\/cache$/);
+    const offWins = runScanScript(validEmptyReport, "critical", { refreshFeed: "false", refreshCatalog: "true" }) as R;
+    expect(offWins.feedCalls).toEqual([]);
 
     const failed = runScanScript(validEmptyReport, "critical", { refreshStatus: 1 }) as R;
     expect(failed.status).toBe(0);
-    expect(failed.stderr).toContain("Feed refresh failed; the scan uses the feed bundled with this version.");
+    expect(failed.stdout).toContain("::warning title=Threat feed refresh failed::");
 
     const typo = runScanScript(validEmptyReport, "critical", { refreshFeed: "tru" }) as R;
     expect(typo.status).toBe(1);
@@ -736,7 +741,7 @@ describe("Marketplace Action fail-closed contract", () => {
   // Isolating the cache under RUNNER_TEMP with no refresh into that directory
   // made catalog: required unsatisfiable on the Action: every run started
   // empty, and a preceding feed refresh wrote cwd .scg-cache which this
-  // script ignored. The input is off by default so the Action stays offline.
+  // script ignored. Since 6.6.0 the refresh runs by default (refresh-feed).
   it("declares refresh-feed, on by default, and reads it through env", () => {
     expect(action).toMatch(/refresh-feed:[\s\S]*?default: "true"/);
     expect(action).toContain("SCG_REFRESH_FEED: ${{ inputs['refresh-feed'] }}");
@@ -745,7 +750,7 @@ describe("Marketplace Action fail-closed contract", () => {
 
   it("can refresh the catalog into the isolated cache before scanning", () => {
     expect(action).toContain("refresh-catalog:");
-    expect(action).toMatch(/refresh-catalog:[\s\S]*?default: "false"/);
+    expect(action).toMatch(/refresh-catalog:[\s\S]*?default: "true"/);
     expect(scanScript).toContain("Invalid refresh-catalog input. Allowed: true, false.");
     const refresh = scanScript.indexOf("supply-chain-guard feed refresh --cache-dir \"$SCG_RUN_DIR/cache\"");
     const scan = scanScript.indexOf("supply-chain-guard scan");

@@ -498,8 +498,8 @@ describe("the daily channel and its release fallback", () => {
     expect(paths.some((p) => p.startsWith("/supply-chain-guard/feed/catalog"))).toBe(false);
   });
 
-  // The Action refreshes the feed on every run; the catalog is a ~40 MB
-  // download it only wants on request (refresh-catalog).
+  // `refresh-catalog: false` on the Action, and `feed refresh --no-catalog`:
+  // the feed alone, without the catalog's six shards.
   it("skips the catalog when asked, without a single catalog request", async () => {
     const d = doc(at(60_000));
     serve({ [CHANNEL_PATH]: d, [CHANNEL_SIG_PATH]: sigOf(d) });

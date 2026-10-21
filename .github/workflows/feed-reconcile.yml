@@ -23,7 +23,7 @@ name: Feed completeness
 
 on:
   schedule:
-    - cron: "37 11 * * *"
+    - cron: "37 12 * * *"
   workflow_dispatch:
 
 permissions:
@@ -65,9 +65,10 @@ jobs:
       # The daily feed channel (feed-daily.yml) must publish within about a day.
       # Checked HERE, in a different workflow, so a publisher that stopped
       # running at all is noticed too. The margin over 24 hours absorbs GitHub's
-      # delayed scheduled runs and the Pages deploy. This workflow runs at 11:37
-      # UTC, about six hours after the 05:17 publish, so ONE missed publish
-      # already reads about 30.3 hours here and fails. Until the owner sets the
+      # delayed scheduled runs and the Pages deploy. This workflow runs at 12:37
+      # UTC, about seven hours after the 05:17 publish, so ONE missed publish
+      # already reads over 31 hours here and fails, with an hour of margin for
+      # a late publish run. Until the owner sets the
       # repository variable FEED_CHANNEL_LIVE after the first deploy, a missing
       # channel is reported but not failed.
       - name: Daily feed channel is fresh

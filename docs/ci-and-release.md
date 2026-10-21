@@ -154,10 +154,11 @@ that holds the key:
 
 **Reading a red run.** Any failed step publishes nothing, and the channel keeps
 the previous day's feed. The job log names the cause: an importer error or
-tripwire, a truncated report, an invariant breach or a feed above 16 MiB (which
-entry, and why), the parser, or the signature. Unmapped upstream records do not
-stop it: they are not in the feed, the job log counts them, and this workflow
-reports them. Fix the cause on `main` or wait for the source to recover; never republish `main`'s feed with a fresh
+tripwire, a truncated report, more than 500 unmapped upstream records (a
+source changed its format), an invariant breach (which entry, and why), a feed
+above 16 MiB, the parser, or the signature. A smaller number of unmapped
+records does not stop it: they are not in the feed, the job log counts them,
+and `feed-reconcile.yml` reports them. Fix the cause on `main` or wait for the source to recover; never republish `main`'s feed with a fresh
 timestamp. The `Daily feed channel is fresh` step in `feed-reconcile.yml`
 fails when the published `generatedAt` is older than 30 hours, once the
 repository variable `FEED_CHANNEL_LIVE` is set.

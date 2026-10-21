@@ -1,6 +1,6 @@
 # Daily signed feed channel and offline import
 
-Status: implemented (pull requests 432 to 437 and the 6.6.0 follow-up), released in 6.6.0. The GitHub Action installs the daily feed on every run (`refresh-feed`, on by default).
+Status: implemented (pull requests 432 to 438), shipped with 6.6.0. The GitHub Action installs the daily feed and the catalog on every run (`refresh-feed` and `refresh-catalog`, both on by default, owner decision 2026-10-21).
 
 ## Why
 
@@ -244,7 +244,13 @@ wait for the weekly review on `main`.
   already current.
 - Website source in `main`, minimal committed index page as the fallback site.
 - Environment policy: branch `main` plus tags `v*.*.*`.
-- Freshness alert at 30 hours, checked from `feed-reconcile`.
+- Freshness alert at 30 hours, checked from `feed-reconcile` at 12:37 UTC,
+  about seven hours after the publish, so one missed publish fails.
+- Unmapped upstream records no longer stop the daily build (reversed on
+  2026-10-21: they are not in the feed, `feed-reconcile` reports them, and Goal
+  1 allows no daily maintainer step); more than 500 at once still fail it,
+  since that means a source changed its format.
+- The daily feed is capped at 16 MiB, half of what clients accept.
 
 ## Left to the builder
 

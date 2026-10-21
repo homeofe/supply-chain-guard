@@ -42,6 +42,13 @@ export const DEFAULT_DAILY_CAP = 2000;
  */
 export const DEFAULT_DAILY_MAX_BYTES = 16 * 1024 * 1024;
 
+/**
+ * A few unmapped upstream records are a backlog the reconcile workflow reports.
+ * Hundreds at once mean a source changed its format and the importer mapped
+ * almost nothing: publishing main's feed with a fresh timestamp would hide that.
+ */
+export const DEFAULT_UNMAPPED_LIMIT = 500;
+
 const LISTED = "listed";
 const HASH = /^(?:[a-f0-9]{32}|[a-f0-9]{40}|[a-f0-9]{64}|[a-f0-9]{128})$/i;
 const FULL_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
@@ -227,6 +234,9 @@ export async function main(argv, { now = new Date() } = {}) {
     // correct without it; feed-reconcile.yml reports the gap. Publishing stops
     // for real failures only, not for a backlog.
     if (!Number.isInteger(report.unmapped) || report.unmapped < 0) throw new Error("the importer report has no unmapped count");
+    if (report.unmapped > DEFAULT_UNMAPPED_LIMIT) {
+      throw new Error(`the importer report has ${report.unmapped} unmapped upstream records, above the ${DEFAULT_UNMAPPED_LIMIT} tripwire`);
+    }
     const { pins, dropped } = selectDailyPins(report);
 
     const mainFeed = JSON.parse(readFileSync(join(opts.mainRoot, "feed.json"), "utf8"));

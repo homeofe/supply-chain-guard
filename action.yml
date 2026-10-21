@@ -52,13 +52,13 @@ inputs:
     required: false
     default: "true"
   refresh-feed:
-    description: "Install the signed daily threat feed into an isolated cache before scanning (true/false). On by default, so new malicious packages reach the scan the day they are published, without a new Action release. Downloads about 2 MB from homeofe.github.io (falling back to github.com release assets); a failed download keeps the scan on the feed bundled with this version. Set to false to keep the Action fully offline."
+    description: "Download the signed daily threat feed into an isolated cache before scanning (true/false). On by default, so new malicious packages reach the scan the day they are published, without a new Action release. Hosts: homeofe.github.io, with fallback to github.com, release-assets.githubusercontent.com and api.github.com; each request gives up after 30 seconds, and the Node HTTPS client does not use HTTPS_PROXY. A failed download keeps the scan on the indicators bundled with this version and shows a warning. false downloads no threat data (the install step and comment-on-pr still use the network)."
     required: false
     default: "true"
   refresh-catalog:
-    description: "Also download the historical catalog (about 40 MB) into the isolated cache before scanning (true/false). Needed for catalog: required. Implies the daily feed refresh. Off by default."
+    description: "With refresh-feed, also install the historical package catalog (true/false): about 3.6 MB compressed, about 40 MB unpacked, from the release assets. On by default; needed for catalog: required. Ignored when refresh-feed is false."
     required: false
-    default: "false"
+    default: "true"
 
 outputs:
   score:
@@ -157,7 +157,7 @@ runs:
         FAIL_SEVERITY="${SCG_FAIL_ON:-critical}"
         COMMENT_ON_PR="${SCG_COMMENT_ON_PR:-true}"
         REFRESH_FEED="${SCG_REFRESH_FEED:-true}"
-        REFRESH_CATALOG="${SCG_REFRESH_CATALOG:-false}"
+        REFRESH_CATALOG="${SCG_REFRESH_CATALOG:-true}"
         case "$SCG_FORMAT" in
           text|json|markdown|sarif|sbom|html|badge|gitlab|junit) ;;
           *) echo "Invalid format input. Allowed: text, json, markdown, sarif, sbom, html, badge, gitlab, junit." >&2; exit 1 ;;
@@ -216,16 +216,20 @@ runs:
         FORMAT_FILE="$SCG_RUN_DIR/requested-report"
         FORMAT_ERR="$SCG_RUN_DIR/format.stderr"
         # Isolated from the checkout: a committed .scg-cache is not the source.
-        # The daily signed feed by default (docs/daily-feed-channel-design.md);
-        # the catalog only on request. A failed refresh still runs the scan on
-        # the bundled feed; THREAT_FEED_CATALOG_MISSING is how the scan reports
-        # that the catalog was not consulted.
-        if [ "$REFRESH_CATALOG" = "true" ]; then
-          supply-chain-guard feed refresh --cache-dir "$SCG_RUN_DIR/cache" ||
-            echo "Feed refresh failed; the scan uses the feed bundled with this version and will report THREAT_FEED_CATALOG_MISSING." >&2
-        elif [ "$REFRESH_FEED" = "true" ]; then
-          supply-chain-guard feed refresh --no-catalog --cache-dir "$SCG_RUN_DIR/cache" ||
-            echo "Feed refresh failed; the scan uses the feed bundled with this version." >&2
+        # The signed daily feed and the catalog by default
+        # (docs/daily-feed-channel-design.md). A failed refresh still runs the
+        # scan on the bundled indicators and says so as a warning annotation
+        # (static text, nothing from the network); THREAT_FEED_CATALOG_MISSING
+        # is how the scan reports a catalog that was not consulted.
+        if [ "$REFRESH_FEED" = "true" ]; then
+          if [ "$REFRESH_CATALOG" = "true" ]; then
+            supply-chain-guard feed refresh --cache-dir "$SCG_RUN_DIR/cache"
+          else
+            supply-chain-guard feed refresh --no-catalog --cache-dir "$SCG_RUN_DIR/cache"
+          fi
+          if [ $? -ne 0 ]; then
+            echo "::warning title=Threat feed refresh failed::The scan uses the indicators bundled with this version. Check access to homeofe.github.io, github.com and release-assets.githubusercontent.com, or set refresh-feed: false."
+          fi
         fi
         supply-chain-guard scan "$SCG_PATH" --format "$SCG_FORMAT" \
           --json-output "$JSON_FILE" --cache-dir "$SCG_RUN_DIR/cache" "${FILTER_ARGS[@]}" \

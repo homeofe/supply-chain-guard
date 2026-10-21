@@ -27,6 +27,22 @@ default, the catalog stays opt-in.
   doc is marked implemented; `docs/ci-and-release.md` covers the unmapped
   rule and the repository secret.
 
+Second round, after an independent review of this pull request: the catalog
+download is about 3.6 MB compressed (40 MB was the unpacked size), so the owner
+decided the Action installs feed AND catalog by default (`refresh-catalog` now
+defaults to `true`, ignored when `refresh-feed` is `false`). A failed
+refresh is a `::warning` annotation with static text. The network hosts are
+listed in full (`homeofe.github.io`, `github.com`,
+`release-assets.githubusercontent.com`, `api.github.com`), with the 30-second
+request deadline and the missing `HTTPS_PROXY` support; `refresh-feed: false`
+is described as "no threat-data download", not "fully offline". More than 500
+unmapped upstream records at once fail the daily build again (a source changed
+its format). The freshness check runs at 12:37 UTC for an hour of margin. The
+README release-rate quote names its 2026-08 measurement window, and the
+"24 hours" wording follows what the code does (the cache does not expire). The
+version bump to 6.6.0 ships in this same pull request, so the Action never runs
+with a CLI that lacks `--no-catalog`.
+
 Owner step still open: delete the repository-level `FEED_SIGNING_KEY` (the
 environment copy is in use), so only the two signing jobs can read it.
 

@@ -276,6 +276,18 @@ describe("the CLI", () => {
     expect(logs.join(" ")).toMatch(/2 unmapped upstream record\(s\) not in this feed/);
   });
 
+  // A handful of unmapped records is a backlog; hundreds at once means a source
+  // changed its format and the importer mapped almost nothing. Publishing
+  // main's feed with a fresh timestamp then would hide that for hours.
+  it("refuses a report with an unmapped count above the tripwire", async () => {
+    const { DEFAULT_UNMAPPED_LIMIT } = await load();
+    expect(DEFAULT_UNMAPPED_LIMIT).toBe(500);
+    const { code, feedPath } = await run(report([["scg-a@1.0.0", "listed"]], { unmapped: 501 }));
+    expect(code).toBe(1);
+    expect(fs.existsSync(feedPath)).toBe(false);
+    expect(errors.join(" ")).toMatch(/501 unmapped upstream records, above the 500 tripwire/);
+  });
+
   // Clients refuse a download above 32 MiB (FEED_REMOTE_LIMITS) and would then
   // fall back to the release feed every day without anyone noticing.
   it("refuses a feed above the size cap", async () => {

@@ -974,6 +974,15 @@ describe("refreshSummaryLines", () => {
 });
 
 describe("refresh review fixes", () => {
+  // Commander turns --no-catalog into `catalog: false`; the Action's default
+  // path depends on that wiring, which no refreshFeed test reaches.
+  it("wires --no-catalog to skipCatalog in the CLI", () => {
+    const cli = fs.readFileSync(path.resolve(__dirname, "..", "cli.ts"), "utf8").replace(/\r\n/g, "\n");
+    const refresh = cli.slice(cli.indexOf('.command("refresh")'), cli.indexOf('.command("import <dir>")'));
+    expect(refresh).toContain('.option("--no-catalog"');
+    expect(refresh).toContain("skipCatalog: opts.catalog === false");
+  });
+
   it("shows when the installed feed was generated", () => {
     const lines = refreshSummaryLines({ entryCount: 3, cachePath: "/c/f.json", source: "channel", generatedAt: "2026-10-22T05:17:00.000Z" });
     expect(lines[0]).toBe("Threat feed refreshed from the daily channel: 3 entries cached (generated 2026-10-22T05:17:00.000Z).");

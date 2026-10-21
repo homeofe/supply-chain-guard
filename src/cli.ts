@@ -992,7 +992,7 @@ feedCmd
     "--allow-unsigned-feed",
     "Install a feed that is not signed by the key bundled with this release (a self-hosted mirror without feed.json.sig). Weakens integrity: the feed is trusted as downloaded.",
   )
-  .option("--no-catalog", "Install the feed only, not the historical catalog (a download of tens of megabytes)")
+  .option("--no-catalog", "Install the feed only, not the historical catalog (about 3.6 MB compressed, 40 MB unpacked)")
   .action(async (opts: { url?: string; cacheDir?: string; allowUnsignedFeed?: boolean; catalog?: boolean }) => {
     try {
       const { refreshFeed, refreshSummaryLines, unsignedFeedRefusal, DEFAULT_FEED_URL } = await import("./feed.js");
