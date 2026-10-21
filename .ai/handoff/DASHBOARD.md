@@ -32,10 +32,10 @@ binary may fail locally; the authoritative Ubuntu CI environment provides it.
 
 | Package | Range |
 |---------|-------|
-| @babel/parser | ^8.0.6 |
+| @babel/parser | ^8.0.7 |
 | @elvatis_com/aahp | 4.0.0 |
-| @types/node | ^26.6.4 |
-| @vitest/coverage-v8 | ^5.0.3 |
+| @types/node | ^26.6.5 |
+| @vitest/coverage-v8 | ^5.0.4 |
 | ajv | ^8.20.0 |
 | ajv-formats | ^3.0.1 |
 | commander | ^14.0.3 |

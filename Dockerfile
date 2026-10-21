@@ -18,7 +18,7 @@
 #   docker buildx imagetools inspect node:24-alpine
 # (the top-level "Digest:" line is the list digest FROM needs).
 
-FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS builder
+FROM node:24-alpine@sha256:44fce696f38ba8c987c4db89954051000bbd05ffd8d8659ba15ed4a8602e937f AS builder
 
 WORKDIR /build
 
@@ -52,7 +52,7 @@ RUN npm pack --ignore-scripts --pack-destination /tmp && mv /tmp/supply-chain-gu
 COPY scripts/clean-room-lockfile.mjs ./scripts/
 RUN node scripts/clean-room-lockfile.mjs /tmp/supply-chain-guard.tgz /opt/supply-chain-guard
 
-FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1
+FROM node:24-alpine@sha256:44fce696f38ba8c987c4db89954051000bbd05ffd8d8659ba15ed4a8602e937f
 
 # unzip extracts .vsix archives in the VS Code extension scanner path; zip is
 # used by tests and kept for parity with the devcontainer.
