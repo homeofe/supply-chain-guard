@@ -17,6 +17,12 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   package by name, range or domain reaches it without review. Clients start
   reading it in a later release; until then `feed refresh` keeps using the
   release feed.
+- `supply-chain-guard feed import <dir>` installs the signed feed, and the
+  release's catalog when its files are present, from a local directory, for
+  networks without internet access. It runs the same signature, rollback,
+  size and catalog digest checks as `feed refresh` and makes no network
+  request. The daily channel publishes `feed-offline.tar.gz` and
+  `SHA256SUMS` for it; the README has a new "Air-gapped networks" section.
 
 ### Changed
 

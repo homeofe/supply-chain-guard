@@ -87,6 +87,7 @@ export { loadThreatIntel, updateThreatFeed, checkThreatIntel, matchPackageIOC, g
 export {
   feedStats,
   refreshFeed,
+  importFeedFromDirectory,
   parseFeedPayload,
   decodeCatalogBody,
   CATALOG_MAX_DECOMPRESSED_BYTES,
