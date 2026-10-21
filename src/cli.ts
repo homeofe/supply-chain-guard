@@ -201,7 +201,7 @@ program
   .description(
     "Open-source supply-chain security scanner. Detects GlassWorm and similar malware campaigns in npm packages, PyPI packages, code repos, VS Code extensions, and project dependencies.",
   )
-  .version("6.5.10");
+  .version("6.6.0");
 
 // ── scan command ────────────────────────────────────────────────────
 
@@ -992,7 +992,8 @@ feedCmd
     "--allow-unsigned-feed",
     "Install a feed that is not signed by the key bundled with this release (a self-hosted mirror without feed.json.sig). Weakens integrity: the feed is trusted as downloaded.",
   )
-  .action(async (opts: { url?: string; cacheDir?: string; allowUnsignedFeed?: boolean }) => {
+  .option("--no-catalog", "Install the feed only, not the historical catalog (about 3.6 MB compressed, 40 MB unpacked)")
+  .action(async (opts: { url?: string; cacheDir?: string; allowUnsignedFeed?: boolean; catalog?: boolean }) => {
     try {
       const { refreshFeed, refreshSummaryLines, unsignedFeedRefusal, DEFAULT_FEED_URL } = await import("./feed.js");
       const refusal = unsignedFeedRefusal(opts.url, opts.allowUnsignedFeed === true);
@@ -1004,6 +1005,7 @@ feedCmd
       }
       const result = await refreshFeed(opts.url ?? DEFAULT_FEED_URL, opts.cacheDir, {}, {
         allowUnsigned: opts.allowUnsignedFeed === true,
+        skipCatalog: opts.catalog === false,
       });
       const [head, ...rest] = refreshSummaryLines(result);
       console.log(`\n  ${head}`);

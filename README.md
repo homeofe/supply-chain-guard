@@ -27,17 +27,28 @@ not trust: npm then puts that directory's `node_modules/.bin` first on `PATH` an
 can run files from it before the scanner starts ([GHSA-gqpg-9mjx-pv4w](https://github.com/homeofe/supply-chain-guard/security/advisories/GHSA-gqpg-9mjx-pv4w)).
 
 It exits `1` on a high finding or a scan that could not examine everything, and
-`2` on a critical finding, so it can gate a script as it is. To add the historical
-package catalog, run `supply-chain-guard feed refresh` once with network
-access. The catalog is cached per user (see [Catalog cache](#catalog-cache)), so
-scans from any directory use it; it belongs to the installed version, so refresh
-again after an upgrade.
+`2` on a critical finding, so it can gate a script as it is.
+
+**Keep the threat data current daily.** New malicious packages are published every
+day, and so is this project's signed threat feed, without waiting for a release.
+Run this once a day with network access (the GitHub Action does it on every run):
+
+```bash
+supply-chain-guard feed refresh
+```
+
+It installs the [signed daily feed](#live-threat-feed) and the historical package
+catalog into a per-user cache (see [Catalog cache](#catalog-cache)) that every
+scan uses, checks the Ed25519 signature first, and falls back to the latest
+release's feed if the daily channel is unreachable. Networks without internet
+access carry the same signed files in and use `feed import`
+([Air-gapped networks](#air-gapped-networks)).
 
 Gate every pull request:
 
 ```yaml
 - uses: actions/checkout@v4
-- uses: homeofe/supply-chain-guard@v6.5.10
+- uses: homeofe/supply-chain-guard@v6.6.0
 ```
 
 Let your AI coding agent check a package before it installs it (MCP):
@@ -211,7 +222,7 @@ Run the scanner as a [pre-commit](https://pre-commit.com) hook (Python-ecosystem
 ```yaml
 repos:
   - repo: https://github.com/homeofe/supply-chain-guard
-    rev: v6.5.10
+    rev: v6.6.0
     hooks:
       - id: supply-chain-guard
 ```
@@ -243,17 +254,18 @@ The hook scans the repository root on every commit and fails on high or critical
 Run the scanner without a Node toolchain via the official multi-arch image (linux/amd64, linux/arm64), published to GHCR on every release tag:
 
 ```bash
-docker run --rm -v ${PWD}:/scan ghcr.io/homeofe/supply-chain-guard:6.5.10 scan /scan
+docker run --rm -v ${PWD}:/scan ghcr.io/homeofe/supply-chain-guard:6.6.0 scan /scan
 ```
 
 `${PWD}` works in bash, zsh, and PowerShell; in cmd.exe use `%cd%` instead.
 
-The image keeps the catalog cache in `/cache` (`SCG_CACHE_DIR`), so it is gone
-after `--rm`. To keep it across runs, mount a named volume there:
+The image keeps the feed and catalog cache in `/cache` (`SCG_CACHE_DIR`), so it
+is gone after `--rm`. To keep it across runs, mount a named volume there, and run
+the refresh once a day to pick up the daily feed:
 
 ```bash
-docker run --rm -v scg-cache:/cache ghcr.io/homeofe/supply-chain-guard:6.5.10 feed refresh
-docker run --rm -v scg-cache:/cache -v ${PWD}:/scan ghcr.io/homeofe/supply-chain-guard:6.5.10 scan /scan
+docker run --rm -v scg-cache:/cache ghcr.io/homeofe/supply-chain-guard:6.6.0 feed refresh
+docker run --rm -v scg-cache:/cache -v ${PWD}:/scan ghcr.io/homeofe/supply-chain-guard:6.6.0 scan /scan
 ```
 
 ## Quickstart
@@ -995,7 +1007,7 @@ The commands that reach the network do so deliberately for their specific functi
 - `supply-chain-guard confusion <dir>`: inspects project dependency manifests and **transmits every declared dependency and devDependency package name to the public npm and PyPI registries** to determine whether private or internal packages are registered publicly.
 - `supply-chain-guard repo <url>` and `supply-chain-guard org <name>`: inspect remote GitHub repositories and organizations by invoking the `gh` CLI as a child process, using the caller's ambient GitHub credentials.
 - `supply-chain-guard monitor <wallet>`: polls public Solana RPC nodes for C2 wallet transaction activity.
-- `supply-chain-guard feed refresh`: downloads updated threat intelligence from the project's daily channel on GitHub Pages (falling back to the latest GitHub Release) into the local cache.
+- `supply-chain-guard feed refresh`: downloads updated threat intelligence from the project's daily channel on GitHub Pages into the local cache (hosts: `homeofe.github.io`, with fallback to `github.com`, `release-assets.githubusercontent.com` and `api.github.com`). `--no-catalog` downloads the feed alone.
 - `supply-chain-guard scan <github-url>`: clones a remote repository via Git for analysis.
 - `supply-chain-guard scan . --check-registry`: opt-in flag that queries the public npm registry for the package's latest published version to detect version drift, and **transmits each Python dependency name** from `requirements.txt` / `pyproject.toml` to the public PyPI registry for dependency-confusion signals. Up to v6.2.5 the PyPI lookups ran on every scan of a Python project, contrary to the offline guarantee above; they now need this flag.
 - `supply-chain-guard scan . --external-intel`: opt-in flag for the two-tier score. It **sends each dependency's name, ecosystem and version to the OSV API**, the CVE ids found to FIRST's EPSS API, and the project's GitHub `owner/repo` to the OpenSSF Scorecard API, and downloads the public CISA KEV catalog.
@@ -1064,7 +1076,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: homeofe/supply-chain-guard@v6.5.10
+      - uses: homeofe/supply-chain-guard@v6.6.0
         with:
           fail-on: critical
           comment-on-pr: true
@@ -1082,16 +1094,16 @@ updates:
       interval: daily
 ```
 
-**`daily`, not `weekly`, and this project's release rate is why.** Measured over
-the 155 days to 2026-08-21: 134 releases, about 1.4 a day over the last two
-months, with a median of 20 hours between releases and two thirds of the gaps
-under a day. A weekly schedule cannot track that. Each weekly run opens a correct
-bump pull request, and the next weekly run closes it as superseded and opens
-another, so an unattended pin never moves at all. Measured in one consumer of
-this Action: eight consecutive weekly bump pull requests, each alive for exactly
-seven days, each proposing a newer target than the last, while the pin itself sat
-unchanged for 49 days and fell 82 releases behind. Every scan check was green
-throughout, because a stale pin is not a failing scan.
+**Threat data does not wait for the pin.** Since 6.6.0 the Action installs the
+signed daily feed and the catalog on every run (`refresh-feed` and
+`refresh-catalog`, both on by default), so new malicious packages reach your
+scans the day they are published, whatever version you pin. The pin decides the
+scanner's code and rules, which this project releases about once a week
+(security fixes at once). A `daily` Dependabot interval still tracks that
+best: in the 155 days to 2026-08-21 releases came about 1.4 a day, and a weekly
+schedule then closed every bump pull request as superseded before anyone merged
+it, so the pin never moved (measured in one consumer: eight weekly pull requests
+in a row, and the pin 82 releases behind).
 
 The interval is the cheap half. The half that actually decides the outcome is
 whether somebody merges the pull request, and no setting in this file supplies
@@ -1111,9 +1123,10 @@ false-negative generator, and nothing in your workflow would report it. An exact
 pin is what turns that into a reviewable out-of-date dependency instead.
 
 **Be precise about what an exact pin does and does not buy you, because a frozen
-exact pin is the same silent false negative.** It ages exactly as quietly. This
-scanner runs offline against the IOC feed bundled with the pinned version, so a
-pin that stops moving freezes the detection rules at that date. What an exact pin
+exact pin is the same silent false negative.** It ages exactly as quietly. The
+daily feed keeps the package indicators current (unless `refresh-feed: false`),
+but the detection rules, heuristics and matchers are those of the pinned
+version, so a pin that stops moving freezes them at that date. What an exact pin
 buys is a *place* where the staleness becomes reviewable: the bump pull request.
 That is a different claim from the staleness being visible on its own, and the
 measurement above is what the difference costs. If those pull requests are opened
@@ -1144,15 +1157,15 @@ passing `<testcase>` rather than a `<failure>`, because only `critical` and
 `high` become failures there.
 
 The measurement is taken over the rule set the scan *used*, not over the version
-number. A consumer running `supply-chain-guard feed refresh` before each scan
-merges the published feed for 24 hours and is correctly reported as current even
-on an old pin. `supply-chain-guard feed stats` prints both ages side by side, the
+number. A consumer running `supply-chain-guard feed refresh` daily (the GitHub
+Action does it on every run) scans with the published daily feed and is
+correctly reported as current even on an old pin. `supply-chain-guard feed stats` prints both ages side by side, the
 one bundled with the installed version and the effective one at scan time, so the
 two are never confused. If a deliberately frozen rule set is the intent, exclude
 the rule by name:
 
 ```yaml
-- uses: homeofe/supply-chain-guard@v6.5.10
+- uses: homeofe/supply-chain-guard@v6.6.0
   with:
     exclude-rules: THREAT_FEED_STALE
 ```
@@ -1263,13 +1276,14 @@ gate rather than reporting a narrower result as success:
 catalog: required
 ```
 
-The GitHub Action is bundle-only unless `refresh-catalog` is `true`. It caches
-into an isolated directory under `RUNNER_TEMP`, not into the checkout, so a
-preceding `feed refresh` in the workflow does not count. `catalog: required`
-on the Action therefore needs:
+The GitHub Action installs the daily feed and the catalog by default
+(`refresh-feed` and `refresh-catalog`). It caches into an isolated directory
+under `RUNNER_TEMP`, not into the checkout, so a preceding `feed refresh` in the
+workflow does not count, and `catalog: required` on the Action needs both inputs
+left on (the default), or explicitly:
 
 ```yaml
-- uses: homeofe/supply-chain-guard@v6.5.10
+- uses: homeofe/supply-chain-guard@v6.6.0
   with:
     refresh-catalog: true
 ```
@@ -1280,7 +1294,7 @@ setting rather than firing on every scan. If scanning against the bundled set
 alone is the intent, exclude the rule by name:
 
 ```yaml
-- uses: homeofe/supply-chain-guard@v6.5.10
+- uses: homeofe/supply-chain-guard@v6.6.0
   with:
     exclude-rules: THREAT_FEED_CATALOG_MISSING
 ```
@@ -1333,7 +1347,8 @@ registry mirror cannot verify the scanner and will not run it.
 | `exclude-rules` | Comma-separated rule IDs to exclude | |
 | `fail-on` | Fail check at this severity or above, including `info` | `critical` |
 | `comment-on-pr` | Post or update a PR comment | `true` |
-| `refresh-catalog` | Download the historical catalog into the isolated Action cache before scanning. Needed for `catalog: required`. | `false` |
+| `refresh-feed` | Download the signed daily threat feed (about 2 MB) into the isolated Action cache before scanning, so new malicious packages are detected without a new Action release. Hosts: `homeofe.github.io`, with fallback to `github.com`, `release-assets.githubusercontent.com` and `api.github.com`. Each request gives up after 30 seconds; the Node HTTPS client does not use `HTTPS_PROXY`, so runners behind a proxy fall back to the bundled indicators and show a warning. `false` downloads no threat data (the install step and `comment-on-pr` still use the network). | `true` |
+| `refresh-catalog` | With `refresh-feed`, also install the historical package catalog (about 3.6 MB compressed, 40 MB unpacked). Needed for `catalog: required`. Ignored when `refresh-feed` is `false`. | `true` |
 
 Coverage failures are fail-closed regardless of `fail-on`: the Action exits
 nonzero, sets `partial-scan` to `true` and `risk-level` to `partial`, and posts
@@ -1404,15 +1419,18 @@ supply-chain-guard feed refresh   # pull the latest published feed into the loca
 supply-chain-guard feed osv       # export malicious-package IOCs as OSV records
 ```
 
-A refreshed feed is merged into every scan for the next 24 hours automatically.
+A refreshed feed is merged into every later scan until the next refresh replaces it; after 24 hours `feed stats` and the scan report mark a refresh as due.
 
 **Daily channel and fallback:** the default source is the daily channel,
 `https://homeofe.github.io/supply-chain-guard/feed/feed.json`. When it cannot be
 installed for any reason, `feed refresh` falls back to the `feed.json` attached
 to the latest GitHub Release, with the same checks, and says which source it
-installed. The daily channel adds to the reviewed feed only exact-version pins
-whose version an advisory source names, and file hashes; everything else
-(package names, version ranges, domains, removals) arrives with a release
+installed. The daily feed is the reviewed feed of the main branch, plus the
+exact-version pins whose version an advisory source names and file hashes, which
+are published the same day without review; everything that could block a
+legitimate package (package names, version ranges, domains) is reviewed on the
+main branch first and is in the next day's feed after that. An indicator built
+into an installed version can only be removed by a release
 ([design](docs/daily-feed-channel-design.md)). When the cache is already newer
 than both sources, `feed refresh` keeps it and reports it current.
 

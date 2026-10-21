@@ -16,7 +16,7 @@ supply-chain-guard mcp
 | `scan_directory` | none (local FS) | Full static scan (350+ rules) of a local directory. Returns risk score, findings by severity, top 20 findings. |
 | `scan_npm_package` | downloads from the npm registry | Scans the latest published version of an npm package without installing it, plus the offline IOC lookup for the requested name/version. |
 
-Recommended agent workflow: call `ioc_lookup` before every `npm install` / `pip install` suggestion (it is instant and offline; to include the historical catalog in package verdicts, run `supply-chain-guard feed refresh` once, as the user the MCP client runs the server as, and again after an upgrade; the cache is per user, so the server's working directory does not matter), `scan_npm_package` before adding a new npm dependency, and `scan_directory` after cloning or downloading third-party code.
+Recommended agent workflow: call `ioc_lookup` before every `npm install` / `pip install` suggestion (it is instant and offline; to include the historical catalog in package verdicts, run `supply-chain-guard feed refresh` daily, as the user the MCP client runs the server as (the daily signed feed keeps package verdicts current; after an upgrade it also installs that version's catalog); the cache is per user, so the server's working directory does not matter), `scan_npm_package` before adding a new npm dependency, and `scan_directory` after cloning or downloading third-party code.
 
 ## Version pinning guidance
 
@@ -100,7 +100,7 @@ Install it globally (`npm install -g supply-chain-guard`), then add to `.cursor/
 
 ```
 -> {"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"demo","version":"1.0"}}}
-<- {"jsonrpc":"2.0","id":0,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{}},"serverInfo":{"name":"supply-chain-guard","version":"6.5.10"},...}}
+<- {"jsonrpc":"2.0","id":0,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{}},"serverInfo":{"name":"supply-chain-guard","version":"6.6.0"},...}}
 -> {"jsonrpc":"2.0","method":"notifications/initialized"}
 -> {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"ioc_lookup","arguments":{"ecosystem":"npm","name":"event-stream","version":"3.3.6"}}}
 <- {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"verdict\":\"malicious\",...}"}]}}

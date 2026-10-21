@@ -297,6 +297,7 @@ data/
 threat-feed-unresolvable.json # Upstream records no mapping can turn into an IOC
 threat-feed-pin-only.json # npm dependency-confusion scopes imported as exact pins, never bare
 scripts/
+  build-daily-feed.mjs    # Daily feed channel: main's feed plus source-listed pins, checked by an independent invariant
   catalog-store.mjs       # The one reader/writer of the committed catalog parts
   audit-publish-toolchain.mjs # npm audit of the pinned publish npm, with dated exceptions
   feed-migrate.mjs        # Bundle-to-catalog migration planner and writer
@@ -305,6 +306,7 @@ scripts/
   release-prepare.mjs     # Release-bound 30-day cutoff advancement
   verify-action-install.mjs # The Action's provenance check of the scanner it installs
 feed-partition.config.json # Committed partition policy and catalog windows
+site/                     # The GitHub Pages site; the daily feed is published under /feed/ (feed-daily.yml)
 ```
 
 ## CI gates and required checks

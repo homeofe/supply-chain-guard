@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [6.6.0] - 2026-10-21
+
 ### Added
 
 - A daily signed feed channel on GitHub Pages (`feed-daily.yml`,
@@ -14,9 +16,14 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   from the reviewed `main` plus exact-version pins whose version a source
   names, checked against `main` before it is signed, with an archive and
   checksums for offline networks. Nothing that could block a legitimate
-  package by name, range or domain reaches it without review. Clients start
-  reading it in a later release; until then `feed refresh` keeps using the
-  release feed.
+  package by name, range or domain reaches it without review. Threat data now
+  reaches users daily, while code releases come about once a week.
+- The GitHub Action's new input `refresh-feed` (on by default) downloads the
+  signed daily feed into its isolated cache before every scan. A failed
+  download keeps the scan on the bundled indicators and shows a warning
+  annotation.
+- `feed refresh --no-catalog` installs the feed without the historical
+  catalog.
 - `supply-chain-guard feed import <dir>` installs the signed feed, and the
   release's catalog when its files are present, from a local directory, for
   networks without internet access. It runs the same signature, rollback,
@@ -26,7 +33,18 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Changed
 
-- `feed refresh` (and the GitHub Action, which runs it) reads the daily
+- Node support policy: the `nodejs/Release` schedule, re-read on 2026-10-21,
+  is unchanged (Node 24 in Maintenance since 2026-10-20, Node 26 Active LTS
+  from 2026-10-28), so `activeLtsMajor` stays 24 and the review milestone
+  moves to 6.6.1.
+- The GitHub Action now uses the network before the scan by default, also
+  for `@v6` users who change nothing: it installs the signed daily feed
+  (about 2 MB) and the historical catalog (about 3.6 MB compressed;
+  `refresh-catalog` is now on by default). Hosts: `homeofe.github.io`, with
+  fallback to `github.com`, `release-assets.githubusercontent.com` and
+  `api.github.com`. `refresh-catalog: false` skips the catalog;
+  `refresh-feed: false` downloads no threat data, as before 6.6.0.
+- `feed refresh` reads the daily
   signed feed channel on GitHub Pages by default and falls back to the signed
   feed of the latest GitHub Release when the channel cannot be installed for
   any reason, with the same signature, rollback and size checks. It says which
@@ -45,8 +63,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   record (`listed`), resolved from a version range (against the registry, or
   the ends a range names), resolved for a pin-only package, or a sampled
   version of a whole-package claim, IDE extensions included. The new `derivations` array is index-aligned with `entries`, which
-  keep their shape. It prepares the daily feed channel, which will publish
-  only versions a source names.
+  keep their shape. The daily feed channel publishes only the pins labelled
+  `listed` without review.
 
 ## [6.5.10] - 2026-10-21
 
@@ -7778,7 +7796,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.5.10...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.6.0...HEAD
+[6.6.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.6.0
 [6.5.10]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.10
 [6.5.9]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.9
 [6.5.8]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.5.8

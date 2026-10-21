@@ -1,3 +1,72 @@
+## Release v6.6.0 (2026-10-21) (claude-opus-5-5)
+
+Minor release (new command `feed import`, new default source for
+`feed refresh`, new Action inputs), the owner's choice over 6.5.11. Ships the
+daily feed channel (PRs 431 to 438): the importer's derivation labels, the
+signed daily publish on GitHub Pages, the client's channel default with the
+release fallback, `feed import`, and the Action installing the daily feed and
+the catalog on every run. The version bump is the second commit of PR 438, so
+the Action pin and the CLI that knows `--no-catalog` arrive together.
+
+Release commit: the version sites and the lockfile's two fields via
+`npm install --package-lock-only`. `release:prepare` left the cutoff at
+2026-09-21 (6.5.10 moved it the same day), so nothing migrated (catalog
+264145 entries).
+Node schedule re-read against `nodejs/Release`: unchanged, milestone 6.6.1.
+SECURITY.md lists majors only (6.x supported), so it needs no change.
+
+After the tag: run the published Action once (`uses:
+homeofe/supply-chain-guard@v6.6.0`) and check its log for the daily channel
+line, because the only Action test drives a fake CLI.
+
+## The Action installs the daily feed; release readiness for 6.6.0 (2026-10-21) (claude-opus-5-5)
+
+A whole-feature audit before the release found that the GitHub Action never
+used the daily channel: it ran `feed refresh` only with `refresh-catalog:
+true`, off by default, while the CHANGELOG and the design said it refreshed on
+every run. Owner decision 2026-10-21: the Action installs the daily feed by
+default, the catalog stays opt-in.
+
+- `action.yml`: new input `refresh-feed` (default `true`) runs
+  `feed refresh --no-catalog` into the isolated cache before the scan;
+  `refresh-catalog: true` runs the full refresh; a failed refresh keeps the
+  bundled feed and says so; `refresh-feed: false` keeps the Action offline.
+- `src/cli.ts` / `src/feed.ts`: `feed refresh --no-catalog`
+  (`RefreshOptions.skipCatalog`).
+- `scripts/build-daily-feed.mjs`: unmapped upstream records no longer stop
+  publishing (they are not in the feed; the count is logged and
+  feed-reconcile reports them), reversing the earlier ruling, since Goal 1
+  allows no daily maintainer step; the feed is capped at 16 MiB (clients
+  refuse 32 MiB).
+- `feed-reconcile.yml` runs at 11:37 UTC, about six hours after the publish,
+  so one missed publish already fails the 30-hour freshness check.
+- Docs: README "Start in 30 seconds" now leads with the daily refresh; the
+  Dependabot cadence paragraph, the exact-pin paragraph, Docker, the egress
+  host, the Action inputs table and the Live Threat Feed description are
+  corrected; CHANGELOG no longer contradicts itself; CONTRIBUTING lists
+  `build-daily-feed.mjs` and `site/`; `docs/mcp.md` says daily; the design
+  doc is marked implemented; `docs/ci-and-release.md` covers the unmapped
+  rule and the repository secret.
+
+Second round, after an independent review of this pull request: the catalog
+download is about 3.6 MB compressed (40 MB was the unpacked size), so the owner
+decided the Action installs feed AND catalog by default (`refresh-catalog` now
+defaults to `true`, ignored when `refresh-feed` is `false`). A failed
+refresh is a `::warning` annotation with static text. The network hosts are
+listed in full (`homeofe.github.io`, `github.com`,
+`release-assets.githubusercontent.com`, `api.github.com`), with the 30-second
+request deadline and the missing `HTTPS_PROXY` support; `refresh-feed: false`
+is described as "no threat-data download", not "fully offline". More than 500
+unmapped upstream records at once fail the daily build again (a source changed
+its format). The freshness check runs at 12:37 UTC for an hour of margin. The
+README release-rate quote names its 2026-08 measurement window, and the
+"24 hours" wording follows what the code does (the cache does not expire). The
+version bump to 6.6.0 ships in this same pull request, so the Action never runs
+with a CLI that lacks `--no-catalog`.
+
+Owner step still open: delete the repository-level `FEED_SIGNING_KEY` (the
+environment copy is in use), so only the two signing jobs can read it.
+
 ## Freshness step: Bash syntax error fixed, every workflow script now parsed in tests (2026-10-21) (claude-opus-5-5)
 
 The first armed run of "Daily feed channel is fresh" (`feed-reconcile.yml`,

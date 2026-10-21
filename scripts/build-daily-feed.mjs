@@ -35,6 +35,20 @@ import { ECOSYSTEM_PREFIX, splitPackageValue } from "./import-threat-feed.mjs";
 /** More added pins than this in one day is a bulk wave, and a bulk wave needs a human. */
 export const DEFAULT_DAILY_CAP = 2000;
 
+/**
+ * The largest daily feed the job publishes: half of the 32 MiB a client
+ * accepts (FEED_REMOTE_LIMITS). Above that, clients would refuse it and fall
+ * back to the release feed every day without anyone noticing.
+ */
+export const DEFAULT_DAILY_MAX_BYTES = 16 * 1024 * 1024;
+
+/**
+ * A few unmapped upstream records are a backlog the reconcile workflow reports.
+ * Hundreds at once mean a source changed its format and the importer mapped
+ * almost nothing: publishing main's feed with a fresh timestamp would hide that.
+ */
+export const DEFAULT_UNMAPPED_LIMIT = 500;
+
 const LISTED = "listed";
 const HASH = /^(?:[a-f0-9]{32}|[a-f0-9]{40}|[a-f0-9]{64}|[a-f0-9]{128})$/i;
 const FULL_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
@@ -176,7 +190,7 @@ export function assertDailyInvariant(mainFeed, dailyFeed, catalogAdditions, { ca
 }
 
 function parseArgs(argv) {
-  const opts = { cap: DEFAULT_DAILY_CAP };
+  const opts = { cap: DEFAULT_DAILY_CAP, maxBytes: DEFAULT_DAILY_MAX_BYTES };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     const next = () => {
@@ -190,12 +204,14 @@ function parseArgs(argv) {
     else if (arg === "--out") opts.out = next();
     else if (arg === "--verify") opts.verify = next();
     else if (arg === "--cap") opts.cap = Number(next());
+    else if (arg === "--max-bytes") opts.maxBytes = Number(next());
     else throw new Error(`unknown argument ${arg}`);
   }
   for (const required of opts.verify ? ["mainRoot", "releaseRoot"] : ["report", "mainRoot", "releaseRoot", "out"]) {
     if (!opts[required]) throw new Error(`--${required.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)} is required`);
   }
   if (!Number.isInteger(opts.cap) || opts.cap < 0) throw new Error("--cap must be a non-negative integer");
+  if (!Number.isInteger(opts.maxBytes) || opts.maxBytes <= 0) throw new Error("--max-bytes must be a positive integer");
   return opts;
 }
 
@@ -214,7 +230,13 @@ export async function main(argv, { now = new Date() } = {}) {
     const report = JSON.parse(readFileSync(opts.report, "utf8"));
     if (report.dryRun !== true) throw new Error("the importer report is not from a dry run");
     if (report.truncated !== false) throw new Error("the importer report is truncated");
-    if (report.unmapped !== 0) throw new Error(`the importer report has ${report.unmapped} unmapped gap(s)`);
+    // An unmapped record is not among the report's entries, so the feed stays
+    // correct without it; feed-reconcile.yml reports the gap. Publishing stops
+    // for real failures only, not for a backlog.
+    if (!Number.isInteger(report.unmapped) || report.unmapped < 0) throw new Error("the importer report has no unmapped count");
+    if (report.unmapped > DEFAULT_UNMAPPED_LIMIT) {
+      throw new Error(`the importer report has ${report.unmapped} unmapped upstream records, above the ${DEFAULT_UNMAPPED_LIMIT} tripwire`);
+    }
     const { pins, dropped } = selectDailyPins(report);
 
     const mainFeed = JSON.parse(readFileSync(join(opts.mainRoot, "feed.json"), "utf8"));
@@ -222,14 +244,18 @@ export async function main(argv, { now = new Date() } = {}) {
     const daily = buildDailyFeed(mainFeed, [...pins, ...catalogAdditions], now);
     assertDailyInvariant(mainFeed, daily, catalogAdditions, { cap: opts.cap });
 
+    const body = `${JSON.stringify(daily, null, 2)}\n`;
+    const bytes = Buffer.byteLength(body);
+    if (bytes > opts.maxBytes) throw new Error(`the daily feed is ${bytes} bytes, above the ${opts.maxBytes}-byte cap`);
     mkdirSync(opts.out, { recursive: true });
     const target = join(opts.out, "feed.json");
-    writeFileSync(`${target}.tmp`, `${JSON.stringify(daily, null, 2)}\n`);
+    writeFileSync(`${target}.tmp`, body);
     renameSync(`${target}.tmp`, target);
     console.log(
       `daily feed: ${daily.entryCount} entries (${mainFeed.entryCount} from main, ${pins.length} listed pin(s) proposed, ` +
         `${catalogAdditions.length} catalog addition(s) since the release), generatedAt ${daily.generatedAt}; ` +
-        `not published without review: ${JSON.stringify(dropped)}`,
+        `not published without review: ${JSON.stringify(dropped)}` +
+        (report.unmapped > 0 ? `; ${report.unmapped} unmapped upstream record(s) not in this feed (see feed-reconcile)` : ""),
     );
     return 0;
   } catch (err) {

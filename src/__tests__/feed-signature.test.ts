@@ -498,6 +498,18 @@ describe("the daily channel and its release fallback", () => {
     expect(paths.some((p) => p.startsWith("/supply-chain-guard/feed/catalog"))).toBe(false);
   });
 
+  // `refresh-catalog: false` on the Action, and `feed refresh --no-catalog`:
+  // the feed alone, without the catalog's six shards.
+  it("skips the catalog when asked, without a single catalog request", async () => {
+    const d = doc(at(60_000));
+    serve({ [CHANNEL_PATH]: d, [CHANNEL_SIG_PATH]: sigOf(d) });
+    const result = await refreshFeed(DEFAULT_FEED_URL, tmpDir, NO_FLOOR, { ...noRelease, skipCatalog: true });
+    expect(result.source).toBe("channel");
+    expect(result.catalog).toBeUndefined();
+    expect(result.catalogError).toMatch(/not requested/);
+    expect(requested().some((p) => p.includes("catalog"))).toBe(false);
+  });
+
   it("a custom URL never falls back to the channel or the release", async () => {
     const MIRROR = "https://mirror.invalid/scg/feed.json";
     serve({});

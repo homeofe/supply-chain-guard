@@ -627,6 +627,12 @@ export interface RefreshOptions {
    * it returns is verified exactly like the default source.
    */
   resolveSignedRelease?: (limits: RemoteRequestLimits) => Promise<string>;
+  /**
+   * Install the feed only, not the historical catalog (`feed refresh
+   * --no-catalog`, the Action's default). The catalog is a download of tens
+   * of megabytes that only `catalog: required` needs.
+   */
+  skipCatalog?: boolean;
 }
 
 /**
@@ -1270,7 +1276,9 @@ export async function refreshFeed(
     // THREAT_FEED_CATALOG_MISSING rather than by failing the refresh.
     let catalog: RefreshResult["catalog"];
     let catalogError: string | undefined;
-    try {
+    if (options.skipCatalog) {
+      catalogError = "not requested (--no-catalog)";
+    } else try {
       const template = catalogTemplateForFeedUrl(feedUrl);
       catalog = await installCatalog(
         async (file) => (await fetchHttpsBuffer(catalogUrlFor(CATALOG_DIGEST.version, file, template), limits)).body,

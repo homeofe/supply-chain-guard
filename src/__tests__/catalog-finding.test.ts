@@ -241,6 +241,6 @@ describe("the README severity table matches the shipped map", () => {
       readme.indexOf("### Action Inputs"),
     );
     expect(section).toMatch(/refresh-catalog: true/);
-    expect(section).toMatch(/bundle-only unless `refresh-catalog` is `true`/);
+    expect(section).toMatch(/installs the daily feed and the catalog by default/);
   });
 });
