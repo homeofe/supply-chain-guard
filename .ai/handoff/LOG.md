@@ -11,6 +11,14 @@
 
 ---
 
+## [2026-10-21] v6.5.10
+
+Threat intel for 2026-10-20 and 2026-10-21: 259 package entries from the GitHub Advisory Database, OpenSSF and the DataDog dataset (250 in the offline bundle, 9 in the catalog). Bare names, each...
+
+Full notes: CHANGELOG.md, section [6.5.10].
+
+---
+
 ## [2026-10-18] v6.5.9
 
 Threat intel for 2026-10-18: 22 package entries from the GitHub Advisory Database, OpenSSF and the DataDog dataset (21 in the offline bundle, 1 in the catalog). PyPI: leakdeep (5 versions),...
@@ -80,11 +88,3 @@ Full notes: CHANGELOG.md, section [6.5.2].
 Threat intel for 2026-10-06: 113 package entries from the GitHub Advisory Database and OpenSSF (111 to the bundle, 2 to the catalog). Among them a RubyGems crypto-wallet typosquat wave (80...
 
 Full notes: CHANGELOG.md, section [6.5.1].
-
----
-
-## [2026-10-05] v6.5.0
-
-IDE extensions from the DataDog dataset: 116 extension versions that both the VS Code Marketplace and Open VSX have since removed, pinned under both prefixes (232 entries), among them the Amazon Q...
-
-Full notes: CHANGELOG.md, section [6.5.0].

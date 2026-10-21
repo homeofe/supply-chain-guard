@@ -1,3 +1,25 @@
+## Release v6.5.10 (2026-10-21) (claude-opus-5-5)
+
+Threat-intel release on the owner's instruction, cut from `main` at
+`7ed3b66`. Ships PR 424 (2026-10-19 intel with the MALFEX indicators), PR 428
+(2026-10-20 and 2026-10-21 intel; PR 427 closed as superseded), PR 426
+(development dependencies) and PR 429 (node:24-alpine digest, carrying
+Dependabot PR 425). After this release no pull request is open.
+
+Release commit: the version sites (every occurrence of 6.5.9 in them was a
+current-version reference, listed with context first; no README CIDR
+collision) and the lockfile's two fields via `npm install --package-lock-only`.
+`release:prepare` advanced the cutoff from 2026-09-18 to 2026-09-21. The
+migration moved 37 plain entries (`firstSeen` 2026-09-18 to 2026-09-20), none
+with campaign or family and none named in tests, README or docs, into the
+catalog (264,145 entries there now). Node schedule re-read against
+`nodejs/Release`: unchanged, milestone 6.5.11.
+
+Owner decisions of 2026-10-21 on how the project continues (code releases
+weekly with security fixes immediate, threat data daily through a signed feed
+channel, air-gapped import) are not part of this release; they start with a
+design document.
+
 ## Docker base image digest bump (2026-10-21) (claude-opus-5-5)
 
 Carries Dependabot PR 425, which moves both `FROM node:24-alpine` lines of

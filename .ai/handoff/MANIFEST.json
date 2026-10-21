@@ -2,31 +2,31 @@
   "aahp_version": "3.0",
   "project": "supply-chain-guard",
   "last_session": {
-    "agent": "handoff-refresh",
-    "session_id": "cli-1792579178",
-    "timestamp": "2026-10-21T10:39:38Z",
-    "commit": "cd8776b",
+    "agent": "cli-tool",
+    "session_id": "cli-1792580149",
+    "timestamp": "2026-10-21T10:55:49Z",
+    "commit": "7ed3b66",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:cbca5b4e5ccb8ccc23afa49a233fc6dbe5e5e3f7f568f014e8937856bc379606",
-      "updated": "2026-10-21T10:39:38Z",
-      "lines": 15144,
-      "summary": "Carries Dependabot PR 425, which moves both `FROM node:24-alpine` lines of the Dockerfile (builder and runtime stage) from..."
+      "checksum": "sha256:eb832776969e5f3bd28ab83aed27fd162322990da9608b44ac81ea11d7bbf007",
+      "updated": "2026-10-21T10:55:46Z",
+      "lines": 15166,
+      "summary": "Threat-intel release on the owner's instruction, cut from `main` at `7ed3b66`."
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:cedf2e47e0f1feb9911b2f036601891fb220d53a54d6110f1ec9a7bec32151ea",
-      "updated": "2026-10-18T07:47:36Z",
+      "checksum": "sha256:cd56cf2251b821b327e4c92def4f8db00af1d5d77b9bc63609ed884b7e0bb37c",
+      "updated": "2026-10-21T10:54:39Z",
       "lines": 231,
       "summary": "Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete."
     },
     "LOG.md": {
-      "checksum": "sha256:69404e884b360b02baca7b5d1d5d5090303ffd660947389f445eaa0e528975ad",
-      "updated": "2026-10-18T07:47:46Z",
+      "checksum": "sha256:54e74b86e259c467bcf4f59d76234bb9e57a19193eae35751c164752b73903cf",
+      "updated": "2026-10-21T10:55:48Z",
       "lines": 90,
-      "summary": "Latest entry: [2026-10-18] v6.5.9"
+      "summary": "Latest entry: [2026-10-21] v6.5.10"
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
@@ -41,14 +41,14 @@
       "summary": "LOG archive index: 5 entries."
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:bb34dbe36f6493923738b99f1dc566a08b5fadb8288b58b4b5303d6fea6bd68f",
-      "updated": "2026-10-21T10:39:38Z",
+      "checksum": "sha256:4ceada6a5fb1dbaf34cd6c8f19802f12fdafb0aa68a2069e5cbe1731ea5acab1",
+      "updated": "2026-10-21T10:55:48Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:97734bccf2e43aac6280e375c40fefa9ca3adfae5a43fa7bca421e01a6d33bc9",
-      "updated": "2026-10-18T07:47:46Z",
+      "checksum": "sha256:24c6ed5bdabea40f494f4cebb90c52c78cbafed3b7d508a2cf6f85d3a4fc0720",
+      "updated": "2026-10-21T10:55:48Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "Carries Dependabot PR 425, which moves both `FROM node:24-alpine` lines of the Dockerfile (builder and runtime stage) from... Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Threat-intel release on the owner's instruction, cut from `main` at `7ed3b66`. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 921,
-    "manifest_plus_core": 225863,
-    "full_read": 239591
+    "manifest_only": 896,
+    "manifest_plus_core": 226143,
+    "full_read": 239871
   }
 }
