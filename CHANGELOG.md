@@ -7,6 +7,20 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat intel 2026-10-22: the litellm 1.107.0 PyPI compromise of
+  2026-10-21 (trojanized wheels built from a lookalike repository, installing
+  a credential stealer and an hourly remote code loader at interpreter start).
+  The `pypi:litellm@1.107.0` pin is kept in the offline bundle under its own
+  campaign, together with the exfiltration host `www[.]litellm[.]dev`, the
+  `letters9813` dead drop and the three payload file hashes; the version is
+  added to `KNOWN_BAD_PYPI_VERSIONS` and the `letters9813` and `Berri-AI`
+  accounts to `KNOWN_MALICIOUS_GITHUB_ACCOUNTS`. Plus 86 package IOCs from
+  the advisory import (all to the bundle), among them hijacked releases of four
+  `@sudobility/*` client packages, a PyPI text-to-speech name cluster and a
+  RubyGems test-name cluster.
+
 ## [6.6.0] - 2026-10-21
 
 ### Added

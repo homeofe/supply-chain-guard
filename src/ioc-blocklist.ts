@@ -607,6 +607,12 @@ export const KNOWN_C2_DOMAINS: string[] = [
   "fdn4apex.com",
   "main.router-apex.com",
   "update.apex-arena-router.com",
+  // litellm 1.107.0 PyPI compromise (October 2026): the privcollect stealer in
+  // the trojanized wheels POSTs to /healthcheck on this lookalike host
+  // (StepSecurity, JFrog, OSV MAL-2026-2144). Only the www host is listed: this
+  // list matches as an unanchored substring, so the bare apex would also hit
+  // unrelated strings that merely start with it.
+  "www.litellm.dev",
 ];
 
 // ---------------------------------------------------------------------------
@@ -1128,6 +1134,10 @@ export const KNOWN_DEAD_DROPS: string[] = [
   // passwordcrackv2 / passwordcracker pull as a tarball dependency (OSV
   // MAL-2026-17865, single-source)
   "github.com/lunexindonesia/node-net-pool",
+  // litellm 1.107.0 PyPI compromise (October 2026): sitecustomize.py polls this
+  // file hourly for loader hosts, then fetches and runs /codepy from each
+  // (StepSecurity, JFrog, OSV MAL-2026-2144). Account since deleted.
+  "raw.githubusercontent.com/letters9813/pythonclient-test/main/domain.txt",
 ];
 
 // ---------------------------------------------------------------------------
@@ -1678,6 +1688,12 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   "68f5a00eafa8ecebf5d93328e0fec23b24d6f91808c8384db002946a13656c71": "Apex Accelerator: CloudSyncD macOS backdoor installer (SHA256)",
   "ee8cd9aba420f1b26b5d43e5bcdd6025a277b4946bb5daf76ab45c0e5f7ecd0b": "Apex Accelerator: exegis.exe Python second-stage loader (SHA256)",
   "ed5cb4af1d2cb067b8d23783ebf05d70278728462ba4f1bf29da0a3a41efc35e": "Apex Accelerator: enc_loader.exe encrypted third stage (SHA256)",
+  // litellm 1.107.0 PyPI compromise (October 2026): the three payload files every
+  // trojanized wheel installs at the site-packages root (Linux/macOS builds; the
+  // same three digests in StepSecurity and OSV MAL-2026-2144).
+  "7f191632e7320705d154b85204f1ae546b543acbd7e8861229b76f5042b92bdb": "litellm 1.107.0 compromise: cook.pth interpreter-start hook (SHA256)",
+  "9dd0a3926f96a37eb86cf1ee2310d9be93139cc4ebef3ef9e2efe9531390be25": "litellm 1.107.0 compromise: cook.py privcollect credential stealer (SHA256)",
+  "34bef04fe88ac9d0aae0475630b1738681d15b94f233ac8aa46eacf5968305fa": "litellm 1.107.0 compromise: sitecustomize.py hourly remote code loader (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
@@ -1897,6 +1913,13 @@ export const KNOWN_MALICIOUS_GITHUB_ACCOUNTS: string[] = [
   // hosting the copilot and audit-mcp repositories behind @apexacc/cli and
   // @apexacc/audit (Elastic Security Labs, single-source)
   "apexaccs",
+  // litellm 1.107.0 PyPI compromise (October 2026): dead-drop account behind
+  // pythonclient-test (StepSecurity, JFrog, OSV MAL-2026-2144; deleted)
+  "letters9813",
+  // litellm 1.107.0 PyPI compromise (October 2026): lookalike of the BerriAI org
+  // whose litellm repository the trojanized release was built from (StepSecurity,
+  // single-source; deleted)
+  "Berri-AI",
 ];
 
 // ---------------------------------------------------------------------------
@@ -3074,8 +3097,11 @@ export const KNOWN_BAD_PYPI_VERSIONS: Record<string, { versions: string[]; descr
     description: "Mini Shai-Hulud / TeamPCP: officially Microsoft-published durabletask Python SDK trojanized (SANS ISC diary 33016, May 24, 2026)",
   },
   "litellm": {
-    versions: ["1.82.7", "1.82.8"],
-    description: "LiteLLM PyPI compromise (TeamPCP): litellm_init.pth auto-runs on Python startup; RSA-4096+AES-256 credential exfil to models.litellm.cloud; persistent backdoor polling checkmarx.zone every 50min (March 24, 2026; Trail of Bits write-up May 22, 2026)",
+    versions: ["1.82.7", "1.82.8", "1.107.0"],
+    description: "LiteLLM PyPI compromises: 1.107.0 (October 21, 2026) ships cook.pth + sitecustomize.py, a credential stealer posting to www.litellm.dev and an hourly remote code loader; 1.82.7/1.82.8 (TeamPCP): litellm_init.pth auto-runs on Python startup; RSA-4096+AES-256 credential exfil to models.litellm.cloud; persistent backdoor polling checkmarx.zone every 50min (March 24, 2026; Trail of Bits write-up May 22, 2026)",
+    // 1.107.0 is a second, separate compromise (October 21, 2026): the wheels were
+    // built from a lookalike repository and ship cook.pth / cook.py /
+    // sitecustomize.py. 1.106.2 and the 1.107.0rc builds are clean.
   },
   "mrmustard": {
     versions: ["0.7.4"],

@@ -1,3 +1,38 @@
+## Daily threat intel 2026-10-22 (claude-opus-5-5)
+
+Rolling PR, case A (no threat-intel PR was open). Daily channel HEALTHY:
+feed-daily run of 2026-10-22 05:30 UTC succeeded, channel generatedAt
+2026-10-22T05:32Z, 7362 entries.
+
+- litellm 1.107.0 PyPI compromise (2026-10-21): OSV re-used MAL-2026-2144
+  from the March compromise and added 1.107.0, so the importer gave the pin
+  firstSeen 2026-03-24 and routed it to the CATALOG. Hand-added to the bundle
+  first under campaign "LiteLLM 1.107.0 PyPI Compromise" / family
+  "privcollect" (FEED_CHUNK_26), so the import deduped it. Also bundled and
+  blocklisted: www[.]litellm[.]dev, the letters9813 raw.githubusercontent dead
+  drop, the three Linux/macOS payload hashes (identical in StepSecurity and
+  the OSV record). KNOWN_BAD_PYPI_VERSIONS litellm += 1.107.0; accounts
+  letters9813 and Berri-AI (single-source). Not added: the apex
+  litellm[.]dev (the domain list matches as a substring), the Windows payload
+  hashes and the wheel/image digests (single-source via WebFetch, which is
+  known to corrupt long hex). Tests in campaigns.test.ts; cutting the bundle
+  pin and the version pin turns exactly three of them red.
+- Importer: 86 new entries, 86 to the bundle, 0 to the catalog. Bare names
+  @worrisome/aaaa and peptide-modify probed: npm takedowns (0.0.0-stage plus
+  0.0.1-security, maintainer npm / npm-support).
+- Snapshot reconcile: dry run 0 added. The local --check died three times on
+  transient registry errors (timeout, HTTP 502 twice, on different packages);
+  the completeness verdict comes from feed:reconcile on thread.
+- DataDog: 314 DataDog-only pins of still-published versions held back
+  (304 on 2026-10-17); still-published IDE list is the six known ids.
+- Open for the owner: a record that re-uses an old MAL id for a NEW
+  compromise keeps its first publication date as firstSeen, so the
+  partition sends fresh intelligence to the catalog. Here it was caught by
+  hand; the importer could use the version's own upstream publication time
+  (or the record's modified time for newly listed versions) instead.
+- The D-062 queue file handoff/d062-rule-fixes.md is not present in the
+  shared checkout, so its statuses could not be skimmed.
+
 ## Release v6.6.0 (2026-10-21) (claude-opus-5-5)
 
 Minor release (new command `feed import`, new default source for
