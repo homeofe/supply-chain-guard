@@ -762,6 +762,46 @@ export function isWholePackageOsvRange(range) {
   );
 }
 
+const ISO_DAY_PREFIX = /^\d{4}-\d{2}-\d{2}/;
+
+/**
+ * The day a listed version of an OSV record became known.
+ *
+ * OSV re-uses a MAL record when the same package is compromised again: the
+ * litellm record published 2026-03-24 gained 1.107.0 on 2026-10-21. Dating
+ * every version by the record's `published` made that new pin seven months
+ * old, so the partition rule sent it to the catalog and an offline scan
+ * without the catalog missed it. Each origin in
+ * `database_specific["malicious-packages-origins"]` names the versions it
+ * reported and when it was imported, so:
+ *
+ * - a version some origin lists is dated by the earliest such origin
+ *   (`import_time`, else `modified_time`), never before `published`;
+ * - a version no origin lists, while every origin carries a version list,
+ *   was added to the record later: it is dated by the record's `modified`;
+ * - anything else (an origin without a version list, no usable date) keeps
+ *   `published`, the behaviour before this rule.
+ */
+function osvVersionFirstSeen(record, version, publishedDay) {
+  const origins = record?.database_specific?.["malicious-packages-origins"];
+  if (!publishedDay || version === undefined || !Array.isArray(origins) || origins.length === 0) {
+    return publishedDay;
+  }
+  if (!origins.every((origin) => Array.isArray(origin?.versions))) return publishedDay;
+  const listing = origins.filter((origin) => origin.versions.includes(version));
+  if (listing.length === 0) {
+    return typeof record.modified === "string" && ISO_DAY_PREFIX.test(record.modified) && record.modified.slice(0, 10) > publishedDay
+      ? record.modified.slice(0, 10)
+      : publishedDay;
+  }
+  const days = listing
+    .map((origin) => [origin.import_time, origin.modified_time].find((t) => typeof t === "string" && ISO_DAY_PREFIX.test(t)))
+    .filter(Boolean)
+    .map((t) => t.slice(0, 10))
+    .sort();
+  return days.length > 0 && days[0] > publishedDay ? days[0] : publishedDay;
+}
+
 /**
  * Map one OpenSSF malicious-packages OSV record without broadening its range.
  *
@@ -876,7 +916,8 @@ export function mapOsvMalwareRecord(record, { ecosystems } = {}) {
         confidence,
         source,
       };
-      if (firstSeen) entry.firstSeen = firstSeen;
+      const versionFirstSeen = osvVersionFirstSeen(record, version, firstSeen);
+      if (versionFirstSeen) entry.firstSeen = versionFirstSeen;
       entry._ecosystemPrefix = mappedEcosystem.prefix;
       entry._name = name;
       entry._discoverySource = DISCOVERY_SOURCE.OPENSSF;

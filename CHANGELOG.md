@@ -21,6 +21,20 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   `@sudobility/*` client packages, a PyPI text-to-speech name cluster and a
   RubyGems test-name cluster.
 
+### Fixed
+
+- The feed importer dates each version of an OpenSSF/OSV record on its own.
+  When OSV re-uses an existing MAL record for a new compromise of the same
+  package, the new version used to inherit the record's first publication
+  date, so fresh intelligence looked months old and was routed to the
+  catalog instead of the offline bundle (litellm 1.107.0 on 2026-10-21). A
+  version is now dated by the earliest origin that lists it, never before the
+  record's publication; a version that no origin lists was added later and is
+  dated by the record's last modification. Records whose origins carry no
+  version lists, and whole-package entries, keep the publication date. The
+  importer is not part of the npm package, so this takes effect for the
+  daily import without a release.
+
 ## [6.6.0] - 2026-10-21
 
 ### Added
