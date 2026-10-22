@@ -1778,6 +1778,73 @@ describe("Campaign Signatures", () => {
   });
 
   // =================================================================
+  // LiteLLM 1.107.0 PyPI compromise (October 21, 2026)
+  // =================================================================
+
+  describe("LiteLLM 1.107.0 PyPI compromise (October 2026)", () => {
+    const feed = getBundledFeed();
+
+    it("keeps pypi:litellm@1.107.0 in the offline bundle with its campaign", () => {
+      const hit = matchPackageIOC("pypi", "litellm", "1.107.0", feed);
+      expect(hit).toBeTruthy();
+      expect(hit?.campaign).toBe("LiteLLM 1.107.0 PyPI Compromise");
+    });
+
+    it("does NOT flag the clean 1.106.2 release or the 1.107.0 release candidates", () => {
+      expect(matchPackageIOC("pypi", "litellm", "1.106.2", feed)).toBeNull();
+      expect(matchPackageIOC("pypi", "litellm", "1.107.0rc2", feed)).toBeNull();
+    });
+
+    it("should flag litellm==1.107.0 in requirements.txt as a known-bad version", async () => {
+      fs.writeFileSync(path.join(tempDir, "requirements.txt"), "litellm==1.107.0\n");
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_BAD_VERSION"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should NOT flag litellm==1.106.2 in requirements.txt", async () => {
+      fs.writeFileSync(path.join(tempDir, "requirements.txt"), "litellm==1.106.2\n");
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.filter((f) => f.rule === "IOC_KNOWN_BAD_VERSION")
+      ).toHaveLength(0);
+    });
+
+    it("should detect the www.litellm.dev exfiltration host", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "cook.js"),
+        'const u = "http://www.litellm.dev/healthcheck";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the letters9813 dead-drop resolver", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "loader.js"),
+        'const d = "https://raw.githubusercontent.com/letters9813/pythonclient-test/main/domain.txt";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_DEAD_DROP"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
+
+  // =================================================================
   // vpmdhaj Sicoob/Cloud-Secret cluster (Socket via THN, May 28-29, 2026)
   // =================================================================
 
@@ -4834,6 +4901,7 @@ describe("Campaign Signatures", () => {
     const PYPI_ONLY: Array<[string, string]> = [
       ["litellm", "1.82.7"],
       ["litellm", "1.82.8"],
+      ["litellm", "1.107.0"],
       ["lightning", "2.6.2"],
       ["lightning", "2.6.3"],
       ["guardrails-ai", "0.10.1"],
