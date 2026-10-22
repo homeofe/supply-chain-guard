@@ -601,6 +601,112 @@ describe("mapOsvMalwareRecord", () => {
     expect(result.entries[0].source).toBe("MAL-2026-4242 (amazon-inspector+checkmarx)");
   });
 
+  // OSV re-uses a MAL record when a package is compromised again: the litellm
+  // record of March 2026 gained 1.107.0 on 2026-10-21. Dated by the record's
+  // `published`, the new pin looked seven months old and was routed to the
+  // catalog, so an offline scan without the catalog missed it. Each origin
+  // names the versions it reported and when it was imported, so a version is
+  // dated by the earliest origin that lists it, and a version no origin lists
+  // was added later and is dated by the record's `modified`.
+  describe("dates each listed version, not only the record", () => {
+    const reused = (origins: unknown[]) =>
+      osvMalwareRecord({
+        published: "2026-03-24T11:15:14Z",
+        modified: "2026-10-21T22:01:01Z",
+        affected: [
+          {
+            package: { ecosystem: "PyPI", name: "scg-fixture-reused" },
+            versions: ["1.0.0", "1.0.1", "2.0.0"],
+          },
+        ],
+        database_specific: { "malicious-packages-origins": origins },
+      });
+    const dates = (result: { entries: FeedIOC[] }) =>
+      Object.fromEntries(result.entries.map((e) => [e.value, e.firstSeen]));
+
+    it("dates a version that no origin lists by the record's modified", async () => {
+      const { mapOsvMalwareRecord } = await load();
+      const result = mapOsvMalwareRecord(
+        reused([
+          { source: "google-open-source-security", versions: ["1.0.0", "1.0.1"], import_time: "2026-03-24T22:11:35Z" },
+          { source: "ossf-package-analysis", versions: ["1.0.1"], import_time: "2026-03-26T09:50:43Z" },
+        ]),
+      );
+      expect(dates(result)).toEqual({
+        "pypi:scg-fixture-reused@1.0.0": "2026-03-24",
+        "pypi:scg-fixture-reused@1.0.1": "2026-03-24",
+        "pypi:scg-fixture-reused@2.0.0": "2026-10-21",
+      });
+    });
+
+    it("dates a version by the earliest origin that lists it, never before published", async () => {
+      const { mapOsvMalwareRecord } = await load();
+      const result = mapOsvMalwareRecord(
+        reused([
+          { source: "amazon-inspector", versions: ["1.0.0", "1.0.1"], import_time: "2026-03-20T08:00:00Z" },
+          { source: "checkmarx", versions: ["2.0.0"], import_time: "2026-10-19T08:00:00Z" },
+          { source: "socket", versions: ["2.0.0"], modified_time: "2026-10-20T08:00:00Z" },
+        ]),
+      );
+      expect(dates(result)).toEqual({
+        "pypi:scg-fixture-reused@1.0.0": "2026-03-24",
+        "pypi:scg-fixture-reused@1.0.1": "2026-03-24",
+        "pypi:scg-fixture-reused@2.0.0": "2026-10-19",
+      });
+    });
+
+    it("keeps the record's published date when an origin carries no version list", async () => {
+      const { mapOsvMalwareRecord } = await load();
+      const result = mapOsvMalwareRecord(
+        reused([
+          { source: "amazon-inspector", versions: ["1.0.0"], import_time: "2026-03-24T12:00:00Z" },
+          { source: "kam193" },
+        ]),
+      );
+      expect(dates(result)).toEqual({
+        "pypi:scg-fixture-reused@1.0.0": "2026-03-24",
+        "pypi:scg-fixture-reused@1.0.1": "2026-03-24",
+        "pypi:scg-fixture-reused@2.0.0": "2026-03-24",
+      });
+    });
+
+    it("keeps the record's published date for a whole-package entry", async () => {
+      const { mapOsvMalwareRecord } = await load();
+      const result = mapOsvMalwareRecord(
+        osvMalwareRecord({
+          published: "2026-03-24T11:15:14Z",
+          modified: "2026-10-21T22:01:01Z",
+          database_specific: {
+            "malicious-packages-origins": [
+              { source: "amazon-inspector", versions: ["9.9.9"], import_time: "2026-03-24T12:00:00Z" },
+            ],
+          },
+        }),
+      );
+      expect(result.entries.map((e: FeedIOC) => [e.value, e.firstSeen])).toEqual([
+        ["scg-fixture-ossf", "2026-03-24"],
+      ]);
+    });
+
+    it("routes the newly added version to the bundle and the old ones to the catalog", async () => {
+      const { mapOsvMalwareRecord } = await load();
+      const { partitionTarget } = await import(
+        /* @vite-ignore */ new URL("../../scripts/feed-partition.mjs", import.meta.url).href
+      );
+      const config = { bundleCutoffDate: "2026-09-21", catalogWindows: [] };
+      const result = mapOsvMalwareRecord(
+        reused([{ source: "google-open-source-security", versions: ["1.0.0", "1.0.1"], import_time: "2026-03-24T22:11:35Z" }]),
+      );
+      expect(
+        Object.fromEntries(result.entries.map((e: FeedIOC) => [e.value, partitionTarget(e, config)])),
+      ).toEqual({
+        "pypi:scg-fixture-reused@1.0.0": "catalog",
+        "pypi:scg-fixture-reused@1.0.1": "catalog",
+        "pypi:scg-fixture-reused@2.0.0": "bundle",
+      });
+    });
+  });
+
   it("skips withdrawn and non-MAL records", async () => {
     const { mapOsvMalwareRecord } = await load();
     expect(

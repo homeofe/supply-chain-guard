@@ -2,19 +2,19 @@
   "aahp_version": "3.0",
   "project": "supply-chain-guard",
   "last_session": {
-    "agent": "handoff-refresh",
-    "session_id": "cli-1792654480",
-    "timestamp": "2026-10-22T07:34:40Z",
-    "commit": "0950c78",
+    "agent": "cli-tool",
+    "session_id": "cli-1792657375",
+    "timestamp": "2026-10-22T08:22:55Z",
+    "commit": "ff65203",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:215535d17838fd0fd764fbe5b6e3bd182e4b841e9e17c566e257c855dab4d583",
-      "updated": "2026-10-22T07:34:37Z",
-      "lines": 15501,
-      "summary": "Rolling PR, case A (no threat-intel PR was open)."
+      "checksum": "sha256:d2d71deac998f4467a35d77b0073bb28c1f8c07d6924216ec3858190d6b0f32d",
+      "updated": "2026-10-22T08:22:55Z",
+      "lines": 15532,
+      "summary": "Fixes the \"Open for the owner\" item of the 2026-10-22 daily entry below."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:bd8fe052586a4d7116a9ff03a7569e84b32db93a21dccc4773becaaf19cc3f03",
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "Rolling PR, case A (no threat-intel PR was open). Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Fixes the \"Open for the owner\" item of the 2026-10-22 daily entry below. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 883,
-    "manifest_plus_core": 231175,
-    "full_read": 244904
+    "manifest_only": 894,
+    "manifest_plus_core": 231649,
+    "full_read": 245378
   }
 }

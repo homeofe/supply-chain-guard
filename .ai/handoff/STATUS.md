@@ -1,3 +1,34 @@
+## Importer dates each OSV version on its own (2026-10-22) (claude-opus-5-5)
+
+Fixes the "Open for the owner" item of the 2026-10-22 daily entry below. No
+version bump; the owner wants it in the next weekly release, and the importer
+is not in the npm package, so the daily import uses it from the merge on.
+
+`mapOsvMalwareRecord` dated every listed version by the record's `published`.
+Now (`osvVersionFirstSeen`): a version some origin in
+`malicious-packages-origins` lists is dated by the earliest such origin
+(`import_time`, else `modified_time`), never before `published`; a version
+no origin lists, while every origin carries a version list, is dated by the
+record's `modified`; everything else keeps `published`. The GitHub advisory
+path is unchanged (its records carry no per-version origins).
+
+Stock check on thread against the full OSV snapshot (239,801 MAL records,
+262,283 values): 16,293 values get a different date, 1,195 would route
+catalog to bundle and 2 bundle to catalog, and all but two of those are
+already stored, where the stored `firstSeen` stays and nothing moves. The two
+unstored ones (`@yongot/canary-mcp-isolation` 1.0.0 and 1.0.2) date to
+2026-09-21. Open for the owner: about 1,190 stored catalog entries are, by the
+new rule, versions added later to older records (for example
+`tailwind-contact-forms@0.5.9`, added 2026-10-05 to a record of 2026-09-04).
+Moving them to the bundle is a budget decision and not part of this fix.
+
+Tests: five in `feed-import.test.ts` ("dates each listed version, not only
+the record"), three red before the fix, including the routing consequence via
+`partitionTarget`. Cuts: dropping the clamp to `published` and dropping the
+"every origin has a version list" guard each turn exactly one of them red on
+the date (the first guard cut crashed instead and was redone so it fails on
+the value).
+
 ## Daily threat intel 2026-10-22 (claude-opus-5-5)
 
 Rolling PR, case A (no threat-intel PR was open). Daily channel HEALTHY:
