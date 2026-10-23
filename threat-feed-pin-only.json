@@ -196,6 +196,32 @@
       "kind": "squat",
       "reason": "Dependency-confusion squat of an internal package name by the same account as @mntv-analysis/ (53.4.1, MAL-2026-17875, 2026-10-14). The name belongs to the victim's internal package, so only the published malicious version is pinned.",
       "addedOn": "2026-10-14"
+    },
+    {
+      "scope": "@grabcad/",
+      "reason": "Dependency-confusion squats of a company's internal scope (MAL-2026-18214 to MAL-2026-18217, 2026-10-23), already removed from npm. The real packages live in the victim's private registry.",
+      "addedOn": "2026-10-23"
+    },
+    {
+      "scope": "@ecg-internal/",
+      "reason": "Dependency-confusion squats of a company's internal scope at internal-looking versions up to 99.0.1, a Proxy stub with a postinstall hook (MAL-2026-18206 to MAL-2026-18211, 2026-10-23). The real packages live in the victim's private registry.",
+      "addedOn": "2026-10-23"
+    },
+    {
+      "scope": "@blueskydataplatform/",
+      "reason": "Dependency-confusion squat of a company's internal scope (MAL-2026-18212, 2026-10-23), already removed from npm. The real package lives in the victim's private registry.",
+      "addedOn": "2026-10-23"
+    },
+    {
+      "scope": "@cecm-web-sdk/",
+      "reason": "Dependency-confusion squat of a company's internal scope (MAL-2026-18213, 2026-10-23), already removed from npm. The real package lives in the victim's private registry.",
+      "addedOn": "2026-10-23"
+    },
+    {
+      "name": "@kibt/www-nuxt-i18n",
+      "kind": "squat",
+      "reason": "Dependency-confusion squat in the same Proxy-stub shape as @ecg-internal/ at sentinel versions up to 99.0.1 (MAL-2026-17498, 2026-10-04), taken down by npm. The name belongs to the victim's internal package, so only the published malicious versions are pinned.",
+      "addedOn": "2026-10-23"
     }
   ]
 }
