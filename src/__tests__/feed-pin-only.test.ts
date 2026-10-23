@@ -301,4 +301,24 @@ describe("the committed stores", () => {
     const bare = inScope.filter((v) => !/^@[^/]+\/[^@]+@.+$/.test(v));
     expect(bare).toEqual([]);
   });
+
+  // @kibt/ moved to the pin-only list on 2026-10-23. The two 2022 squats were
+  // stored as bare names, which flag the victim's own internal packages; the
+  // removal is only safe because the squatter's published versions replace
+  // them as exact pins (registry history before MAL-2022-377 and -378).
+  it("keep the 2022 @kibt squats as exact pins after dropping the bare names", async () => {
+    const { readCatalogLines } = await import(/* @vite-ignore */ CATALOG_STORE_URL);
+    const catalog = new Set(readCatalogLines(REPO_ROOT).map((line: string) => JSON.parse(line).value as string));
+    const kibt2022 = [...catalog].filter((v) => /^@kibt\/(operation-track|weblogger)(@|$)/.test(v)).sort();
+    expect(kibt2022).toEqual([
+      "@kibt/operation-track@0.0.10",
+      "@kibt/operation-track@0.0.11",
+      "@kibt/operation-track@0.1.0",
+      "@kibt/operation-track@0.1.1",
+      "@kibt/weblogger@1.4.0",
+      "@kibt/weblogger@1.4.1",
+      "@kibt/weblogger@1.4.2",
+      "@kibt/weblogger@1.4.3",
+    ]);
+  });
 });

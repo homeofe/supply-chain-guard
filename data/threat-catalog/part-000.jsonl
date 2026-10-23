@@ -95970,7 +95970,6 @@
 {"type":"package","value":"identity-browser-manual-tests","severity":"critical","confidence":0.9,"source":"MAL-2022-3767 (ghsa-malware)","firstSeen":"2022-06-20"}
 {"type":"package","value":"identity-cache-persistence","severity":"critical","confidence":0.9,"source":"MAL-2022-3768 (ghsa-malware)","firstSeen":"2022-06-20"}
 {"type":"package","value":"identity-dev-docs","severity":"critical","confidence":0.9,"source":"MAL-2022-3769 (ghsa-malware)","firstSeen":"2022-07-21"}
-{"type":"package","value":"@kibt/operation-track","severity":"critical","confidence":0.9,"source":"MAL-2022-377 (ghsa-malware)","firstSeen":"2022-05-23"}
 {"type":"package","value":"identity-module-miniapp","severity":"critical","confidence":0.9,"source":"MAL-2022-3770 (ghsa-malware)","firstSeen":"2022-06-20"}
 {"type":"package","value":"identity-partners-site","severity":"critical","confidence":0.9,"source":"MAL-2022-3771 (ghsa-malware)","firstSeen":"2022-07-21"}
 {"type":"package","value":"identity-sam-landing","severity":"critical","confidence":0.9,"source":"MAL-2022-3772 (ghsa-malware)","firstSeen":"2022-07-21"}
@@ -95981,7 +95980,6 @@
 {"type":"package","value":"idp-core-upperfunnel","severity":"critical","confidence":0.9,"source":"MAL-2022-3777 (ghsa-malware)","firstSeen":"2022-06-20"}
 {"type":"package","value":"idp-shared-node-library","severity":"critical","confidence":0.9,"source":"MAL-2022-3778 (ghsa-malware)","firstSeen":"2022-06-20"}
 {"type":"package","value":"idp-ssr-shell","severity":"critical","confidence":0.9,"source":"MAL-2022-3779 (ghsa-malware)","firstSeen":"2022-06-20"}
-{"type":"package","value":"@kibt/weblogger","severity":"critical","confidence":0.9,"source":"MAL-2022-378 (ghsa-malware)","firstSeen":"2022-05-23"}
 {"type":"package","value":"idp-test-test-test","severity":"critical","confidence":0.9,"source":"MAL-2022-3780 (ghsa-malware)","firstSeen":"2022-06-20"}
 {"type":"package","value":"idx-auto-tester","severity":"critical","confidence":0.9,"source":"MAL-2022-3781 (ghsa-malware)","firstSeen":"2022-06-20"}
 {"type":"package","value":"iedux","severity":"critical","confidence":0.9,"source":"MAL-2022-3782 (ghsa-malware)","firstSeen":"2022-08-19"}
@@ -99998,3 +99996,5 @@
 {"type":"package","value":"zuanshi","severity":"critical","confidence":0.9,"source":"MAL-2022-7415 (ghsa-malware)","firstSeen":"2022-05-17"}
 {"type":"package","value":"zureexplorer2","severity":"critical","confidence":0.9,"source":"MAL-2022-7416 (ghsa-malware)","firstSeen":"2022-05-17"}
 {"type":"package","value":"zuyapvkdcmxoiwbl","severity":"critical","confidence":0.9,"source":"MAL-2022-7417 (ghsa-malware)","firstSeen":"2022-07-11"}
+{"type":"package","value":"zyamkljs","severity":"critical","confidence":0.9,"source":"MAL-2022-7418 (ghsa-malware)","firstSeen":"2022-08-19"}
+{"type":"package","value":"zzzhelloeveryone","severity":"critical","confidence":0.9,"source":"MAL-2022-7419 (ghsa-malware)","firstSeen":"2022-06-09"}

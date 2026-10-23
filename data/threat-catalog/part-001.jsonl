@@ -1,5 +1,3 @@
-{"type":"package","value":"zyamkljs","severity":"critical","confidence":0.9,"source":"MAL-2022-7418 (ghsa-malware)","firstSeen":"2022-08-19"}
-{"type":"package","value":"zzzhelloeveryone","severity":"critical","confidence":0.9,"source":"MAL-2022-7419 (ghsa-malware)","firstSeen":"2022-06-09"}
 {"type":"package","value":"@xvideos/anonymizer","severity":"critical","confidence":0.9,"source":"MAL-2022-742 (ghsa-malware)","firstSeen":"2022-06-20"}
 {"type":"package","value":"zzzreport","severity":"critical","confidence":0.9,"source":"MAL-2022-7420 (ghsa-malware)","firstSeen":"2022-06-20"}
 {"type":"package","value":"@xvideos/api","severity":"critical","confidence":0.9,"source":"MAL-2022-743 (ghsa-malware)","firstSeen":"2022-06-20"}
@@ -99998,3 +99996,5 @@
 {"type":"package","value":"fitri-mieaceh42-sukiwir","severity":"critical","confidence":0.9,"source":"MAL-2025-56351 (amazon-inspector)","firstSeen":"2025-11-10"}
 {"type":"package","value":"fitri-mieayam43-sukiwir","severity":"critical","confidence":0.9,"source":"MAL-2025-56352 (amazon-inspector)","firstSeen":"2025-11-10"}
 {"type":"package","value":"fitri-nasipecel73-sukiwir","severity":"critical","confidence":0.9,"source":"MAL-2025-56353 (amazon-inspector)","firstSeen":"2025-11-10"}
+{"type":"package","value":"fitri-nasiuduk58-sukiwir","severity":"critical","confidence":0.9,"source":"MAL-2025-56354 (amazon-inspector)","firstSeen":"2025-11-10"}
+{"type":"package","value":"fitri-oncom47-sukiwir","severity":"critical","confidence":0.9,"source":"MAL-2025-56355 (amazon-inspector)","firstSeen":"2025-11-10"}

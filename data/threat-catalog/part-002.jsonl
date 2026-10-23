@@ -1,5 +1,3 @@
-{"type":"package","value":"fitri-nasiuduk58-sukiwir","severity":"critical","confidence":0.9,"source":"MAL-2025-56354 (amazon-inspector)","firstSeen":"2025-11-10"}
-{"type":"package","value":"fitri-oncom47-sukiwir","severity":"critical","confidence":0.9,"source":"MAL-2025-56355 (amazon-inspector)","firstSeen":"2025-11-10"}
 {"type":"package","value":"fitri-serabi12-sukiwir","severity":"critical","confidence":0.9,"source":"MAL-2025-56356 (amazon-inspector)","firstSeen":"2025-11-10"}
 {"type":"package","value":"fitri-soto37-sukiwir","severity":"critical","confidence":0.9,"source":"MAL-2025-56357 (amazon-inspector)","firstSeen":"2025-11-10"}
 {"type":"package","value":"fitri-soto88-sukiwir","severity":"critical","confidence":0.9,"source":"MAL-2025-56358 (amazon-inspector)","firstSeen":"2025-11-10"}
@@ -64143,3 +64141,11 @@
 {"type":"package","value":"cowork-os@0.5.53","severity":"critical","confidence":0.9,"source":"datadog-malicious-packages","firstSeen":"2026-09-20"}
 {"type":"package","value":"tailwindcss-form","severity":"critical","confidence":1,"source":"GHSA-c8m9-qwg6-5cv9, MAL-2026-16282 (amazon-inspector+ghsa-malware)","firstSeen":"2026-09-18"}
 {"type":"package","value":"zero-baileys","severity":"critical","confidence":1,"source":"GHSA-v486-jrrq-rhwx, MAL-2026-16280 (amazon-inspector+ghsa-malware)","firstSeen":"2026-09-18"}
+{"type":"package","value":"@kibt/operation-track@0.0.10","severity":"critical","confidence":0.9,"source":"MAL-2022-377 (ghsa-malware)","firstSeen":"2022-05-23"}
+{"type":"package","value":"@kibt/operation-track@0.0.11","severity":"critical","confidence":0.9,"source":"MAL-2022-377 (ghsa-malware)","firstSeen":"2022-05-23"}
+{"type":"package","value":"@kibt/operation-track@0.1.0","severity":"critical","confidence":0.9,"source":"MAL-2022-377 (ghsa-malware)","firstSeen":"2022-05-23"}
+{"type":"package","value":"@kibt/operation-track@0.1.1","severity":"critical","confidence":0.9,"source":"MAL-2022-377 (ghsa-malware)","firstSeen":"2022-05-23"}
+{"type":"package","value":"@kibt/weblogger@1.4.0","severity":"critical","confidence":0.9,"source":"MAL-2022-378 (ghsa-malware)","firstSeen":"2022-05-23"}
+{"type":"package","value":"@kibt/weblogger@1.4.1","severity":"critical","confidence":0.9,"source":"MAL-2022-378 (ghsa-malware)","firstSeen":"2022-05-23"}
+{"type":"package","value":"@kibt/weblogger@1.4.2","severity":"critical","confidence":0.9,"source":"MAL-2022-378 (ghsa-malware)","firstSeen":"2022-05-23"}
+{"type":"package","value":"@kibt/weblogger@1.4.3","severity":"critical","confidence":0.9,"source":"MAL-2022-378 (ghsa-malware)","firstSeen":"2022-05-23"}

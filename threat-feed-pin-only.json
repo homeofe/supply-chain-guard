@@ -218,9 +218,8 @@
       "addedOn": "2026-10-23"
     },
     {
-      "name": "@kibt/www-nuxt-i18n",
-      "kind": "squat",
-      "reason": "Dependency-confusion squat in the same Proxy-stub shape as @ecg-internal/ at sentinel versions up to 99.0.1 (MAL-2026-17498, 2026-10-04), taken down by npm. The name belongs to the victim's internal package, so only the published malicious versions are pinned.",
+      "scope": "@kibt/",
+      "reason": "Dependency-confusion target of a company's internal scope, squatted twice: @kibt/operation-track and @kibt/weblogger (MAL-2022-377, MAL-2022-378, 2022-05-23) and @kibt/www-nuxt-i18n in the same Proxy-stub shape as @ecg-internal/ at sentinel versions up to 99.0.1 (MAL-2026-17498, 2026-10-04). All three were taken down by npm. The names belong to the victim's internal packages, so only the published malicious versions are pinned; the two bare 2022 names were removed from the catalog.",
       "addedOn": "2026-10-23"
     }
   ]
