@@ -1,3 +1,49 @@
+## Daily threat intel 2026-10-23 (claude-opus-5-5)
+
+Rolling PR, case A (no threat-intel PR was open). Daily channel HEALTHY:
+feed-daily run of 2026-10-22 05:30 UTC succeeded, channel generatedAt
+2026-10-22T05:32Z (23.7 h old at the check), 7362 entries; feed-reconcile of
+2026-10-22 12:54 UTC succeeded.
+
+- Windowed import: 103 entries, all to the bundle, 0 unmapped, nothing
+  declined, no `--limit`, no page cap.
+- Dependency-confusion squats arrived as 13 bare names. Probed: the
+  `@grabcad/`, `@ecg-internal/`, `@blueskydataplatform/` and `@cecm-web-sdk/`
+  names are deleted (404) or carry the squatter's internal-looking versions up
+  to 99.0.1; `@kibt/www-nuxt-i18n` is an npm takedown in the same Proxy-stub
+  shape. The four scopes were added to `threat-feed-pin-only.json`, and
+  `@kibt/www-nuxt-i18n` as a `"kind": "squat"` name (its eight versions were
+  already pinned since 2026-10-04). The re-run imported exact pins only (43:
+  37 `@ecg-internal/`, 6 `@grabcad/`). MAL-2026-18212, MAL-2026-18213,
+  MAL-2026-18214, MAL-2026-18215 and MAL-2026-18217 (deleted, no version
+  listed) added to `threat-feed-unresolvable.json`.
+- A first attempt put the whole `@kibt/` scope on the pin-only list. The
+  "hold no bare name in a pin-only scope" test in `feed-pin-only.test.ts`
+  turned red on it: the catalog holds the bare names `@kibt/operation-track`
+  and `@kibt/weblogger` (MAL-2022-377, MAL-2022-378), which a scope entry would
+  require removing from the catalog. Reverted to the single name entry and
+  re-imported from a clean store.
+- `kvarzo8f3atestmetest` and `sdk-utils-testmetest` stay bare names: both
+  probed as npm takedowns (only `0.0.0-stage` and `0.0.1-security` by `npm`).
+- `agentic-awesome-skills` and `opencode-skills-collection`: GHSA lists 20 and
+  21 versions; the npm time map shows every listed version removed except
+  `opencode-skills-collection` 4.1.7 and 4.1.16, which are still published.
+  The unlisted releases stay unblocked. No decline: the pins are source-listed.
+- Snapshot reconcile: 0 entries. `--check` exit 0, 0 missing, 0 unmapped,
+  38 acknowledged, none stale.
+- DataDog: 0 bare names, 8253 pins, 314 DataDog-only pins of a still
+  published version held back (304 on 2026-10-17), the six known still
+  published extensions and no new one.
+- Vendor enrichment: the litellm 1.107.0 and ChainDrop indicators found are
+  already in the bundle; nothing added by hand.
+
+Open for an interactive session: `@kibt/` looks like a dependency-confusion
+target since 2022, and the catalog holds the BARE names `@kibt/operation-track`
+and `@kibt/weblogger` (MAL-2022-377, MAL-2022-378), which flag any private
+package of those names. Putting `@kibt/` on the pin-only list settles both
+records into eight exact pins (measured this run), but then needs the two bare
+catalog lines removed, which this routine does not do outside the importer.
+
 ## Importer dates each OSV version on its own (2026-10-22) (claude-opus-5-5)
 
 Fixes the "Open for the owner" item of the 2026-10-22 daily entry below. No
