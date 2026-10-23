@@ -2,19 +2,19 @@
   "aahp_version": "3.0",
   "project": "supply-chain-guard",
   "last_session": {
-    "agent": "handoff-refresh",
-    "session_id": "cli-1792734264",
-    "timestamp": "2026-10-23T05:44:24Z",
-    "commit": "325b38d",
+    "agent": "cli-tool",
+    "session_id": "cli-1792742684",
+    "timestamp": "2026-10-23T08:04:44Z",
+    "commit": "63943df",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:4bd3b1c2a4411ad9e15ddde85b2e23e738d0c2354bcd05f4e09426bd310742dd",
-      "updated": "2026-10-23T05:44:12Z",
-      "lines": 15578,
-      "summary": "Rolling PR, case A (no threat-intel PR was open)."
+      "checksum": "sha256:6671cd90726c35ddeac094411f5145eb6929fdbf9c958c2ca9941aee647643f4",
+      "updated": "2026-10-23T08:04:44Z",
+      "lines": 15590,
+      "summary": "Dependabot PR 441: `github/codeql-action` 4.38.3 to 4.39.0 (init, analyze, upload-sarif in codeql.yml, scorecard.yml and self-scan.yml) and..."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:bd8fe052586a4d7116a9ff03a7569e84b32db93a21dccc4773becaaf19cc3f03",
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "Rolling PR, case A (no threat-intel PR was open). Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Dependabot PR 441: `github/codeql-action` 4.38.3 to 4.39.0 (init, analyze, upload-sarif in codeql.yml, scorecard.yml and self-scan.yml) and... Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 883,
-    "manifest_plus_core": 232359,
-    "full_read": 246088
+    "manifest_only": 928,
+    "manifest_plus_core": 232567,
+    "full_read": 246296
   }
 }

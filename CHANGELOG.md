@@ -31,6 +31,11 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   `@sudobility/*` client packages, a PyPI text-to-speech name cluster and a
   RubyGems test-name cluster.
 
+### Changed
+
+- CI actions updated: `github/codeql-action` 4.39.0 (init, analyze,
+  upload-sarif) and `ossf/scorecard-action` 2.5.0, each pinned by commit.
+
 ### Fixed
 
 - The feed importer dates each version of an OpenSSF/OSV record on its own.

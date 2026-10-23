@@ -1,3 +1,15 @@
+## GitHub Actions group bump (2026-10-23) (claude-opus-5-5)
+
+Dependabot PR 441: `github/codeql-action` 4.38.3 to 4.39.0 (init, analyze,
+upload-sarif in codeql.yml, scorecard.yml and self-scan.yml) and
+`ossf/scorecard-action` 2.4.4 to 2.5.0. Both commit SHAs checked against the
+upstream tags (`v4.39.0` = `6f2ac81f`, `v2.5.0` = `fa7117db`). The
+CodeQL breaking change (minimum bundle 2.20.7) does not apply: the workflows
+use the default bundle. Scorecard 2.5.0 moves to Scorecard v5.6.0. Red only
+on `aahp-verify`, which needs a handoff change on any workflow edit; this
+note is it, together with `main` merged in. Merged on the owner's
+instruction.
+
 ## Daily threat intel 2026-10-23 (claude-opus-5-5)
 
 Rolling PR, case A (no threat-intel PR was open). Daily channel HEALTHY:
