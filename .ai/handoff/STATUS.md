@@ -1,3 +1,23 @@
+## `@kibt/` becomes a pin-only scope (2026-10-23) (claude-opus-5-5)
+
+Settles the "Open for an interactive session" item of the 2026-10-23 daily
+entry, on the owner's decision. `threat-feed-pin-only.json`: the
+`@kibt/www-nuxt-i18n` name entry (kind squat) is replaced by the scope
+`@kibt/`. The catalog loses its two bare names `@kibt/operation-track` and
+`@kibt/weblogger` (MAL-2022-377, MAL-2022-378, whole-package records with no
+version list), removed through `scripts/catalog-store.mjs`. npm has served
+only its `0.0.1-security` placeholder for both since 2022, and `@kibt` was
+squatted again on 2026-10-04, so the scope belongs to a real organisation whose
+internal packages the bare names would flag. The OSV snapshot import then
+settled both records into eight exact pins from the registry history before
+the records (operation-track 0.0.10, 0.0.11, 0.1.0, 0.1.1; weblogger 1.4.0 to
+1.4.3), all dated 2022-05-23 and so in the catalog. The eight 2026 pins of
+`@kibt/www-nuxt-i18n` are unchanged.
+
+Proof: adding the scope without the removal turns "hold no bare name in a
+pin-only scope" red on exactly the two names; a new test pins the eight
+replacement versions, red before the import.
+
 ## GitHub Actions group bump (2026-10-23) (claude-opus-5-5)
 
 Dependabot PR 441: `github/codeql-action` 4.38.3 to 4.39.0 (init, analyze,

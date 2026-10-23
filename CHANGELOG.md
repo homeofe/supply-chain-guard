@@ -35,6 +35,11 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 - CI actions updated: `github/codeql-action` 4.39.0 (init, analyze,
   upload-sarif) and `ossf/scorecard-action` 2.5.0, each pinned by commit.
+- The npm scope `@kibt/` is now pin-only. It is a company's internal scope
+  that was squatted twice (2022 and 2026). The two 2022 squats were stored as
+  bare names, which would flag the company's own internal packages of the
+  same names; they are replaced by the eight versions the squatter actually
+  published.
 
 ### Fixed
 
