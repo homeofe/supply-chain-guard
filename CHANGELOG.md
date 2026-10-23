@@ -9,6 +9,16 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Added
 
+- Threat intel 2026-10-23: 103 package IOCs from the advisory import (all to
+  the bundle), among them 43 exact pins from
+  dependency-confusion squats of internal scopes (`@ecg-internal/`,
+  `@grabcad/`; with `@blueskydataplatform/` and `@cecm-web-sdk/` now on the
+  pin-only list, so none of them becomes a bare name), the pulled releases of
+  `agentic-awesome-skills` (20 versions) and `opencode-skills-collection`
+  (21 versions), `@tekmidian/pai` 1.0.8 to 1.0.10, `darknode-cli` 2.46.x and
+  three PyPI packages. `@kibt/www-nuxt-i18n` is pinned by version only, as a
+  squat name on the pin-only list. Five deleted, versionless records
+  in the new pin-only scopes are recorded in `threat-feed-unresolvable.json`.
 - Threat intel 2026-10-22: the litellm 1.107.0 PyPI compromise of
   2026-10-21 (trojanized wheels built from a lookalike repository, installing
   a credential stealer and an hourly remote code loader at interpreter start).
