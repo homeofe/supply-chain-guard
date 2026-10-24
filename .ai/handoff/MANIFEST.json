@@ -2,18 +2,18 @@
   "aahp_version": "3.0",
   "project": "supply-chain-guard",
   "last_session": {
-    "agent": "handoff-refresh",
-    "session_id": "cli-1792820490",
-    "timestamp": "2026-10-24T05:41:30Z",
-    "commit": "a0bc681",
+    "agent": "cli-tool",
+    "session_id": "cli-1792829101",
+    "timestamp": "2026-10-24T08:05:01Z",
+    "commit": "a461242",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:c36b7357ba9bd0e5dc3234dca99f868f7d85c101cfbb7fc783e44b0d812e45fe",
-      "updated": "2026-10-24T05:41:28Z",
-      "lines": 15661,
+      "checksum": "sha256:d4492414e9ddc4071b2a6a06e62f9538b3a27120e9ab546a81ecb22b184a09cc",
+      "updated": "2026-10-24T08:04:42Z",
+      "lines": 15682,
       "summary": "Rolling PR, case A (no threat-intel PR was open)."
     },
     "NEXT_ACTIONS.md": {
@@ -79,8 +79,8 @@
   },
   "quick_context": "Rolling PR, case A (no threat-intel PR was open). Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 883,
-    "manifest_plus_core": 233584,
-    "full_read": 247313
+    "manifest_only": 882,
+    "manifest_plus_core": 234080,
+    "full_read": 247809
   }
 }

@@ -517,12 +517,15 @@ jobs:
       # of this package's own dependencies.
       #
       # npm bundles those packages, so only a new npm release can fix one. The
-      # script reads `npm audit --json` and accepts an advisory only when
-      # .github/publish-toolchain/audit-exceptions.json names it, with a reason
-      # and an expiry date; an expired or no longer reported exception fails, as
-      # does every unlisted advisory at the threshold (2026-09-30: no npm release
-      # carried the fixed brace-expansion and undici; 2026-10-17: 11.21.1 carries
-      # every fix, the pin moved there and the list is empty again).
+      # script reads `npm audit --json` for the pin AND for the newest npm of the
+      # same major (lockfile-only, no package code runs). An unlisted high
+      # advisory fails only when that newest release no longer reports it, and
+      # the failure names the release to move the pin to; otherwise it is a
+      # warning annotation, because no npm release can fix it yet. An unlisted
+      # critical advisory always fails, as does an expired or stale entry in
+      # .github/publish-toolchain/audit-exceptions.json, an unreadable report or
+      # a failed lookup (2026-10-24: GHSA-xjj6-f33q-929c in the bundled undici,
+      # the fourth red for an unfixable advisory in four weeks).
       - name: Audit the pinned npm
         run: node scripts/audit-publish-toolchain.mjs --audit-level=high
 
