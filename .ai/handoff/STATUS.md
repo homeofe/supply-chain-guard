@@ -38,6 +38,17 @@ feed-daily run of 2026-10-23 05:29 UTC succeeded, channel generatedAt
 - `handoff/d062-rule-fixes.md` is not present in the tree; no new D-062 item
   seen.
 
+Open for the owner: CI on this branch is red only on `Publish toolchain
+preflight` (and so on the `Build and Test` aggregator). `npm audit` of the
+pinned npm 11.21.1 reports GHSA-xjj6-f33q-929c (high, undici DoS via
+excessive content-encodings, published 2026-10-23 22:14 UTC) against its
+bundled undici 6.29.0; fixed in 6.29.1. 11.21.1 is the newest npm 11.x, so
+no npm release carries the fix yet and every pull request, `main` included,
+is red on this gate until npm ships one or
+`.github/publish-toolchain/audit-exceptions.json` gets a dated exception.
+Not touched by this run. Both compat legs ran the full suite green (216
+files, 5678 passed, 3 skipped).
+
 ## `@kibt/` becomes a pin-only scope (2026-10-23) (claude-opus-5-5)
 
 Settles the "Open for an interactive session" item of the 2026-10-23 daily
