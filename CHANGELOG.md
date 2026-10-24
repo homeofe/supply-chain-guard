@@ -44,6 +44,9 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Changed
 
+- SECURITY.md lists the seven published security advisories with the version
+  that fixes each one, and marks 5.x as no longer supported: none of those
+  fixes was released for 5.x. Upgrade to 6.6.0 or later.
 - The audit of the npm that publishes this package fails only where an action
   exists. A high-severity advisory in a package npm bundles now fails the
   check when a newer npm of the same major no longer reports it, and names

@@ -5,11 +5,31 @@
 | Version | Supported          |
 |---------|--------------------|
 | 6.x     | :white_check_mark: |
-| 5.x     | :white_check_mark: |
+| 5.x     | :x:                |
 | 4.x     | :x:                |
 | 3.x     | :x:                |
 | 2.x     | :x:                |
 | 1.x     | :x:                |
+
+Security fixes ship in the newest 6.x release only. 5.x received none of the
+fixes for the advisories below, so it is no longer supported.
+
+## Published security advisories
+
+Every advisory below is fixed in 6.6.0. Upgrade to 6.6.0 or later.
+
+| Advisory | Severity | Affected | Fixed in | Summary |
+|---|---|---|---|---|
+| [GHSA-77wv-pr2j-p38h](https://github.com/homeofe/supply-chain-guard/security/advisories/GHSA-77wv-pr2j-p38h) | low | <= 6.5.6 | 6.5.7 | A crafted version range in an MCP config can stall a scan |
+| [GHSA-gqpg-9mjx-pv4w](https://github.com/homeofe/supply-chain-guard/security/advisories/GHSA-gqpg-9mjx-pv4w) | high | <= 6.5.5 | 6.5.6 | npx: a tool planted in `node_modules/.bin` of the scanned directory runs during the scan |
+| [GHSA-cq59-vmg7-pmqv](https://github.com/homeofe/supply-chain-guard/security/advisories/GHSA-cq59-vmg7-pmqv) | high | <= 6.5.1 | 6.5.2 | Windows: a scan executes a `git` binary planted in the scanned directory |
+| [GHSA-wrr5-263w-wvmh](https://github.com/homeofe/supply-chain-guard/security/advisories/GHSA-wrr5-263w-wvmh) | medium | <= 6.5.1 | 6.5.2 | A policy file or inline comment inside the scanned tree can suppress the scanner's own findings |
+| [GHSA-frvv-hf2w-gwf7](https://github.com/homeofe/supply-chain-guard/security/advisories/GHSA-frvv-hf2w-gwf7) | medium | <= 6.5.1 | 6.5.2 | A deny-list regex in a policy file inside the scanned tree can hang the scan |
+| [GHSA-hpmp-48p8-f32h](https://github.com/homeofe/supply-chain-guard/security/advisories/GHSA-hpmp-48p8-f32h) | medium | <= 6.5.1 | 6.5.2 | MCP server: `scan_directory` accepts network (UNC) paths and blocks the server |
+| [GHSA-pvhm-wc2r-q627](https://github.com/homeofe/supply-chain-guard/security/advisories/GHSA-pvhm-wc2r-q627) | low | < 6.3.0 | 6.3.0 | `WORKFLOW_SECRET_TO_UPLOAD_PATH` judged the spelling of a secret reference, not its exposure |
+
+The GitHub Action pins the exact scanner version it installs, so a workflow
+on `uses: homeofe/supply-chain-guard@v6` runs the newest 6.x release.
 
 ## Reporting a Vulnerability
 
@@ -70,10 +90,14 @@ These scanner alerts on this repository are open on purpose, and why:
   below the maximum until a second maintainer can review.
 - **Dependabot alerts in `.github/publish-toolchain/`, and Scorecard's
   Vulnerabilities check, which counts them.** They concern dependencies that
-  npm itself bundles (`undici`, `ip-address`, `brace-expansion`,
-  `http-cache-semantics`). Bundled dependencies cannot be overridden, and no
-  npm release ships fixed versions yet, so the alerts stay open rather than
-  being dismissed. That npm runs only inside the release job. Its audit gate
+  npm itself bundles, and only an npm release can fix them, because bundled
+  dependencies cannot be overridden. Open on 2026-10-24: `undici`
+  GHSA-xjj6-f33q-929c (high; inside npm only `node-gyp` uses it, for native
+  builds, which the release job does not run) and `ip-address`
+  GHSA-rxp7-6hxx-x8q5 (medium; inside npm only `socks` uses it, for proxy
+  connections, which the release job does not open). The newest npm 11.x does
+  not ship either fix yet, so the alerts stay open rather than being
+  dismissed. That npm runs only inside the release job. Its audit gate
   fails on a high-severity advisory as soon as a newer npm of the same major
   no longer reports it, and names that release so the pin can move. Until then
   the advisory is a warning on the job. A critical advisory always fails unless

@@ -1,3 +1,21 @@
+## SECURITY.md: published advisories, 5.x unsupported (2026-10-24) (claude-opus-5-5)
+
+Owner decision 2026-10-24: 5.x is no longer supported (option 1; no backport).
+All seven published repository advisories affect 5.x, and their fixes exist
+only in 6.3.0 to 6.5.7, so the old table (5.x supported) promised protection
+that did not exist. SECURITY.md now marks 5.x unsupported, lists the seven
+advisories (severity, affected, fixed in, summary; all fixed in 6.6.0) and
+updates "Known open findings" to the two open bundled-npm advisories
+(undici GHSA-xjj6-f33q-929c, high; ip-address GHSA-rxp7-6hxx-x8q5, medium,
+Dependabot alert 38).
+
+Measured the same day: none of the seven advisories is in GitHub's global
+Advisory Database (`gh api advisories/<id>` is 404 for all), and none has a
+CVE id, so neither `npm audit` nor Dependabot nor OSV warns users of old
+versions. About 30 % of the last week's npm downloads (311 of 1,028) were of
+versions up to 6.5.5. The owner requested CVEs after each finding; what became
+of the requests is open and only visible on the advisory pages.
+
 ## Daily threat intel 2026-10-24 (claude-opus-5-5)
 
 Rolling PR, case A (no threat-intel PR was open). Daily channel HEALTHY:

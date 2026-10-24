@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "cli-tool",
-    "session_id": "cli-1792829101",
-    "timestamp": "2026-10-24T08:05:01Z",
-    "commit": "a461242",
+    "session_id": "cli-1792832861",
+    "timestamp": "2026-10-24T09:07:41Z",
+    "commit": "b7dc8ce",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:d4492414e9ddc4071b2a6a06e62f9538b3a27120e9ab546a81ecb22b184a09cc",
-      "updated": "2026-10-24T08:04:42Z",
-      "lines": 15682,
-      "summary": "Rolling PR, case A (no threat-intel PR was open)."
+      "checksum": "sha256:9cd552b697ad156e785a56acaaf73aa32a0716a5e08ada734a53f5e664c487db",
+      "updated": "2026-10-24T09:07:39Z",
+      "lines": 15700,
+      "summary": "Owner decision 2026-10-24: 5.x is no longer supported (option 1; no backport)."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:bd8fe052586a4d7116a9ff03a7569e84b32db93a21dccc4773becaaf19cc3f03",
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "Rolling PR, case A (no threat-intel PR was open). Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Owner decision 2026-10-24: 5.x is no longer supported (option 1; no backport). Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 882,
-    "manifest_plus_core": 234080,
-    "full_read": 247809
+    "manifest_only": 896,
+    "manifest_plus_core": 234363,
+    "full_read": 248092
   }
 }
