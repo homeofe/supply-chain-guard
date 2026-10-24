@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "cli-tool",
-    "session_id": "cli-1792828164",
-    "timestamp": "2026-10-24T07:49:24Z",
-    "commit": "6757786",
+    "session_id": "cli-1792829101",
+    "timestamp": "2026-10-24T08:05:01Z",
+    "commit": "a461242",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:009e54afc96a78e879888b8d4baf07f831bea4938ab465a9158d69b13328abf8",
-      "updated": "2026-10-24T07:49:23Z",
-      "lines": 15632,
-      "summary": "GHSA-xjj6-f33q-929c (high, published 2026-10-23 22:14 UTC) against the undici 6.29.0 bundled in the pinned npm 11.21.1 turned `Publish toolchain..."
+      "checksum": "sha256:d4492414e9ddc4071b2a6a06e62f9538b3a27120e9ab546a81ecb22b184a09cc",
+      "updated": "2026-10-24T08:04:42Z",
+      "lines": 15682,
+      "summary": "Rolling PR, case A (no threat-intel PR was open)."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:bd8fe052586a4d7116a9ff03a7569e84b32db93a21dccc4773becaaf19cc3f03",
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "GHSA-xjj6-f33q-929c (high, published 2026-10-23 22:14 UTC) against the undici 6.29.0 bundled in the pinned npm 11.21.1 turned `Publish toolchain... Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Rolling PR, case A (no threat-intel PR was open). Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 931,
-    "manifest_plus_core": 233366,
-    "full_read": 247095
+    "manifest_only": 882,
+    "manifest_plus_core": 234080,
+    "full_read": 247809
   }
 }

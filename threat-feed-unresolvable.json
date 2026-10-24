@@ -140,18 +140,6 @@
     {
       "id": "MAL-2026-18213",
       "reason": "Dependency-confusion record naming every version of @cecm-web-sdk/core, a package the npm registry has deleted (404), so no exact version is known. The scope @cecm-web-sdk/ is on threat-feed-pin-only.json (2026-10-23): a bare-name block would flag the victim organization's own internal package of the same name."
-    },
-    {
-      "id": "MAL-2026-18214",
-      "reason": "Dependency-confusion record naming every version of @grabcad/company-server-shared, a package the npm registry has deleted (404), so no exact version is known. The scope @grabcad/ is on threat-feed-pin-only.json (2026-10-23): a bare-name block would flag the victim organization's own internal package of the same name."
-    },
-    {
-      "id": "MAL-2026-18215",
-      "reason": "Dependency-confusion record naming every version of @grabcad/grabcad-shop-shared, a package the npm registry has deleted (404), so no exact version is known. The scope @grabcad/ is on threat-feed-pin-only.json (2026-10-23): a bare-name block would flag the victim organization's own internal package of the same name."
-    },
-    {
-      "id": "MAL-2026-18217",
-      "reason": "Dependency-confusion record naming every version of @grabcad/user-license, a package the npm registry has deleted (404), so no exact version is known. The scope @grabcad/ is on threat-feed-pin-only.json (2026-10-23): a bare-name block would flag the victim organization's own internal package of the same name."
     }
   ]
 }

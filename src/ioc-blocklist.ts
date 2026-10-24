@@ -3028,6 +3028,14 @@ export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; descri
     description: "Web3 dev-tooling typosquat campaign: postinstall stage exfiltrates wallet keys and mnemonics; only 1.0.1 is reported malicious (Jun 2026)",
   },
 
+  // Baileys WhatsApp fork channel-farming campaign, kimmcloude leg (Xygeni digest 93,
+  // October 2026). Version-pinned only: single-source, and 1.0.0 is still live on the
+  // registry, so the name is not blocked beyond the release the digest names.
+  "@kimmcloude/baileys": {
+    versions: ["1.0.0"],
+    description: "Baileys fork channel-farming campaign, kimmcloude leg: Baileys fork confirmed malicious by Xygeni; single-source (Oct 2026)",
+  },
+
   // Baileys WhatsApp fork channel-farming campaign (Xygeni digest 86, September 2026).
   // Version-pinned and deliberately NOT name-blocked: the registry probe shows a live
   // package with a real maintainer and 17 published versions, so this is a modded fork
