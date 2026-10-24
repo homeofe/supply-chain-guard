@@ -133,6 +133,86 @@ describe("audit-publish-toolchain", () => {
     }
   });
 
+  // 2026-10-24: GHSA-xjj6-f33q-929c (high, undici bundled in npm 11.21.1) turned
+  // every pull request red although no npm release carried the fix, so the only
+  // possible answer was another hand-written exception. The gate now asks the
+  // question that has an action behind it: does the newest npm of the pinned
+  // major still report the advisory? If not, move the pin (red). If it does,
+  // nothing can be done yet (a warning). Critical stays red either way.
+  describe("against the newest npm of the pinned major", () => {
+    const xjj6 = () => report({ undici: [adv("GHSA-xjj6-f33q-929c", "undici", "high")] });
+    const newest = (version: string | null, r: unknown = report()) => ({ version, report: r });
+
+    it("fails and names the release when the newest npm no longer reports the advisory", () => {
+      const { errors, warnings } = evaluate(xjj6(), EXCEPTIONS.slice(0, 2), {
+        level: "high",
+        today: TODAY,
+        newer: newest("11.22.0", report()),
+      });
+      expect(errors).toEqual([
+        expect.stringMatching(/^undici: high advisory GHSA-xjj6-f33q-929c is fixed in npm 11\.22\.0; move the pin there/),
+      ]);
+      expect(warnings).toEqual([]);
+    });
+
+    it("warns instead of failing when the pinned npm is already the newest", () => {
+      const { errors, warnings } = evaluate(xjj6(), EXCEPTIONS.slice(0, 2), {
+        level: "high",
+        today: TODAY,
+        newer: newest(null),
+      });
+      expect(errors).toEqual([]);
+      expect(warnings).toEqual([
+        expect.stringMatching(/^undici: high advisory GHSA-xjj6-f33q-929c has no fix in any npm release yet/),
+      ]);
+    });
+
+    it("warns instead of failing when the newest npm still reports the advisory", () => {
+      const { errors, warnings } = evaluate(xjj6(), EXCEPTIONS.slice(0, 2), {
+        level: "high",
+        today: TODAY,
+        newer: newest("11.22.0", xjj6()),
+      });
+      expect(errors).toEqual([]);
+      expect(warnings).toEqual([expect.stringMatching(/still reported by npm 11\.22\.0, the newest release/)]);
+    });
+
+    it("fails on a critical advisory without an exception, even with no fix anywhere", () => {
+      const r = report({ tar: [adv("GHSA-2222-3333-4444", "tar", "critical")] });
+      const opts = { level: "high", today: TODAY, newer: newest(null, r) };
+      expect(evaluate(r, EXCEPTIONS, opts).errors).toEqual([
+        expect.stringMatching(/^tar: critical advisory GHSA-2222-3333-4444 is not excepted/),
+      ]);
+      expect(evaluate(r, [...EXCEPTIONS, exception("GHSA-2222-3333-4444", "tar")], opts).errors).toEqual([]);
+    });
+
+    it("keeps an advisory below the threshold silent", () => {
+      const r = report({ semver: [adv("GHSA-5555-6666-7777", "semver", "moderate")] });
+      const out = evaluate(r, EXCEPTIONS, { level: "high", today: TODAY, newer: newest(null) });
+      expect(out).toEqual({ errors: [], excepted: expect.any(Array), warnings: [] });
+    });
+
+    it("still fails on a stale or expired exception", () => {
+      const opts = { level: "high", today: TODAY, newer: newest(null) };
+      const r = report();
+      delete (r.vulnerabilities as Record<string, unknown>).undici;
+      expect(evaluate(r, EXCEPTIONS, opts).errors).toEqual([expect.stringMatching(/matches nothing/)]);
+      const expired = [...EXCEPTIONS.slice(1), exception("GHSA-qhr7-859c-m2p7", "brace-expansion", "2026-09-29")];
+      expect(evaluate(report(), expired, opts).errors).toEqual([expect.stringMatching(/expired on 2026-09-29/)]);
+    });
+
+    it("fails closed when the newest npm's report cannot be read", () => {
+      for (const bad of [null, {}, { error: { code: "E404" } }]) {
+        const { errors } = evaluate(xjj6(), EXCEPTIONS.slice(0, 2), {
+          level: "high",
+          today: TODAY,
+          newer: newest("11.22.0", bad),
+        });
+        expect(errors).toEqual([expect.stringMatching(/report for npm 11\.22\.0 could not be read/)]);
+      }
+    });
+  });
+
   it("keeps the committed exceptions well-formed", () => {
     const committed = JSON.parse(
       fs.readFileSync(path.join(ROOT, ".github", "publish-toolchain", "audit-exceptions.json"), "utf8"),
@@ -156,17 +236,20 @@ describe("audit-publish-toolchain", () => {
         v.via.push(adv(e.ghsa, e.package, "high"));
       }
       fs.writeFileSync(file, JSON.stringify(r));
-      const ok = execFileSync(process.execPath, [SCRIPT, "--audit-level=high", "--report", file, "--today", TODAY], {
+      // --newest none keeps the test offline: without it the script looks up
+      // the newest npm on the registry.
+      const ok = execFileSync(process.execPath, [SCRIPT, "--audit-level=high", "--report", file, "--today", TODAY, "--newest", "none"], {
         encoding: "utf8",
       });
       expect(ok).toMatch(/audit: OK/);
 
-      (r.vulnerabilities as Record<string, unknown>).tar = { name: "tar", severity: "high", via: [adv("GHSA-xxxx-xxxx-xxxx", "tar", "high")] };
+      // Critical: fails without an exception whether or not any npm fixes it.
+      (r.vulnerabilities as Record<string, unknown>).tar = { name: "tar", severity: "critical", via: [adv("GHSA-xxxx-xxxx-xxxx", "tar", "critical")] };
       fs.writeFileSync(file, JSON.stringify(r));
       let status = 0;
       let stderr = "";
       try {
-        execFileSync(process.execPath, [SCRIPT, "--audit-level=high", "--report", file, "--today", TODAY], {
+        execFileSync(process.execPath, [SCRIPT, "--audit-level=high", "--report", file, "--today", TODAY, "--newest", "none"], {
           encoding: "utf8",
           stdio: "pipe",
         });
@@ -175,7 +258,56 @@ describe("audit-publish-toolchain", () => {
         stderr = String((err as { stderr: string }).stderr);
       }
       expect(status).toBe(1);
-      expect(stderr).toMatch(/FAIL tar: high advisory GHSA-xxxx-xxxx-xxxx/);
+      expect(stderr).toMatch(/FAIL tar: critical advisory GHSA-xxxx-xxxx-xxxx/);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("as a command, warns with an annotation when no npm release fixes the advisory, and fails when one does", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-audit-"));
+    try {
+      const committed = JSON.parse(
+        fs.readFileSync(path.join(ROOT, ".github", "publish-toolchain", "audit-exceptions.json"), "utf8"),
+      ) as { ghsa: string; package: string }[];
+      const r = { auditReportVersion: 2, vulnerabilities: {} as Record<string, unknown> };
+      for (const e of committed) {
+        const v = (r.vulnerabilities[e.package] ??= { name: e.package, severity: "high", via: [] }) as { via: Advisory[] };
+        v.via.push(adv(e.ghsa, e.package, "high"));
+      }
+      (r.vulnerabilities as Record<string, unknown>)["scg-fixture-bundled"] = {
+        name: "scg-fixture-bundled",
+        severity: "high",
+        via: [adv("GHSA-xjj6-f33q-929c", "scg-fixture-bundled", "high")],
+      };
+      const file = path.join(dir, "report.json");
+      fs.writeFileSync(file, JSON.stringify(r));
+      const fixed = path.join(dir, "newest.json");
+      const fixedReport = JSON.parse(JSON.stringify(r));
+      delete fixedReport.vulnerabilities["scg-fixture-bundled"];
+      fs.writeFileSync(fixed, JSON.stringify(fixedReport));
+      const cli = (extra: string[]) => {
+        try {
+          const stdout = execFileSync(process.execPath, [SCRIPT, "--audit-level=high", "--report", file, "--today", TODAY, ...extra], {
+            encoding: "utf8",
+            stdio: "pipe",
+            env: { ...process.env, GITHUB_ACTIONS: "true" },
+          });
+          return { status: 0, stdout, stderr: "" };
+        } catch (err) {
+          const e = err as { status: number; stdout: string; stderr: string };
+          return { status: e.status, stdout: String(e.stdout), stderr: String(e.stderr) };
+        }
+      };
+
+      const none = cli(["--newest", "none"]);
+      expect(none.status).toBe(0);
+      expect(none.stdout).toMatch(/^::warning title=Publish toolchain advisory::scg-fixture-bundled: high advisory GHSA-xjj6-f33q-929c has no fix/m);
+      expect(none.stdout).toMatch(/audit: OK/);
+
+      const bump = cli(["--newest", "11.99.0", "--newest-report", fixed]);
+      expect(bump.status).toBe(1);
+      expect(bump.stderr).toMatch(/FAIL scg-fixture-bundled: high advisory GHSA-xjj6-f33q-929c is fixed in npm 11\.99\.0/);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }

@@ -33,6 +33,12 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Changed
 
+- The audit of the npm that publishes this package fails only where an action
+  exists. A high-severity advisory in a package npm bundles now fails the
+  check when a newer npm of the same major no longer reports it, and names
+  that release; while no npm release fixes it, it is a warning on the job
+  instead of a red check that blocks every pull request. Critical advisories,
+  expired or stale exceptions and unreadable reports still fail.
 - CI actions updated: `github/codeql-action` 4.39.0 (init, analyze,
   upload-sarif) and `ossf/scorecard-action` 2.5.0, each pinned by commit.
 - The npm scope `@kibt/` is now pin-only. It is a company's internal scope
