@@ -1,3 +1,43 @@
+## Daily threat intel 2026-10-24 (claude-opus-5-5)
+
+Rolling PR, case A (no threat-intel PR was open). Daily channel HEALTHY:
+feed-daily run of 2026-10-23 05:29 UTC succeeded, channel generatedAt
+2026-10-23T05:31Z (23.7 h old at the check), 7433 entries; feed-reconcile of
+2026-10-23 12:51 UTC succeeded.
+
+- Windowed import: 70 entries, all to the bundle, 0 to the catalog, 0
+  unmapped, nothing declined, no `--limit`, no page cap, no window slicing,
+  no `catalogWindows` entry. Every entry is a source-listed exact pin; no bare
+  name was proposed. 34 npm, 36 PyPI.
+- PyPI: 23 task-queue-themed names (kam193 records MAL-2026-18218 to
+  MAL-2026-18242), each at 0.1.0 except `sitecard` (13 versions).
+- `@grabcad/` (pin-only since 2026-10-23): the three records that were
+  versionless yesterday now list seven versions each, so 21 exact pins were
+  imported. MAL-2026-18214, MAL-2026-18215 and MAL-2026-18217 were reported
+  stale by `--check`; each was proven obsolete (OSV record now names the same
+  package with explicit versions, all 21 pins found in the bundle, positive
+  control `ph-common@77.7.7` in the catalog) and removed from
+  `threat-feed-unresolvable.json` (38 to 35 records). Re-check exit 0, no
+  stale line.
+- Live names probed: `@liauto/win32-x64` (maintainer `licli`, live
+  0.1.1-b1 to 0.1.2-b1; only the listed 0.1.2-b2, not on the registry, is
+  pinned), `overarch-windows-x64-yr` (live 0.8.0 unblocked; 1.4.0, 1.5.0,
+  2.0.0 pinned), `skillward` (only `0.0.0-stage` left).
+- Snapshot reconcile: dry run proposed 0 entries, so the write was skipped.
+  `--check` exit 0, 0 missing, 0 unmapped, 35 acknowledged, none stale.
+- DataDog: 0 bare names, 8253 pins, 314 DataDog-only pins of a still
+  published version held back (same as 2026-10-23), the six known still
+  published extensions and no new one.
+- Vendor enrichment: Xygeni digest 93 (2026-10-18 to 2026-10-21). All named
+  versions were already in the bundle except `@kimmcloude/baileys` 1.0.0,
+  added by hand (family `baileys-channel-farming`, confidence 0.85,
+  single-source) plus a `KNOWN_BAD_NPM_VERSIONS` entry. Registry probe: one
+  real release (1.0.0, 2026-10-18) beside npm's `0.0.0-stage`, still live, so
+  pinned by version rather than name-blocked. The digest publishes no
+  network indicators or hashes.
+- `handoff/d062-rule-fixes.md` is not present in the tree; no new D-062 item
+  seen.
+
 ## `@kibt/` becomes a pin-only scope (2026-10-23) (claude-opus-5-5)
 
 Settles the "Open for an interactive session" item of the 2026-10-23 daily

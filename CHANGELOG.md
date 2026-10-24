@@ -9,6 +9,17 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Added
 
+- Threat intel 2026-10-24: 70 package IOCs from the advisory import (all to
+  the bundle): a PyPI cluster of 23 task-queue-themed names from one actor
+  (MAL-2026-18218 to MAL-2026-18242, `sitecard` with 13 versions), the three
+  `@grabcad/` dependency-confusion squats now that their records list versions
+  (21 exact pins), the `@k18k/entrypoint-sdk-*` platform binaries (6),
+  `overarch-windows-x64-yr` (3), `skillward` (2), `orqiva-runtime-win32-x64`
+  and `@liauto/win32-x64` 0.1.2-b2. Hand-added from a vendor write-up:
+  `@kimmcloude/baileys` 1.0.0 (Baileys fork channel-farming campaign,
+  single-source), version-pinned in the bundle and in `KNOWN_BAD_NPM_VERSIONS`.
+  MAL-2026-18214, MAL-2026-18215 and MAL-2026-18217 are removed from
+  `threat-feed-unresolvable.json`, since they now map to exact pins.
 - Threat intel 2026-10-23: 103 package IOCs from the advisory import (all to
   the bundle), among them 43 exact pins from
   dependency-confusion squats of internal scopes (`@ecg-internal/`,

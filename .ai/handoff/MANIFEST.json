@@ -2,19 +2,19 @@
   "aahp_version": "3.0",
   "project": "supply-chain-guard",
   "last_session": {
-    "agent": "cli-tool",
-    "session_id": "cli-1792743451",
-    "timestamp": "2026-10-23T08:17:31Z",
-    "commit": "a318bfe",
+    "agent": "handoff-refresh",
+    "session_id": "cli-1792819782",
+    "timestamp": "2026-10-24T05:29:42Z",
+    "commit": "6757786",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:5fe6f5368fcd2ab557ffa5342014f9299ce8d145d96592854065aefc4c56007a",
-      "updated": "2026-10-23T08:17:27Z",
-      "lines": 15610,
-      "summary": "Settles the \"Open for an interactive session\" item of the 2026-10-23 daily entry, on the owner's decision."
+      "checksum": "sha256:1fec490cac42a1b8011ed3725c188c4f99f364f20f0b256fc440deb6512337bd",
+      "updated": "2026-10-24T05:29:38Z",
+      "lines": 15650,
+      "summary": "Rolling PR, case A (no threat-intel PR was open)."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:bd8fe052586a4d7116a9ff03a7569e84b32db93a21dccc4773becaaf19cc3f03",
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "Settles the \"Open for an interactive session\" item of the 2026-10-23 daily entry, on the owner's decision. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Rolling PR, case A (no threat-intel PR was open). Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 911,
-    "manifest_plus_core": 232849,
-    "full_read": 246578
+    "manifest_only": 883,
+    "manifest_plus_core": 233418,
+    "full_read": 247147
   }
 }
