@@ -1,3 +1,25 @@
+## Publish-toolchain audit fails only where an action exists (2026-10-24) (claude-opus-5-5)
+
+GHSA-xjj6-f33q-929c (high, published 2026-10-23 22:14 UTC) against the undici
+6.29.0 bundled in the pinned npm 11.21.1 turned `Publish toolchain
+preflight`, and so the required `Build and Test`, red on every pull request
+(PR 444 first). It was the fourth such red in four weeks (2026-09-30,
+2026-10-02, 2026-10-17, 2026-10-24) for an advisory no npm release had fixed,
+and each time the only answer was a dated exception with the same reasoning.
+Owner decision: change the gate instead of adding an exception.
+
+`scripts/audit-publish-toolchain.mjs` now also looks up the newest stable npm
+of the pinned major and audits it from a lockfile-only install. An unlisted
+high advisory fails only when that release no longer reports it (the failure
+names the release); otherwise it is a `::warning` annotation. Critical,
+expired or stale exceptions, unreadable reports and a failed lookup still
+fail. Dependabot for the toolchain stays at limit 0: the pin moves by hand,
+and Dependabot proposes npm 12, which is refused on creation. Within npm
+11.21.1 only node-gyp depends on undici (native-build header downloads); the
+publish job runs no native build. The Dependabot alert stays open.
+
+Verified on thread: the real gate on the committed pin (11.21.1, the newest 11.x) prints a ::warning for GHSA-xjj6-f33q-929c and exits 0; the same gate on the 11.19.1 lockfile of 6fca609 exits 1, naming 11.21.1 as the fix for the four advisories it carries (brace-expansion x2, http-cache-semantics, undici GHSA-rfgv), while GHSA-xjj6 stays a warning there too. Cuts: treating a still-reported advisory as fixed, treating critical like high, and dropping the fail-closed check on the newest report each turn the new tests red on their assertions. Dependabot alert 38 (GHSA-rxp7-6hxx-x8q5, ip-address, medium, used only by socks for proxy connections) is below the threshold and stays open until npm ships 10.7.4.
+
 ## `@kibt/` becomes a pin-only scope (2026-10-23) (claude-opus-5-5)
 
 Settles the "Open for an interactive session" item of the 2026-10-23 daily

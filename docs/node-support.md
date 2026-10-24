@@ -370,6 +370,23 @@ the twelve Dependabot alerts and the Scorecard Vulnerabilities finding came from
 the pinned lockfile and close with it. The pin stays on the npm 11 line, so only
 the patch release changes.
 
+On 2026-10-24 GHSA-xjj6-f33q-929c (high, the bundled `undici` 6.29.0) turned every
+pull request red again, the fourth time in four weeks for an advisory no npm
+release had fixed yet. The gate now fails only where an action exists. On every
+run it also looks up the newest stable npm of the pinned major and audits it from
+a lockfile-only install, without running any package code. Then:
+
+- An unlisted high advisory that the newest release no longer reports fails. The
+  failure names that release, and the fix is to move the pin.
+- An unlisted high advisory that the newest release still reports, or one where
+  the pinned npm is already the newest, is a warning: a GitHub annotation on the
+  job, no exception needed. The Dependabot alert stays open meanwhile.
+- An unlisted critical advisory fails regardless and needs a dated exception.
+- An expired or stale exception fails as before.
+- An unreadable report, or a failed lookup of the newest release, fails closed.
+
+The pin still moves by hand, so Dependabot keeps a limit of 0 for this directory.
+
 ## What is deliberately not governed here
 
 Threat intelligence and test fixtures mention Node versions as data, not as policy: a

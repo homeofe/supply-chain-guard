@@ -74,9 +74,11 @@ These scanner alerts on this repository are open on purpose, and why:
   `http-cache-semantics`). Bundled dependencies cannot be overridden, and no
   npm release ships fixed versions yet, so the alerts stay open rather than
   being dismissed. That npm runs only inside the release job. Its audit gate
-  fails on high severity, and `.github/publish-toolchain/audit-exceptions.json`
-  lists each high-severity advisory with a reason and an expiry date, so the
-  gate fails again when the expiry passes.
+  fails on a high-severity advisory as soon as a newer npm of the same major
+  no longer reports it, and names that release so the pin can move. Until then
+  the advisory is a warning on the job. A critical advisory always fails unless
+  `.github/publish-toolchain/audit-exceptions.json` lists it with a reason and
+  an expiry date, and the gate fails again when that expiry passes.
 
 ## Recognition
 

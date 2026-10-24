@@ -299,7 +299,7 @@ threat-feed-pin-only.json # npm dependency-confusion scopes imported as exact pi
 scripts/
   build-daily-feed.mjs    # Daily feed channel: main's feed plus source-listed pins, checked by an independent invariant
   catalog-store.mjs       # The one reader/writer of the committed catalog parts
-  audit-publish-toolchain.mjs # npm audit of the pinned publish npm, with dated exceptions
+  audit-publish-toolchain.mjs # npm audit of the pinned publish npm: fails when a newer npm fixes an advisory, warns when none does
   feed-migrate.mjs        # Bundle-to-catalog migration planner and writer
   feed-partition.mjs      # Shared bundle/catalog placement policy
   generate-catalog.mjs    # Deterministic catalog index and shard generator
